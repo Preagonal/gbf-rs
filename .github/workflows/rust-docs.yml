@@ -6,6 +6,7 @@ on:
       - main  # Trigger the workflow on pushes to the `main` branch
 permissions:
   id-token: write
+  pages: write
   contents: read
 
 jobs:
