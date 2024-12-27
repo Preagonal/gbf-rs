@@ -108,7 +108,7 @@ Please ensure your code passes all tests and adheres to the project’s style gu
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Mozilla Public License v2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
