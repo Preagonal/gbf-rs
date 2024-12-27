@@ -18,8 +18,9 @@ jobs:
 
     env:
       CARGO_INCREMENTAL: 0
-      RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
-    #   LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
+      # Using -Zprofile for LLVM instrumentation:
+      RUSTFLAGS: "-Cinstrument-coverage -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+      LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
       RUSTDOCFLAGS: "-Cpanic=abort"
       RUSTC_BOOTSTRAP: 1
 
@@ -40,44 +41,60 @@ jobs:
         run: rustup component add llvm-tools-preview
 
       # Step 4: Install grcov
-    #   - name: Install grcov
-    #     run: cargo install grcov
+      - name: Install grcov
+        run: cargo install grcov
 
-      # Step 5: Create coverage dir (optional)
-    #   - name: Prepare coverage directory
-    #     run: mkdir -p target/coverage
+      # Step 5: Prepare coverage directory
+      - name: Prepare coverage directory
+        run: mkdir -p target/coverage
 
-      # Step 6: Build project
-    #   - name: Build Project
-    #     run: cargo build --workspace
+      # Step 6: Build the Project with instrumentation
+      - name: Build Project
+        run: cargo build --workspace
 
-      # Step 7: Run tests with coverage
+      # Step 7: Run tests with coverage instrumentation
       - name: Run tests with coverage
         run: cargo test --workspace --verbose
 
-      # Step 8: Verify coverage files
-      - name: Verify coverage files
-        run: ls -l target/**/*.gcno
+      # Step 8: Generate lcov.info with grcov
+      - name: Generate LCOV file
+        run: |
+          # Create a coverage/ subdir to store the LCOV output
+          mkdir -p target/coverage
+          # Generate the LCOV (lcov.info) file
+          grcov target/coverage \
+            -s . \
+            -b target/debug \
+            --llvm \
+            --branch \
+            --ignore-not-existing \
+            -t lcov \
+            -o target/coverage/lcov.info
 
-    #   # Step 9: Generate grcov report
-    #   - name: Generate grcov report
-    #     run: |
-    #       mkdir -p target/coverage/html
-    #       grcov target/coverage -s . -b ./target/debug \
-    #         -t html --llvm --branch --ignore-not-existing \
-    #         -o target/coverage/html
+      # Step 9: Optionally, generate an HTML report for debugging or local artifact
+      - name: Generate HTML report (optional)
+        run: |
+          mkdir -p target/coverage/html
+          grcov target/coverage \
+            -s . \
+            -b target/debug \
+            --llvm \
+            --branch \
+            --ignore-not-existing \
+            -t html \
+            -o target/coverage/html
 
-      # Step 10: Upload Coverage Report
-    #   - name: Upload Coverage Report
-    #     uses: actions/upload-artifact@v3
-    #     with:
-    #       name: grcov-coverage-report
-    #       path: target/coverage/html
+      # Step 10: Upload HTML Coverage (optional)
+      - name: Upload HTML Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: grcov-coverage-report
+          path: target/coverage/html
 
-      # Upload coverage data to Codecov
+      # Step 11: Upload coverage data to Codecov
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: target/**/*.gcno
+          files: target/coverage/lcov.info
           flags: unittests
