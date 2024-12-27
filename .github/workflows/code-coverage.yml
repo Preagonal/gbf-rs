@@ -1,0 +1,54 @@
+name: Code Coverage
+
+on:
+  push:
+    branches:
+      - main  # Run on pushes to `main`
+  pull_request:
+    branches:
+      - main  # Run on pull requests targeting `main`
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Run Code Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Install Rust
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Step 3: Install `cargo-llvm-cov`
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov
+
+      # Step 4: Run tests with coverage
+      - name: Run Coverage
+        run: cargo llvm-cov --workspace --coverage-target=100
+
+      # Step 5: Upload Coverage Report
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: target/llvm-cov-html
+    
+      # TODO: Do we have to rely on a third party?
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+            token: ${{ secrets.CODECOV_TOKEN }}
+            files: target/llvm-cov/*.profdata
+            flags: unittests
+            name: gbf-rs
+

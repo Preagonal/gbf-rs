@@ -1,8 +1,12 @@
 name: Rust CI
 
 on:
-  push:  # Run on pushes to any branch
-  pull_request:  # Run on all pull requests
+  push:
+    branches:
+      - main  # Run on pushes to `main`
+  pull_request:
+    branches:
+      - main  # Run on pull requests targeting `main`
 
 jobs:
   check:
