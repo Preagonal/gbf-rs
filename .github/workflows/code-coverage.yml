@@ -55,7 +55,7 @@ jobs:
 
       # Step 8: Verify coverage files
       - name: Verify coverage files
-        run: ls -l target/debug/deps/*.gcno
+        run: ls -l target/**/*.gcno
 
     #   # Step 9: Generate grcov report
     #   - name: Generate grcov report
@@ -77,5 +77,5 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: target/debug/deps/*.gcno
+          files: ls -l target/**/*.gcno
           flags: unittests
