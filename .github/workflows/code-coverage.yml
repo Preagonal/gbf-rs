@@ -39,21 +39,28 @@ jobs:
       # Step 5: Set up Rust flags for coverage
       - name: Set up environment
         run: |
+          mkdir -p target/coverage
           export CARGO_INCREMENTAL=0
           export RUSTFLAGS="-Cinstrument-coverage"
-          export LLVM_PROFILE_FILE="target/coverage/%m.profraw"
+          export LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw"
 
       # Step 6: Run tests to generate coverage data
       - name: Run tests with coverage
         run: cargo test --workspace --verbose
+        env:
+          LLVM_PROFILE_FILE: target/coverage/%p-%m.profraw
 
-      # Step 7: Generate grcov report
+      # Step 7: Verify profraw files exist
+      - name: Verify coverage files
+        run: ls -l target/coverage/*.profraw
+
+      # Step 8: Generate grcov report
       - name: Generate grcov report
         run: |
           mkdir -p target/coverage/html
           grcov target/coverage -s . -b ./target/debug -t html --llvm --branch --ignore-not-existing -o target/coverage/html
 
-      # Step 8: Upload Coverage Report
+      # Step 9: Upload Coverage Report
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v3
         with:
@@ -68,5 +75,3 @@ jobs:
           files: target/coverage/*.profraw
           flags: unittests
           name: gbf-rs
-
-
