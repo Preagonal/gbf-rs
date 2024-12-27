@@ -1,0 +1,9 @@
+[package]
+name = "gbf-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+log = "0.4.22"
+serde = {version = "1.0.216", features = ["derive"]}
+thiserror = "2.0.8"
