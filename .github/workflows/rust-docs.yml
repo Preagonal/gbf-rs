@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main  # Trigger the workflow on pushes to the `main` branch
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   # Build job: Generate Rust documentation
