@@ -71,27 +71,7 @@ jobs:
             -t lcov \
             -o target/coverage/lcov.info
 
-      # Step 9: Optionally, generate an HTML report for debugging or local artifact
-      - name: Generate HTML report (optional)
-        run: |
-          mkdir -p target/coverage/html
-          grcov target/coverage \
-            -s . \
-            -b target/debug \
-            --llvm \
-            --branch \
-            --ignore-not-existing \
-            -t html \
-            -o target/coverage/html
-
-      # Step 10: Upload HTML Coverage (optional)
-      - name: Upload HTML Coverage
-        uses: actions/upload-artifact@v3
-        with:
-          name: grcov-coverage-report
-          path: target/coverage/html
-
-      # Step 11: Upload coverage data to Codecov
+      # Step 9: Upload coverage data to Codecov
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
