@@ -1,5 +1,4 @@
 #![deny(missing_docs)]
-#![deny(rustdoc::missing_doc_code_examples)]
 
 use core::fmt;
 use serde::{Deserialize, Serialize};
@@ -18,18 +17,6 @@ pub enum Operand {
 }
 
 impl Operand {
-    /// Converts the operand to a string.
-    ///
-    /// # Returns
-    /// - The string representation of the operand.
-    pub fn to_string(&self) -> String {
-        match self {
-            Operand::String(value) => value.clone(),
-            Operand::Float(value) => value.clone(),
-            Operand::Int(value) => value.to_string(),
-        }
-    }
-
     /// Creates a new string operand.
     ///
     /// # Arguments
@@ -91,7 +78,12 @@ impl Operand {
 
 impl fmt::Display for Operand {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        match self {
+            Operand::String(value) => value.clone(),
+            Operand::Float(value) => value.clone(),
+            Operand::Int(value) => value.to_string(),
+        }
+        .fmt(f)
     }
 }
 

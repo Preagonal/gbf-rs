@@ -1,6 +1,4 @@
-#![feature(rustdoc_missing_doc_code_examples)]
 #![deny(missing_docs)]
-#![deny(rustdoc::missing_doc_code_examples)]
 
 //! This crate provides basic block definitions, function definitions, module definitions,
 //! graph definitions, instruction definitions, opcode definitions, and operand definitions.

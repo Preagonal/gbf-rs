@@ -1,5 +1,4 @@
 #![deny(missing_docs)]
-#![deny(rustdoc::missing_doc_code_examples)]
 
 use std::fmt;
 use std::{collections::HashMap, hash::Hash};
@@ -88,7 +87,7 @@ impl FunctionId {
     /// assert!(entry.is_named());
     /// ```
     pub fn is_named(&self) -> bool {
-        !self.name.is_some()
+        self.name.is_none()
     }
 }
 
@@ -310,7 +309,7 @@ impl Function {
             .ok_or(FunctionError::BasicBlockNodeIdNotFound(target))?;
         self.cfg
             .add_edge(source_node_id, target_node_id)
-            .or_else(|e| Err(FunctionError::GraphError(e)))
+            .map_err(FunctionError::GraphError)
     }
 
     /// Get the predecessors of a `BasicBlock`.
@@ -340,7 +339,7 @@ impl Function {
     pub fn get_predecessors(&self, id: BasicBlockId) -> Result<Vec<BasicBlockId>, FunctionError> {
         let node_id = self
             .block_id_to_node_id(id)
-            .ok_or(FunctionError::BasicBlockNodeIdNotFound(id.clone()))?;
+            .ok_or(FunctionError::BasicBlockNodeIdNotFound(id))?;
         let preds = self
             .cfg
             .get_predecessors(node_id)
@@ -379,7 +378,7 @@ impl Function {
     pub fn get_successors(&self, id: BasicBlockId) -> Result<Vec<BasicBlockId>, FunctionError> {
         let node_id = self
             .block_id_to_node_id(id)
-            .ok_or(FunctionError::BasicBlockNodeIdNotFound(id.clone()))?;
+            .ok_or(FunctionError::BasicBlockNodeIdNotFound(id))?;
         let succs = self
             .cfg
             .get_successors(node_id)

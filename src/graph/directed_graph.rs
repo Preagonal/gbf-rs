@@ -1,8 +1,10 @@
 #![deny(missing_docs)]
-#![deny(rustdoc::missing_doc_code_examples)]
 
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+};
 use thiserror::Error;
 
 /// Error type for Graph operations
@@ -20,13 +22,20 @@ pub enum GraphError {
 }
 
 /// Represents a unique identifier for a node in the graph.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct NodeId(usize);
 
 // Implement the `PartialOrd` trait for `NodeId` to allow sorting for test cases
 impl PartialOrd for NodeId {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.0.cmp(&other.0))
+    }
+}
+
+// Implement the `Ord` trait for `NodeId` to allow sorting for test cases
+impl Ord for NodeId {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
     }
 }
 
@@ -83,6 +92,28 @@ pub struct DirectedGraph<T> {
     nodes: HashMap<NodeId, Node<T>>, // Maps NodeId to Node
     node_map: HashMap<T, NodeId>,    // Maps node values to NodeId
     next_id: usize,                  // Tracks the next available NodeId
+}
+
+/// Implement the `Default` trait for `DirectedGraph`.
+impl<T> Default for DirectedGraph<T> {
+    /// Creates a new, empty directed graph using the `Default` trait.
+    ///
+    /// # Returns
+    /// A new `DirectedGraph` instance.
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    ///
+    /// let graph: DirectedGraph<i32> = DirectedGraph::default();
+    /// ```
+    fn default() -> Self {
+        Self {
+            nodes: HashMap::new(),
+            node_map: HashMap::new(),
+            next_id: 0,
+        }
+    }
 }
 
 impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> DirectedGraph<T> {
@@ -254,7 +285,7 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
         dot.push_str("    node [shape=\"none\", fontname=\"Courier\", fontsize=\"12\"];\n");
 
         // Render each node using the resolver.
-        for (node_id, _node) in &self.nodes {
+        for node_id in self.nodes.keys() {
             if let Some(data) = resolver.resolve(*node_id) {
                 dot.push_str(&format!(
                     "    N{} [shape=plaintext,label=<\n{}    >];\n",

@@ -1,5 +1,4 @@
 #![deny(missing_docs)]
-#![deny(rustdoc::missing_doc_code_examples)]
 
 use std::{
     fmt::{self, Write},

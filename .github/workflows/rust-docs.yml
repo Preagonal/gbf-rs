@@ -19,7 +19,9 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          # Use the nightly toolchain to build the documentation
+          # TODO: Change this to `stable` once the feature is stable
+          toolchain: nightly
           override: true
 
       # Build the Rust documentation

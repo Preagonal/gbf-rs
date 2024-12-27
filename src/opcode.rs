@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
-#![deny(rustdoc::missing_doc_code_examples)]
 
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use thiserror::Error;
 
 /// Error type for invalid opcodes.
@@ -76,17 +76,21 @@ macro_rules! define_opcodes {
                     )*
                 }
             }
+        }
+
+        impl FromStr for Opcode {
+            type Err = OpcodeError;
 
             /// Convert a string to an `Opcode`
             ///
             /// # Arguments
             /// - `name`: The string to convert.
-            pub fn from_str(name: &str) -> Result<Self, OpcodeError> {
-                match name {
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                match s {
                     $(
                         stringify!($name) => Ok(Opcode::$name),
                     )*
-                    _ => Err(OpcodeError::InvalidOpcodeString(name.to_string())),
+                    _ => Err(OpcodeError::InvalidOpcodeString(s.to_string())),
                 }
             }
         }

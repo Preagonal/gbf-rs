@@ -1,5 +1,4 @@
 #![deny(missing_docs)]
-#![deny(rustdoc::missing_doc_code_examples)]
 
 use serde::{Deserialize, Serialize};
 
@@ -52,7 +51,10 @@ impl Instruction {
             operand: Some(operand),
         }
     }
+}
 
+/// Implement the `Display` trait for `Instruction`.
+impl std::fmt::Display for Instruction {
     /// Convert the Instruction to a string
     ///
     /// # Returns
@@ -68,18 +70,11 @@ impl Instruction {
     /// let string = instruction.to_string();
     /// assert_eq!(string, "PushNumber 42");
     /// ```
-    pub fn to_string(&self) -> String {
-        match &self.operand {
-            Some(operand) => format!("{} {}", self.opcode.to_string(), operand.to_string()),
-            None => self.opcode.to_string().to_string(),
-        }
-    }
-}
-
-/// Implement the `Display` trait for `Instruction`.
-impl std::fmt::Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        match &self.operand {
+            Some(operand) => write!(f, "{} {}", self.opcode.to_string(), operand),
+            None => write!(f, "{}", self.opcode.to_string()),
+        }
     }
 }
 

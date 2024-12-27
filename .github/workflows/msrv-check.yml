@@ -1,0 +1,33 @@
+name: MSRV Check
+
+on:
+  push:
+    branches:
+      - main  # Run on pushes to `main`
+  pull_request:
+    branches:
+      - main  # Run on pull requests targeting `main`
+
+jobs:
+  msrv-check:
+    name: Minimum Supported Rust Version Check
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Install Rust 1.61.0
+      - name: Install MSRV (1.61.0)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.61.0
+          override: true
+
+      # Verify the project builds with MSRV
+      - name: Build and Test with MSRV
+        run: |
+          cargo clean
+          cargo build --workspace --all-targets
+          cargo test --workspace --all-targets

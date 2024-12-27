@@ -1,5 +1,4 @@
 #![deny(missing_docs)]
-#![deny(rustdoc::missing_doc_code_examples)]
 
 use std::io::{self, Read, Write};
 
@@ -1036,33 +1035,27 @@ mod tests {
     fn test_write_gu16() {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu16(1).unwrap();
-        assert_eq!(writer.inner.into_inner(), vec![32 + 0, 32 + 1]);
+        assert_eq!(writer.inner.into_inner(), vec![32, 32 + 1]);
     }
 
     #[test]
     fn test_write_gu24() {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu24(1).unwrap();
-        assert_eq!(writer.inner.into_inner(), vec![32 + 0, 32 + 0, 32 + 1]);
+        assert_eq!(writer.inner.into_inner(), vec![32, 32, 32 + 1]);
     }
 
     #[test]
     fn test_write_gu32() {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu32(1).unwrap();
-        assert_eq!(
-            writer.inner.into_inner(),
-            vec![32 + 0, 32 + 0, 32 + 0, 32 + 1]
-        );
+        assert_eq!(writer.inner.into_inner(), vec![32, 32, 32, 32 + 1]);
     }
 
     #[test]
     fn test_write_gu40() {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu40(1).unwrap();
-        assert_eq!(
-            writer.inner.into_inner(),
-            vec![32 + 0, 32 + 0, 32 + 0, 32 + 0, 32 + 1]
-        );
+        assert_eq!(writer.inner.into_inner(), vec![32, 32, 32, 32, 32 + 1]);
     }
 }
