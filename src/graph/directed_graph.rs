@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
 /// Error type for Graph operations
-/// 
+///
 /// # Variants
 /// - `NodeNotFound`: The requested node was not found.
 /// - `EdgeAlreadyExists`: An edge already exists between the two nodes.
@@ -38,17 +38,17 @@ pub struct Node<T> {
 
 impl<T> Node<T> {
     /// Creates a new node with the given value.
-    /// 
+    ///
     /// # Arguments
     /// - `value`: The value to store in the node.
-    /// 
+    ///
     /// # Returns
     /// A new `Node` instance.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::Node;
-    /// 
+    ///
     /// let node = Node::new(42);
     /// ```
     pub fn new(value: T) -> Self {
@@ -78,20 +78,20 @@ pub trait NodeResolver {
 #[derive(Debug)]
 pub struct DirectedGraph<T> {
     nodes: HashMap<NodeId, Node<T>>, // Maps NodeId to Node
-    node_map: HashMap<T, NodeId>,   // Maps node values to NodeId
-    next_id: usize,             // Tracks the next available NodeId
+    node_map: HashMap<T, NodeId>,    // Maps node values to NodeId
+    next_id: usize,                  // Tracks the next available NodeId
 }
 
 impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> DirectedGraph<T> {
     /// Creates a new, empty directed graph.
-    /// 
+    ///
     /// # Returns
     /// A new `DirectedGraph` instance.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// 
+    ///
     /// let graph: DirectedGraph<i32> = DirectedGraph::new();
     /// ```
     pub fn new() -> Self {
@@ -103,14 +103,14 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     }
 
     /// Get the total number of nodes in the graph
-    /// 
+    ///
     /// # Returns
     /// The number of nodes in the graph.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// 
+    ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
     /// let b = graph.add_node(43);
@@ -121,17 +121,17 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     }
 
     /// Adds a node to the graph. Returns the index of the node.
-    /// 
+    ///
     /// # Arguments
     /// - `value`: The value to store in the node.
-    /// 
+    ///
     /// # Returns
     /// The index of the newly added node.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// 
+    ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let node_id = graph.add_node(42);
     /// ```
@@ -149,18 +149,18 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     }
 
     /// Adds a directed edge from `from` to `to`.
-    /// 
+    ///
     /// # Arguments
     /// - `from`: The source node.
     /// - `to`: The target node.
-    /// 
+    ///
     /// # Errors
     /// - `GraphError::NodeNotFound` if either node does not exist.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// 
+    ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
     /// let b = graph.add_node(43);
@@ -255,8 +255,8 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
             if let Some(data) = resolver.resolve(*node_id) {
                 dot.push_str(&format!(
                     "    N{} [shape=plaintext,label=<\n{}    >];\n",
-                    node_id.0,      // NodeId
-                    data.render_node(8) // Node label with padding
+                    node_id.0,           // NodeId
+                    data.render_node(8)  // Node label with padding
                 ));
             }
         }
@@ -266,7 +266,8 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
             for &successor_id in &node.successors {
                 dot.push_str(&format!(
                     "    N{} -> N{};\n",
-                    node_id.0, successor_id.0 // Edge from source to target
+                    node_id.0,
+                    successor_id.0 // Edge from source to target
                 ));
             }
         }
@@ -278,20 +279,20 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     }
 
     /// Gets the successors of a NodeId.
-    /// 
+    ///
     /// # Arguments
     /// - `value`: The NodeId.
-    /// 
+    ///
     /// # Returns
     /// A vector of references to the successor NodeIds.
-    /// 
+    ///
     /// # Errors
     /// - `GraphError::NodeNotFound` if the node does not exist.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// 
+    ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
     /// let b = graph.add_node(43);
@@ -307,20 +308,20 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     }
 
     /// Gets the predecessors of a NodeId.
-    /// 
+    ///
     /// # Arguments
     /// - `value`: The value of the NodeId.
-    /// 
+    ///
     /// # Returns
     /// A vector of references to the predecessor NodeIds.
-    /// 
+    ///
     /// # Errors
     /// - `GraphError::NodeNotFound` if the node does not exist.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// 
+    ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
     /// let b = graph.add_node(43);
@@ -336,20 +337,20 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     }
 
     /// Gets the value of a node by its NodeId.
-    /// 
+    ///
     /// # Arguments
     /// - `node`: The NodeId.
-    /// 
+    ///
     /// # Returns
     /// The value of the node.
-    /// 
+    ///
     /// # Errors
     /// - `GraphError::NodeNotFound` if the node does not exist.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// 
+    ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
     /// let value = graph.get_node_value(a).unwrap();
@@ -363,20 +364,20 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     }
 
     /// Gets a vector of values for nodes based on their NodeIds.
-    /// 
+    ///
     /// # Arguments
     /// - `nodes`: A vector of NodeIds.
-    /// 
+    ///
     /// # Returns
     /// A vector of values for the given NodeIds.
-    /// 
+    ///
     /// # Errors
     /// - `GraphError::NodeNotFound` if any of the nodes do not exist.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// 
+    ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
     /// let b = graph.add_node(43);
@@ -394,20 +395,20 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
 
 impl<T: Eq + std::hash::Hash + Clone + std::fmt::Debug> DirectedGraph<T> {
     /// Performs a depth-first search (DFS) from the given node.
-    /// 
+    ///
     /// # Arguments
     /// - `start`: The value of the starting node.
-    /// 
+    ///
     /// # Returns
     /// A vector of node ids in DFS order.
-    /// 
+    ///
     /// # Errors
     /// - `GraphError::NodeNotFound` if the starting node does not exist.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// 
+    ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
     /// let b = graph.add_node(43);
@@ -423,7 +424,7 @@ impl<T: Eq + std::hash::Hash + Clone + std::fmt::Debug> DirectedGraph<T> {
 
     /// Helper function for DFS. This is a recursive function that visits each node
     /// and its successors in depth-first order.
-    /// 
+    ///
     /// # Arguments
     /// - `index`: The index of the current node.
     /// - `visited`: A set of visited node indices.
@@ -470,20 +471,20 @@ impl<T: Eq + std::hash::Hash + Clone + std::fmt::Debug> DirectedGraph<T> {
 
     /// Returns nodes in reverse postorder starting from the given entry node.
     /// This is useful for analyzing and transforming control flow graphs.
-    /// 
+    ///
     /// # Arguments
     /// - `start`: The value of the starting node.
-    /// 
+    ///
     /// # Returns
     /// A vector of node ids in reverse post order.
-    /// 
+    ///
     /// # Errors
     /// - `GraphError::NodeNotFound` if the starting node does not exist.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// 
+    ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
     /// let b = graph.add_node(43);
@@ -511,7 +512,7 @@ impl<T: Eq + std::hash::Hash + Clone + std::fmt::Debug> DirectedGraph<T> {
     }
 
     /// Helper function for reverse postorder traversal.
-    /// 
+    ///
     /// # Arguments
     /// - `node_id`: The id of the current node.
     /// - `visited`: A set of visited node indices.
@@ -555,7 +556,6 @@ impl<T: Eq + std::hash::Hash + Clone + std::fmt::Debug> DirectedGraph<T> {
 
         Ok(())
     }
-
 }
 
 #[cfg(test)]
@@ -707,5 +707,4 @@ mod tests {
         let result = graph.reverse_postorder(NodeId(100));
         assert!(result.is_err());
     }
-
 }

@@ -27,7 +27,7 @@ pub struct GraalWriter<W: Write> {
 }
 
 /// Errors that can occur when reading or writing to a GraalReader / GraalWriter.
-/// 
+///
 /// # Variants
 /// - `NoNullTerminator`: A null terminator was not found when reading a string.
 /// - `Utf8ConversionFailed`: A UTF-8 conversion failed.
@@ -41,49 +41,48 @@ pub enum GraalIoError {
     #[error("UTF8 string conversion failed: {0}")]
     Utf8ConversionFailed(String),
 
-    #[error("Value exceeds maximum for Graal-encoded integer. Value was {0}, but cannot exceed {1}.")]
+    #[error(
+        "Value exceeds maximum for Graal-encoded integer. Value was {0}, but cannot exceed {1}."
+    )]
     ValueExceedsMaximum(u64, u64),
 
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
 }
 
-
 impl<R: Read> GraalReader<R> {
-    /// Creates a new GraalReader 
-    /// 
+    /// Creates a new GraalReader
+    ///
     /// # Arguments
     /// - `inner`: The reader to wrap.
-    /// 
+    ///
     /// # Returns
     /// - A new GraalReader with the given bytes.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let reader = GraalReader::new(Cursor::new(vec![1, 2, 3, 4]));
     /// ```
     pub fn new(inner: R) -> Self {
-        Self {
-            inner
-        }
+        Self { inner }
     }
 
     /// Decodes a sequence of bytes using the Graal encoding.
-    /// 
+    ///
     /// # Arguments
     /// - `slice`: The slice of bytes to decode.
-    /// 
+    ///
     /// # Returns
     /// - The decoded integer.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let value = GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[32, 32, 32, 33]);
     /// assert_eq!(value, 1);
     /// ```
@@ -108,12 +107,12 @@ impl<R: Read> GraalReader<R> {
     /// - `GraalIoError::NoNullTerminator`: If the null terminator (`0x00`) is not found.
     /// - `GraalIoError::Utf8ConversionFailed`: If the bytes cannot be converted to a UTF-8 string.
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![104, 101, 108, 108, 111, 0, 119, 111, 114, 108, 100, 0]));
     /// assert_eq!(reader.read_string().unwrap(), "hello");
     /// ```
@@ -146,12 +145,12 @@ impl<R: Read> GraalReader<R> {
     /// - `GraalIoError::Utf8ConversionFailed`: If the bytes cannot be converted to a UTF-8 string.
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
     /// - `GraalIoError::ValueExceedsMaximum`: If the value exceeds the maximum for a Graal-encoded integer.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 5, 104, 101, 108, 108, 111, 32 + 5, 119, 111, 114, 108, 100]));
     /// assert_eq!(reader.read_gstring().unwrap(), "hello");
     /// assert_eq!(reader.read_gstring().unwrap(), "world");
@@ -169,18 +168,18 @@ impl<R: Read> GraalReader<R> {
     }
 
     /// Reads an unsigned char from the reader.
-    /// 
+    ///
     /// # Returns
     /// - The unsigned char read from the reader.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![1, 2]));
     /// assert_eq!(reader.read_u8().unwrap(), 1);
     /// assert_eq!(reader.read_u8().unwrap(), 2);
@@ -192,18 +191,18 @@ impl<R: Read> GraalReader<R> {
     }
 
     /// Read an unsigned short from the reader.
-    /// 
+    ///
     /// # Returns
     /// - The unsigned short read from the reader.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![1, 0, 2, 0]));
     /// assert_eq!(reader.read_u16().unwrap(), 1);
     /// assert_eq!(reader.read_u16().unwrap(), 2);
@@ -215,18 +214,18 @@ impl<R: Read> GraalReader<R> {
     }
 
     /// Read an unsigned int from the reader.
-    /// 
+    ///
     /// # Returns
     /// - The unsigned int read from the reader.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![1, 0, 0, 0, 2, 0, 0, 0]));
     /// assert_eq!(reader.read_u32().unwrap(), 1);
     /// assert_eq!(reader.read_u32().unwrap(), 2);
@@ -238,18 +237,18 @@ impl<R: Read> GraalReader<R> {
     }
 
     /// Reads a Graal encoded unsigned 8-bit integer from the reader.
-    /// 
+    ///
     /// # Returns
     /// - The decoded unsigned char.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1]));
     /// assert_eq!(reader.read_gu8().unwrap(), 1);
     /// ```
@@ -258,18 +257,18 @@ impl<R: Read> GraalReader<R> {
     }
 
     /// Reads a Graal encoded unsigned 16-bit integer from the reader.
-    /// 
+    ///
     /// # Returns
     /// - The decoded unsigned short.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1]));
     /// assert_eq!(reader.read_gu16().unwrap(), 129);
     /// ```
@@ -278,18 +277,18 @@ impl<R: Read> GraalReader<R> {
     }
 
     /// Reads a Graal encoded unsigned 24-bit integer from the reader.
-    /// 
+    ///
     /// # Returns
     /// - The decoded unsigned int.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1, 32 + 1]));
     /// assert_eq!(reader.read_gu24().unwrap(), 16513);
     /// ```
@@ -298,18 +297,18 @@ impl<R: Read> GraalReader<R> {
     }
 
     /// Reads a Graal encoded unsigned 32-bit integer from the reader.
-    /// 
+    ///
     /// # Returns
     /// - The decoded unsigned int.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1, 32 + 1, 32 + 1]));
     /// assert_eq!(reader.read_gu32().unwrap(), 2113665);
     /// ```
@@ -318,18 +317,18 @@ impl<R: Read> GraalReader<R> {
     }
 
     /// Reads a Graal encoded unsigned 40-bit integer from the reader.
-    /// 
+    ///
     /// # Returns
     /// - The decoded unsigned int.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1, 32 + 1, 32 + 1, 32 + 1]));
     /// assert_eq!(reader.read_gu40().unwrap(), 270549121);
     /// ```
@@ -347,12 +346,12 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Errors
     /// - `GraalIoError::Io`: If an I/O error occurs
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1, 32 + 1, 32 + 1, 32 + 1]));
     /// assert_eq!(reader.read_gu(5).unwrap(), 270549121);
     /// ```
@@ -368,43 +367,41 @@ impl<R: Read> GraalReader<R> {
 }
 
 impl<W: Write> GraalWriter<W> {
-    /// Creates a new GraalWriter 
-    /// 
+    /// Creates a new GraalWriter
+    ///
     /// # Arguments
     /// - `inner`: The writer to wrap.
-    /// 
+    ///
     /// # Returns
     /// - A new GraalWriter with the given bytes.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let data = vec![0];
     /// let writer = GraalWriter::new(Cursor::new(data));
     /// ```
     pub fn new(inner: W) -> Self {
-        Self {
-            inner
-        }
+        Self { inner }
     }
 
     /// Encodes a value as a sequence of bytes using the Graal encoding.
-    /// 
+    ///
     /// # Arguments
     /// - `value`: The value to encode.
     /// - `buffer`: The buffer to write the encoded bytes to.
     /// - `byte_count`: The number of bytes to encode.
-    /// 
+    ///
     /// # Returns
     /// - The encoded bytes.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut buffer = vec![0, 0, 0, 0];
     /// GraalWriter::<Cursor<Vec<u8>>>::encode_bits(1, &mut buffer, 4);
     /// assert_eq!(buffer, vec![32, 32, 32, 33]);
@@ -442,15 +439,15 @@ impl<W: Write> GraalWriter<W> {
     }
 
     /// Write a string to the writer, followed by a null terminator.
-    /// 
+    ///
     /// # Arguments
     /// - `s`: The string to write.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
     /// writer.write_string("hello").unwrap();
     /// writer.write_string("world").unwrap();
@@ -469,12 +466,12 @@ impl<W: Write> GraalWriter<W> {
     /// # Errors
     /// - `GraalIoError::ValueExceedsMaximum`: If the string is too long to be represented by a Graal encoded 8 bit integer.
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
     /// writer.write_gstring("hello").unwrap();
     /// ```
@@ -491,18 +488,18 @@ impl<W: Write> GraalWriter<W> {
     }
 
     /// Writes an unsigned 8-bit integer to the writer.
-    /// 
+    ///
     /// # Arguments
     /// - `c`: The unsigned char to write.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
     /// writer.write_u8(1);
     /// writer.write_u8(2);
@@ -516,18 +513,18 @@ impl<W: Write> GraalWriter<W> {
     }
 
     /// Write an unsigned 16-bit integer to the writer.
-    /// 
+    ///
     /// # Arguments
     /// - `s`: The unsigned short to write.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
     /// writer.write_u16(1);
     /// ```
@@ -538,18 +535,18 @@ impl<W: Write> GraalWriter<W> {
     }
 
     /// Write an unsigned 32-bit integer to the writer.
-    /// 
+    ///
     /// # Arguments
     /// - `i`: The unsigned int to write.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
     /// writer.write_u32(1).unwrap();
     /// ```
@@ -560,19 +557,19 @@ impl<W: Write> GraalWriter<W> {
     }
 
     /// Writes an encoded Graal unsigned 8-bit integer.
-    /// 
+    ///
     /// # Arguments
     /// - `v`: The value to write.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::ValueExceedsMaximum`: If the value exceeds the maximum for a Graal-encoded integer.
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
     /// writer.write_gu8(1).unwrap();
     /// ```
@@ -588,19 +585,19 @@ impl<W: Write> GraalWriter<W> {
     }
 
     /// Writes an encoded Graal unsigned 16-bit integer.
-    /// 
+    ///
     /// # Arguments
     /// - `v`: The value to write.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::ValueExceedsMaximum`: If the value exceeds the maximum for a Graal-encoded integer.
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
     /// writer.write_gu16(1).unwrap();
     /// ```
@@ -616,19 +613,19 @@ impl<W: Write> GraalWriter<W> {
     }
 
     /// Writes an encoded Graal unsigned 24-bit integer.
-    /// 
+    ///
     /// # Arguments
     /// - `v`: The value to write.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::ValueExceedsMaximum`: If the value exceeds the maximum for a Graal-encoded integer.
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
     /// writer.write_gu24(1).unwrap();
     /// ```
@@ -644,19 +641,19 @@ impl<W: Write> GraalWriter<W> {
     }
 
     /// Writes an encoded Graal unsigned 32-bit integer.
-    /// 
+    ///
     /// # Arguments
     /// - `v`: The value to write.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::ValueExceedsMaximum`: If the value exceeds the maximum for a Graal-encoded integer.
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
     /// writer.write_gu32(1).unwrap();
     /// ```
@@ -672,19 +669,19 @@ impl<W: Write> GraalWriter<W> {
     }
 
     /// Writes an encoded Graal unsigned 40-bit integer.
-    /// 
+    ///
     /// # Arguments
     /// - `v`: The value to write.
-    /// 
+    ///
     /// # Errors
     /// - `GraalIoError::ValueExceedsMaximum`: If the value exceeds the maximum for a Graal-encoded integer.
     /// - `GraalIoError::Io`: If there is an underlying I/O error.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use gbf_rs::graal_io::GraalWriter;
     /// use std::io::Cursor;
-    /// 
+    ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
     /// writer.write_gu40(1).unwrap();
     /// ```
@@ -726,7 +723,12 @@ mod tests {
 
         // Test for GUINT24
         let data = [
-            MAX_ENCODED, MAX_ENCODED, MAX_ENCODED, MIN_ENCODED, MIN_ENCODED, MIN_ENCODED,
+            MAX_ENCODED,
+            MAX_ENCODED,
+            MAX_ENCODED,
+            MIN_ENCODED,
+            MIN_ENCODED,
+            MIN_ENCODED,
         ];
         let mut reader = GraalReader::new(Cursor::new(&data));
         assert_eq!(reader.read_gu24().unwrap(), GUINT24_MAX);
@@ -734,8 +736,14 @@ mod tests {
 
         // Test for GUINT32
         let data = [
-            MAX_ENCODED, MAX_ENCODED, MAX_ENCODED, MAX_ENCODED, MIN_ENCODED, MIN_ENCODED,
-            MIN_ENCODED, MIN_ENCODED,
+            MAX_ENCODED,
+            MAX_ENCODED,
+            MAX_ENCODED,
+            MAX_ENCODED,
+            MIN_ENCODED,
+            MIN_ENCODED,
+            MIN_ENCODED,
+            MIN_ENCODED,
         ];
         let mut reader = GraalReader::new(Cursor::new(&data));
         assert_eq!(reader.read_gu32().unwrap(), GUINT32_MAX);
@@ -785,11 +793,26 @@ mod tests {
 
     #[test]
     fn test_decode_bits() {
-        assert_eq!(GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[32, 32, 32, 32]), 0);
-        assert_eq!(GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[32, 32, 32, 33]), 1);
-        assert_eq!(GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[32, 32, 33, 32]), 128);
-        assert_eq!(GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[32, 33, 32, 32]), 16384);
-        assert_eq!(GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[33, 32, 32, 32]), 2097152);
+        assert_eq!(
+            GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[32, 32, 32, 32]),
+            0
+        );
+        assert_eq!(
+            GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[32, 32, 32, 33]),
+            1
+        );
+        assert_eq!(
+            GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[32, 32, 33, 32]),
+            128
+        );
+        assert_eq!(
+            GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[32, 33, 32, 32]),
+            16384
+        );
+        assert_eq!(
+            GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[33, 32, 32, 32]),
+            2097152
+        );
     }
 
     #[test]
@@ -819,12 +842,16 @@ mod tests {
 
     #[test]
     fn test_read_string() {
-        let mut reader = GraalReader::new(Cursor::new(vec![104, 101, 108, 108, 111, 0, 119, 111, 114, 108, 100, 0]));
+        let mut reader = GraalReader::new(Cursor::new(vec![
+            104, 101, 108, 108, 111, 0, 119, 111, 114, 108, 100, 0,
+        ]));
         assert_eq!(reader.read_string().unwrap(), "hello");
         assert_eq!(reader.read_string().unwrap(), "world");
 
         // read a string that doesn't have a null terminator
-        let mut reader = GraalReader::new(Cursor::new(vec![104, 101, 108, 108, 111, 119, 111, 114, 108, 100]));
+        let mut reader = GraalReader::new(Cursor::new(vec![
+            104, 101, 108, 108, 111, 119, 111, 114, 108, 100,
+        ]));
         assert!(reader.read_string().is_err());
 
         // read a string that is empty
@@ -834,7 +861,20 @@ mod tests {
 
     #[test]
     fn test_read_gstring() {
-        let mut reader = GraalReader::new(Cursor::new(vec![32 + 5, 104, 101, 108, 108, 111, 32 + 5, 119, 111, 114, 108, 100]));
+        let mut reader = GraalReader::new(Cursor::new(vec![
+            32 + 5,
+            104,
+            101,
+            108,
+            108,
+            111,
+            32 + 5,
+            119,
+            111,
+            114,
+            108,
+            100,
+        ]));
         assert_eq!(reader.read_gstring().unwrap(), "hello");
         assert_eq!(reader.read_gstring().unwrap(), "world");
 
@@ -892,7 +932,8 @@ mod tests {
 
     #[test]
     fn test_read_gu40() {
-        let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1, 32 + 1, 32 + 1, 32 + 1]));
+        let mut reader =
+            GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1, 32 + 1, 32 + 1, 32 + 1]));
         assert_eq!(reader.read_gu40().unwrap(), 270549121);
     }
 
@@ -905,7 +946,23 @@ mod tests {
         let mut writer = GraalWriter::new(cursor);
         writer.write_gstring("hello").unwrap();
         writer.write_gstring("world").unwrap();
-        assert_eq!(writer.inner.into_inner(), vec![32 + 5, 104, 101, 108, 108, 111, 32 + 5, 119, 111, 114, 108, 100]);
+        assert_eq!(
+            writer.inner.into_inner(),
+            vec![
+                32 + 5,
+                104,
+                101,
+                108,
+                108,
+                111,
+                32 + 5,
+                119,
+                111,
+                114,
+                108,
+                100
+            ]
+        );
 
         // write the max length, which should be fine
         let cursor = Cursor::new(vec![]);
@@ -928,7 +985,10 @@ mod tests {
         let mut writer = GraalWriter::new(cursor);
         writer.write_string("hello").unwrap();
         writer.write_string("world").unwrap();
-        assert_eq!(writer.inner.into_inner(), vec![104, 101, 108, 108, 111, 0, 119, 111, 114, 108, 100, 0]);
+        assert_eq!(
+            writer.inner.into_inner(),
+            vec![104, 101, 108, 108, 111, 0, 119, 111, 114, 108, 100, 0]
+        );
     }
 
     #[test]
@@ -987,13 +1047,19 @@ mod tests {
     fn test_write_gu32() {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu32(1).unwrap();
-        assert_eq!(writer.inner.into_inner(), vec![32 + 0, 32 + 0, 32 + 0, 32 + 1]);
+        assert_eq!(
+            writer.inner.into_inner(),
+            vec![32 + 0, 32 + 0, 32 + 0, 32 + 1]
+        );
     }
 
     #[test]
     fn test_write_gu40() {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu40(1).unwrap();
-        assert_eq!(writer.inner.into_inner(), vec![32 + 0, 32 + 0, 32 + 0, 32 + 0, 32 + 1]);
+        assert_eq!(
+            writer.inner.into_inner(),
+            vec![32 + 0, 32 + 0, 32 + 0, 32 + 0, 32 + 1]
+        );
     }
 }

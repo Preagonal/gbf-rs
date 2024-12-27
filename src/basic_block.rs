@@ -1,4 +1,7 @@
-use std::{fmt::{self, Write}, vec};
+use std::{
+    fmt::{self, Write},
+    vec,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +29,7 @@ pub enum BasicBlockType {
     ///   return temp.foo == 1 ? 1 : 0;
     /// }
     /// ```
-    EntryAndExit
+    EntryAndExit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -34,7 +37,7 @@ pub struct BasicBlockId {
     index: usize,
 
     /// The type of the basic block.
-    pub block_type: BasicBlockType
+    pub block_type: BasicBlockType,
 }
 
 impl fmt::Display for BasicBlockId {
@@ -45,70 +48,66 @@ impl fmt::Display for BasicBlockId {
 }
 
 impl BasicBlockId {
-
     /// Create a new `BasicBlockId`.
-    /// 
+    ///
     /// # Arguments
     /// - `index`: The index of the basic block in the function.
-    /// 
+    ///
     /// # Returns
     /// - A new `BasicBlockId` instance.
-    /// 
+    ///
     /// Example
     /// ```
     /// use gbf_rs::basic_block::BasicBlockId;
     /// use gbf_rs::basic_block::BasicBlockType;
-    /// 
+    ///
     /// let block = BasicBlockId::new(0, BasicBlockType::Normal);
     /// ```
     pub fn new(index: usize, block_type: BasicBlockType) -> Self {
-        Self {
-            index,
-            block_type
-        }
+        Self { index, block_type }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BasicBlock {
     pub id: BasicBlockId,
-    pub instructions: Vec<Instruction>
+    pub instructions: Vec<Instruction>,
 }
 
 impl BasicBlock {
     /// Create a new `BasicBlock`.
-    /// 
+    ///
     /// # Arguments
     /// - `id`: The `BasicBlockId` of the block.
-    /// 
+    ///
     /// # Returns
     /// - A new `BasicBlock` instance.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
-    /// 
+    ///
     /// let block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
     /// ```
     pub fn new(id: BasicBlockId) -> Self {
         Self {
             id,
-            instructions: Vec::new()
+            instructions: Vec::new(),
         }
     }
 
     /// Add an instruction to the basic block.
-    /// 
+    ///
     /// # Arguments
     /// - `instruction`: The instruction to add.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
     /// use gbf_rs::instruction::Instruction;
     /// use gbf_rs::opcode::Opcode;
     /// use gbf_rs::operand::Operand;
-    /// 
+    ///
     /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
     /// block.add_instruction(Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_int(42)));
     /// ```
@@ -117,40 +116,40 @@ impl BasicBlock {
     }
 
     /// Find an instruction based on a predicate.
-    /// 
+    ///
     /// # Arguments
     /// - `predicate`: The predicate to use to find the instruction.
-    /// 
+    ///
     /// # Returns
     /// A reference to the instruction if found, or `None` if not found.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
     /// use gbf_rs::instruction::Instruction;
     /// use gbf_rs::opcode::Opcode;
     /// use gbf_rs::operand::Operand;
-    /// 
+    ///
     /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
     /// block.add_instruction(Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_int(42)));
     /// let instruction = block.find_instruction(|i| i.opcode == Opcode::PushNumber);
     /// ```
     pub fn find_instruction<F>(&self, predicate: F) -> Option<&Instruction>
     where
-        F: Fn(&Instruction) -> bool
+        F: Fn(&Instruction) -> bool,
     {
         self.instructions.iter().find(|i| predicate(i))
     }
 
     /// Get the number of instructions in the block.
-    /// 
+    ///
     /// # Returns
     /// - The number of instructions in the block.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
-    /// 
+    ///
     /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
     /// assert_eq!(block.len(), 0);
     /// ```
@@ -159,14 +158,14 @@ impl BasicBlock {
     }
 
     /// Check if the block is empty.
-    /// 
+    ///
     /// # Returns
     /// - `true` if the block is empty, `false` otherwise.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
-    /// 
+    ///
     /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
     /// assert!(block.is_empty());
     /// ```
@@ -181,7 +180,7 @@ impl<'a> IntoIterator for &'a BasicBlock {
     type IntoIter = Iter<'a, Instruction>;
 
     /// Create an iterator over the instructions in the block.
-    /// 
+    ///
     /// # Returns
     /// - An iterator over the instructions in the block.
     fn into_iter(self) -> Self::IntoIter {
@@ -195,7 +194,7 @@ impl IntoIterator for BasicBlock {
     type IntoIter = vec::IntoIter<Instruction>;
 
     /// Create an iterator over the instructions in the block.
-    /// 
+    ///
     /// # Returns
     /// - An iterator over the instructions in the block.
     fn into_iter(self) -> Self::IntoIter {

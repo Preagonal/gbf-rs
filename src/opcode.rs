@@ -12,7 +12,7 @@ pub enum OpcodeError {
 }
 
 /// A macro to define opcodes as a `#[repr(u8)]` enum.
-/// 
+///
 /// # Overview
 /// This macro simplifies defining opcodes by automatically generating:
 /// - An `Opcode` enum with associated `u8` values.
@@ -60,7 +60,7 @@ macro_rules! define_opcodes {
             }
 
             /// Convert an `Opcode` to a human-readable string.
-            /// 
+            ///
             /// # Returns
             /// - A string representation of the opcode.
             pub fn to_string(self) -> &'static str {
@@ -72,7 +72,7 @@ macro_rules! define_opcodes {
             }
 
             /// Convert a string to an `Opcode`
-            /// 
+            ///
             /// # Arguments
             /// - `name`: The string to convert.
             pub fn from_str(name: &str) -> Result<Self, OpcodeError> {
@@ -257,7 +257,10 @@ mod tests {
     #[test]
     fn test_from_str() {
         assert_eq!(Opcode::from_str("Jmp").unwrap(), Opcode::Jmp);
-        assert_eq!(Opcode::from_str("ConvertToString").unwrap(), Opcode::ConvertToString);
+        assert_eq!(
+            Opcode::from_str("ConvertToString").unwrap(),
+            Opcode::ConvertToString
+        );
         assert!(Opcode::from_str("Invalid").is_err());
     }
 }
