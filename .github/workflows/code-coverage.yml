@@ -3,10 +3,10 @@ name: Code Coverage
 on:
   push:
     branches:
-      - main  # Run on pushes to `main`
+      - main
   pull_request:
     branches:
-      - main  # Run on pull requests targeting `main`
+      - main
 
 permissions:
   contents: read
@@ -36,31 +36,39 @@ jobs:
       - name: Install grcov
         run: cargo install grcov
 
-      # Step 5: Set up Rust flags for coverage
+      # Step 5: Set up environment
       - name: Set up environment
         run: |
           mkdir -p target/coverage
           export CARGO_INCREMENTAL=0
           export RUSTFLAGS="-Cinstrument-coverage"
           export LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw"
+        env:
+          CARGO_INCREMENTAL: 0
+          RUSTFLAGS: "-Cinstrument-coverage"
+          LLVM_PROFILE_FILE: target/coverage/%p-%m.profraw
 
-      # Step 6: Run tests to generate coverage data
+      # Step 6: Build Project
+      - name: Build Project
+        run: cargo build --workspace
+
+      # Step 7: Run tests with coverage
       - name: Run tests with coverage
         run: cargo test --workspace --verbose
         env:
           LLVM_PROFILE_FILE: target/coverage/%p-%m.profraw
 
-      # Step 7: Verify profraw files exist
+      # Step 8: Verify profraw files
       - name: Verify coverage files
-        run: ls -l target/coverage/*.profraw
+        run: ls -l target/coverage/
 
-      # Step 8: Generate grcov report
+      # Step 9: Generate grcov report
       - name: Generate grcov report
         run: |
           mkdir -p target/coverage/html
           grcov target/coverage -s . -b ./target/debug -t html --llvm --branch --ignore-not-existing -o target/coverage/html
 
-      # Step 9: Upload Coverage Report
+      # Step 10: Upload Coverage Report
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v3
         with:
