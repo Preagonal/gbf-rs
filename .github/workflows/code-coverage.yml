@@ -18,8 +18,9 @@ jobs:
 
     env:
       CARGO_INCREMENTAL: 0
-      RUSTFLAGS: "-Cinstrument-coverage"
+      RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
       LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
+      RUSTDOCFLAGS: "-Cpanic=abort"
 
     steps:
       # Step 1: Check out the repository
@@ -30,7 +31,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           override: true
 
       # Step 3: Install llvm-tools-preview
@@ -38,12 +39,12 @@ jobs:
         run: rustup component add llvm-tools-preview
 
       # Step 4: Install grcov
-      - name: Install grcov
-        run: cargo install grcov
+    #   - name: Install grcov
+    #     run: cargo install grcov
 
       # Step 5: Create coverage dir (optional)
-      - name: Prepare coverage directory
-        run: mkdir -p target/coverage
+    #   - name: Prepare coverage directory
+    #     run: mkdir -p target/coverage
 
       # Step 6: Build project
       - name: Build Project
@@ -66,11 +67,11 @@ jobs:
     #         -o target/coverage/html
 
       # Step 10: Upload Coverage Report
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: grcov-coverage-report
-          path: target/coverage/html
+    #   - name: Upload Coverage Report
+    #     uses: actions/upload-artifact@v3
+    #     with:
+    #       name: grcov-coverage-report
+    #       path: target/coverage/html
 
       # Upload coverage data to Codecov
       - name: Upload to Codecov
