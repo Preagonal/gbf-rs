@@ -603,6 +603,15 @@ mod tests {
         graph.add_node("b".to_string());
         graph.add_node("c".to_string());
         assert_eq!(graph.node_count(), 3);
+
+        // test duplicate node, should return the same NodeId
+        let a = graph.add_node("a".to_string());
+        let b = graph.add_node("b".to_string());
+        let c = graph.add_node("c".to_string());
+        assert_eq!(graph.node_count(), 3);
+        assert_eq!(graph.add_node("a".to_string()), a);
+        assert_eq!(graph.add_node("b".to_string()), b);
+        assert_eq!(graph.add_node("c".to_string()), c);
     }
 
     #[test]
@@ -626,6 +635,10 @@ mod tests {
 
         // Test invalid node
         let result = graph.add_edge(NodeId(100), NodeId(101));
+        assert!(result.is_err());
+
+        // Test valid node with invalid node
+        let result = graph.add_edge(a, NodeId(101));
         assert!(result.is_err());
 
         // Test edge already exists
@@ -740,5 +753,25 @@ mod tests {
         // Test invalid node
         let result = graph.reverse_postorder(NodeId(100));
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_partial_cmp_and_cmp() {
+        let a = NodeId(1);
+        let b = NodeId(2);
+
+        assert_eq!(a.partial_cmp(&b), Some(Ordering::Less));
+        assert_eq!(a.partial_cmp(&a), Some(Ordering::Equal));
+        assert_eq!(b.partial_cmp(&a), Some(Ordering::Greater));
+
+        assert_eq!(a.cmp(&b), Ordering::Less);
+        assert_eq!(a.cmp(&a), Ordering::Equal);
+        assert_eq!(b.cmp(&a), Ordering::Greater);
+    }
+
+    #[test]
+    fn test_default() {
+        let graph: DirectedGraph<i32> = DirectedGraph::default();
+        assert_eq!(graph.node_count(), 0);
     }
 }
