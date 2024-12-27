@@ -1,23 +1,25 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_doc_code_examples)]
+
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
 /// Error type for Graph operations
-///
-/// # Variants
-/// - `NodeNotFound`: The requested node was not found.
-/// - `EdgeAlreadyExists`: An edge already exists between the two nodes.
-/// - `SelfLoop`: A self-loop was detected.
 #[derive(Error, Debug)]
 pub enum GraphError {
+    /// The requested node was not found.
     #[error("Node not found: {0}")]
     NodeNotFound(String),
+    /// An edge already exists between the two nodes.
     #[error("Self-loop detected for NodeId({0})")]
     SelfLoop(usize),
+    /// An edge already exists between the two nodes.
     #[error("Edge already exists between NodeId({0}) and NodeId({1})")]
     EdgeAlreadyExists(usize, usize),
 }
 
+/// Represents a unique identifier for a node in the graph.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Ord)]
 pub struct NodeId(usize);
 
@@ -68,6 +70,7 @@ pub trait RenderableNode {
 
 /// Trait for resolving NodeId to renderable metadata.
 pub trait NodeResolver {
+    /// The renderable node type associated with the resolver.
     type NodeData: RenderableNode;
 
     /// Resolves a NodeId to its associated metadata.

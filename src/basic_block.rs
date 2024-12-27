@@ -1,3 +1,6 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_doc_code_examples)]
+
 use std::{
     fmt::{self, Write},
     vec,
@@ -9,6 +12,7 @@ use crate::{graph::directed_graph::RenderableNode, instruction::Instruction};
 
 use std::slice::Iter;
 
+/// Represents the type of a basic block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BasicBlockType {
     /// Used for blocks that are entry blocks of a function.
@@ -32,6 +36,7 @@ pub enum BasicBlockType {
     EntryAndExit,
 }
 
+/// Represents the identifier of a basic block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BasicBlockId {
     index: usize,
@@ -68,9 +73,12 @@ impl BasicBlockId {
     }
 }
 
+/// Represents a basic block in a function.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BasicBlock {
+    /// The identifier of the basic block.
     pub id: BasicBlockId,
+    /// The instructions in the basic block.
     pub instructions: Vec<Instruction>,
 }
 

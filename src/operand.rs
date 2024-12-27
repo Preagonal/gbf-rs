@@ -1,3 +1,6 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_doc_code_examples)]
+
 use core::fmt;
 use serde::{Deserialize, Serialize};
 
@@ -6,8 +9,10 @@ use serde::{Deserialize, Serialize};
 pub enum Operand {
     /// A string operand.
     String(String),
+
     /// A floating-point operand (stored as a string).
     Float(String),
+
     /// An integer operand.
     Int(i32),
 }

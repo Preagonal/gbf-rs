@@ -1,3 +1,6 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_doc_code_examples)]
+
 use std::io::{self, Read, Write};
 
 use thiserror::Error;
@@ -18,34 +21,34 @@ pub const GUINT32_MAX: u64 = 0x1C18305F;
 /// but the Graal encoding only supports up to 0xFFFFFFFF in practice.
 pub const GUINT40_MAX: u64 = 0xFFFFFFFF;
 
+/// A reader that reads Graal-encoded data.
 pub struct GraalReader<R: Read> {
     inner: R,
 }
 
+/// A writer that writes Graal-encoded data.
 pub struct GraalWriter<W: Write> {
     inner: W,
 }
 
 /// Errors that can occur when reading or writing to a GraalReader / GraalWriter.
-///
-/// # Variants
-/// - `NoNullTerminator`: A null terminator was not found when reading a string.
-/// - `Utf8ConversionFailed`: A UTF-8 conversion failed.
-/// - `ValueExceedsMaximum`: A value exceeds the maximum for a Graal-encoded integer.
-/// - `Io`: An I/O error occurred.
 #[derive(Debug, Error)]
 pub enum GraalIoError {
+    /// A null terminator was not found when reading a string.
     #[error("No null terminator found when reading a string.")]
     NoNullTerminator(),
 
+    /// A UTF-8 conversion failed.
     #[error("UTF8 string conversion failed: {0}")]
     Utf8ConversionFailed(String),
 
+    /// A value exceeds the maximum for a Graal-encoded integer.
     #[error(
         "Value exceeds maximum for Graal-encoded integer. Value was {0}, but cannot exceed {1}."
     )]
     ValueExceedsMaximum(u64, u64),
 
+    /// An I/O error occurred.
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
 }

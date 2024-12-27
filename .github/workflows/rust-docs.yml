@@ -1,0 +1,44 @@
+name: Generate and Deploy Rust Docs
+
+on:
+  push:
+    branches:
+      - main  # Trigger the workflow on pushes to the `main` branch
+
+jobs:
+  # Build job: Generate Rust documentation
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Install Rust
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Build the Rust documentation
+      - name: Build Rust documentation
+        run: cargo doc --no-deps --workspace
+
+      # Upload the documentation as an artifact
+      - name: Upload documentation artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/doc  # Path where Rust documentation is generated
+
+  # Deploy job: Publish the documentation to GitHub Pages
+  deploy:
+    environment:
+      name: github-pages
+    runs-on: ubuntu-latest
+    needs: build  # This job depends on the "build" job
+
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

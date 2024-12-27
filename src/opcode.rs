@@ -1,12 +1,17 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_doc_code_examples)]
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Error type for invalid opcodes.
 #[derive(Error, Debug)]
 pub enum OpcodeError {
+    /// Error for when an invalid opcode is encountered.
     #[error("Invalid opcode: {0}")]
     InvalidOpcode(u8),
 
+    /// Error for when an invalid opcode string is encountered.
     #[error("Invalid opcode: {0}")]
     InvalidOpcodeString(String),
 }
@@ -29,6 +34,7 @@ macro_rules! define_opcodes {
         #[repr(u8)]
         pub enum Opcode {
             $(
+                /// Represents the opcode `$name`.
                 $name = $value,
             )*
         }

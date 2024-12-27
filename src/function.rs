@@ -1,3 +1,6 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_doc_code_examples)]
+
 use std::fmt;
 use std::{collections::HashMap, hash::Hash};
 use thiserror::Error;
@@ -9,21 +12,27 @@ use crate::{
     graph::directed_graph::DirectedGraph,
 };
 
+/// Represents an error that can occur when working with functions.
 #[derive(Error, Debug)]
 pub enum FunctionError {
+    /// The requested `BasicBlock` was not found.
     #[error("BasicBlock not found: {0}")]
     BasicBlockNotFound(BasicBlockId),
 
+    /// The requested `BasicBlock` does not have a `NodeId`.
     #[error("BasicBlock with id {0} does not have a NodeId")]
     BasicBlockNodeIdNotFound(BasicBlockId),
 
+    /// The function already has an entry block.
     #[error("Function already has an entry block")]
     EntryBlockAlreadyExists,
 
+    /// An error occurred while working with the graph.
     #[error("Graph error: {0}")]
     GraphError(#[from] GraphError),
 }
 
+/// Represents the identifier of a function.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionId {
     index: usize,
@@ -83,8 +92,10 @@ impl FunctionId {
     }
 }
 
+/// Represents a function in a module.
 #[derive(Debug)]
 pub struct Function {
+    /// The identifier of the function.
     pub id: FunctionId,
     entry_block: BasicBlockId,
     blocks: HashMap<BasicBlockId, BasicBlock>,

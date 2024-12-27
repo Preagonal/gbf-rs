@@ -1,12 +1,21 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::missing_doc_code_examples)]
+
 use serde::{Deserialize, Serialize};
 
 use crate::opcode::Opcode;
 use crate::operand::Operand;
 
+/// Represents an instruction in a bytecode system.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Instruction {
+    /// The opcode of the instruction.
     pub opcode: Opcode,
+
+    /// The address of the instruction.
     pub address: usize,
+
+    /// The operand of the instruction, if any.
     pub operand: Option<Operand>,
 }
 
