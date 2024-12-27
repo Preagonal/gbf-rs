@@ -19,7 +19,7 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
-      LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
+    #   LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
       RUSTDOCFLAGS: "-Cpanic=abort"
       RUSTC_BOOTSTRAP: 1
 
@@ -48,8 +48,8 @@ jobs:
     #     run: mkdir -p target/coverage
 
       # Step 6: Build project
-      - name: Build Project
-        run: cargo build --workspace
+    #   - name: Build Project
+    #     run: cargo build --workspace
 
       # Step 7: Run tests with coverage
       - name: Run tests with coverage
