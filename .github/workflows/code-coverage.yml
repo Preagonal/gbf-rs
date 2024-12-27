@@ -17,9 +17,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CARGO_INCREMENTAL: 0
+    #   CARGO_INCREMENTAL: 0
       RUSTFLAGS: "-Cinstrument-coverage"
-      LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
+    #   LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
 
     steps:
       # Step 1: Check out the repository
@@ -38,8 +38,8 @@ jobs:
         run: rustup component add llvm-tools-preview
 
       # Step 4: Install grcov
-      - name: Install grcov
-        run: cargo install grcov
+    #   - name: Install grcov
+    #     run: cargo install grcov
 
       # Step 5: Create coverage dir (optional)
       - name: Prepare coverage directory
@@ -54,16 +54,16 @@ jobs:
         run: cargo test --workspace --verbose
 
       # Step 8: Verify coverage files
-      - name: Verify coverage files
-        run: ls -l target/coverage/
+    #   - name: Verify coverage files
+    #     run: ls -l target/coverage/
 
-      # Step 9: Generate grcov report
-      - name: Generate grcov report
-        run: |
-          mkdir -p target/coverage/html
-          grcov target/coverage -s . -b ./target/debug \
-            -t html --llvm --branch --ignore-not-existing \
-            -o target/coverage/html
+    #   # Step 9: Generate grcov report
+    #   - name: Generate grcov report
+    #     run: |
+    #       mkdir -p target/coverage/html
+    #       grcov target/coverage -s . -b ./target/debug \
+    #         -t html --llvm --branch --ignore-not-existing \
+    #         -o target/coverage/html
 
       # Step 10: Upload Coverage Report
       - name: Upload Coverage Report
@@ -77,5 +77,5 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: target/coverage/*.profraw
+          files: target/debug/deps/*.gcno
           flags: unittests
