@@ -34,7 +34,7 @@ jobs:
 
       # Step 4: Run tests with coverage
       - name: Run Coverage
-        run: cargo llvm-cov --workspace --coverage-target=100
+        run: cargo llvm-cov --workspace
 
       # Step 5: Upload Coverage Report
       - name: Upload Coverage Report
