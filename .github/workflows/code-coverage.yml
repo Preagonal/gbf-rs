@@ -54,8 +54,8 @@ jobs:
         run: cargo test --workspace --verbose
 
       # Step 8: Verify coverage files
-    #   - name: Verify coverage files
-    #     run: ls -l target/coverage/
+      - name: Verify coverage files
+        run: ls -l target/debug/deps/*.gcno
 
     #   # Step 9: Generate grcov report
     #   - name: Generate grcov report
