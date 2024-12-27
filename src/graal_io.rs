@@ -1029,6 +1029,10 @@ mod tests {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu8(1).unwrap();
         assert_eq!(writer.inner.into_inner(), vec![32 + 1]);
+
+        // test for error case
+        let mut writer = GraalWriter::new(Cursor::new(vec![]));
+        assert!(writer.write_gu8(GUINT8_MAX + 1).is_err());
     }
 
     #[test]
@@ -1036,6 +1040,10 @@ mod tests {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu16(1).unwrap();
         assert_eq!(writer.inner.into_inner(), vec![32, 32 + 1]);
+
+        // test for error case
+        let mut writer = GraalWriter::new(Cursor::new(vec![]));
+        assert!(writer.write_gu16(GUINT16_MAX + 1).is_err());
     }
 
     #[test]
@@ -1043,6 +1051,10 @@ mod tests {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu24(1).unwrap();
         assert_eq!(writer.inner.into_inner(), vec![32, 32, 32 + 1]);
+
+        // test for error case
+        let mut writer = GraalWriter::new(Cursor::new(vec![]));
+        assert!(writer.write_gu24(GUINT24_MAX + 1).is_err());
     }
 
     #[test]
@@ -1050,6 +1062,10 @@ mod tests {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu32(1).unwrap();
         assert_eq!(writer.inner.into_inner(), vec![32, 32, 32, 32 + 1]);
+
+        // test for error case
+        let mut writer = GraalWriter::new(Cursor::new(vec![]));
+        assert!(writer.write_gu32(GUINT32_MAX + 1).is_err());
     }
 
     #[test]
@@ -1057,5 +1073,9 @@ mod tests {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_gu40(1).unwrap();
         assert_eq!(writer.inner.into_inner(), vec![32, 32, 32, 32, 32 + 1]);
+
+        // test for error case
+        let mut writer = GraalWriter::new(Cursor::new(vec![]));
+        assert!(writer.write_gu40(GUINT40_MAX + 1).is_err());
     }
 }
