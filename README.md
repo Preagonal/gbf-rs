@@ -1,4 +1,6 @@
 # gbf-rs
+[![codecov](https://codecov.io/github/cernec1999/gbf-rs/graph/badge.svg?token=URWSQ6C8OW)](https://codecov.io/github/cernec1999/gbf-rs)
+[![Rust CI](https://github.com/cernec1999/gbf-rs/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/cernec1999/gbf-rs/actions/workflows/rust-ci.yml)
 
 `gbf-rs` is a Rust library designed to analyze, disassemble, process, and decompile Graal Script 2 (GS2) bytecode. It provides tools for GS2 bytecode analysis, control flow graph (CFG) generation, and abstract syntax tree (AST) construction, with a focus on modern Rust best practices.
 
