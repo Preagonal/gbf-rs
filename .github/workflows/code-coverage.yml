@@ -21,6 +21,7 @@ jobs:
       RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
       LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
       RUSTDOCFLAGS: "-Cpanic=abort"
+      RUSTC_BOOTSTRAP: 1
 
     steps:
       # Step 1: Check out the repository
@@ -31,7 +32,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
 
       # Step 3: Install llvm-tools-preview
