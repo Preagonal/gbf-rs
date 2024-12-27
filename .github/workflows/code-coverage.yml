@@ -13,14 +13,28 @@ permissions:
 
 jobs:
   coverage:
+    name: Run Code Coverage
     runs-on: ubuntu-latest
-    env:
-      CARGO_INCREMENTAL: 0
-      RUSTFLAGS: "-Cinstrument-coverage"
-      LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
 
     steps:
-      # Step 1 - 4: (Checkout, Install Rust, etc.)
+      # Step 1: Check out the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Install Rust
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Step 3: Install llvm-tools-preview
+      - name: Install llvm-tools-preview
+        run: rustup component add llvm-tools-preview
+
+      # Step 4: Install grcov
+      - name: Install grcov
+        run: cargo install grcov
 
       # Step 5: Create coverage dir (optional)
       - name: Prepare coverage directory
@@ -53,7 +67,7 @@ jobs:
           name: grcov-coverage-report
           path: target/coverage/html
 
-      # Optional: Upload coverage data to Codecov
+      # Upload coverage data to Codecov
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
