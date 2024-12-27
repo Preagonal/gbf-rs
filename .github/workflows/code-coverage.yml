@@ -79,4 +79,3 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: target/coverage/*.profraw
           flags: unittests
-          name: gbf-rs
