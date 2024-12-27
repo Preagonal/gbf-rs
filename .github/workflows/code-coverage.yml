@@ -38,8 +38,8 @@ jobs:
         run: rustup component add llvm-tools-preview
 
       # Step 4: Install grcov
-    #   - name: Install grcov
-    #     run: cargo install grcov
+      - name: Install grcov
+        run: cargo install grcov
 
       # Step 5: Create coverage dir (optional)
       - name: Prepare coverage directory
