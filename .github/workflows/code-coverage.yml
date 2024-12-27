@@ -13,52 +13,28 @@ permissions:
 
 jobs:
   coverage:
-    name: Run Code Coverage
     runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: "-Cinstrument-coverage"
+      LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
 
     steps:
-      # Step 1: Check out the repository
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      # Step 1 - 4: (Checkout, Install Rust, etc.)
 
-      # Step 2: Install Rust
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      # Step 5: Create coverage dir (optional)
+      - name: Prepare coverage directory
+        run: mkdir -p target/coverage
 
-      # Step 3: Install llvm-tools-preview
-      - name: Install llvm-tools-preview
-        run: rustup component add llvm-tools-preview
-
-      # Step 4: Install grcov
-      - name: Install grcov
-        run: cargo install grcov
-
-      # Step 5: Set up environment
-      - name: Set up environment
-        run: |
-          mkdir -p target/coverage
-          export CARGO_INCREMENTAL=0
-          export RUSTFLAGS="-Cinstrument-coverage"
-          export LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw"
-        env:
-          CARGO_INCREMENTAL: 0
-          RUSTFLAGS: "-Cinstrument-coverage"
-          LLVM_PROFILE_FILE: target/coverage/%p-%m.profraw
-
-      # Step 6: Build Project
+      # Step 6: Build project
       - name: Build Project
         run: cargo build --workspace
 
       # Step 7: Run tests with coverage
       - name: Run tests with coverage
         run: cargo test --workspace --verbose
-        env:
-          LLVM_PROFILE_FILE: target/coverage/%p-%m.profraw
 
-      # Step 8: Verify profraw files
+      # Step 8: Verify coverage files
       - name: Verify coverage files
         run: ls -l target/coverage/
 
@@ -66,7 +42,9 @@ jobs:
       - name: Generate grcov report
         run: |
           mkdir -p target/coverage/html
-          grcov target/coverage -s . -b ./target/debug -t html --llvm --branch --ignore-not-existing -o target/coverage/html
+          grcov target/coverage -s . -b ./target/debug \
+            -t html --llvm --branch --ignore-not-existing \
+            -o target/coverage/html
 
       # Step 10: Upload Coverage Report
       - name: Upload Coverage Report
