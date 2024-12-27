@@ -22,3 +22,6 @@ Cargo.lock
 
 # Mac OS X clutter
 .DS_Store
+
+# Stop tracking main.rs
+src/main.rs

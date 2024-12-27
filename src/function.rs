@@ -425,6 +425,8 @@ impl NodeResolver for Function {
 
 #[cfg(test)]
 mod tests {
+    use crate::{instruction::Instruction, opcode::Opcode};
+
     use super::*;
 
     #[test]
@@ -449,6 +451,10 @@ mod tests {
         let node_id = function.block_to_node.get(&block_id).unwrap();
         let new_block_id = function.node_to_block.get(node_id).unwrap();
         assert_eq!(block_id, *new_block_id);
+
+        // test EntryBlockAlreadyExists error
+        let result = function.create_block(BasicBlockType::Entry);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -470,5 +476,108 @@ mod tests {
 
         block.id = BasicBlockId::new(0, BasicBlockType::Exit);
         assert_eq!(block.id, BasicBlockId::new(0, BasicBlockType::Exit));
+    }
+
+    #[test]
+    fn test_display_function_id() {
+        let id = FunctionId::new(0, None, 0);
+        assert_eq!(id.to_string(), "BasicBlock0");
+    }
+
+    #[test]
+    fn test_is_named() {
+        let id = FunctionId::new(0, None, 0);
+        assert!(id.is_named());
+
+        let id = FunctionId::new(0, Some("test".to_string()), 0);
+        assert!(!id.is_named());
+    }
+
+    #[test]
+    fn test_get_entry_block() {
+        let id = FunctionId::new(0, None, 0);
+        let function = Function::new(id.clone());
+        let entry = function.get_entry_block();
+
+        assert_eq!(entry.id, function.entry_block);
+    }
+
+    #[test]
+    fn test_get_entry_block_mut() {
+        let id = FunctionId::new(0, None, 0);
+        let mut function = Function::new(id.clone());
+        let entry_id = function.entry_block;
+        let entry = function.get_entry_block_mut();
+
+        assert_eq!(entry.id, entry_id);
+    }
+
+    #[test]
+    fn test_add_edge() {
+        let id = FunctionId::new(0, None, 0);
+        let mut function = Function::new(id.clone());
+        let block1 = function.create_block(BasicBlockType::Normal).unwrap();
+        let block2 = function.create_block(BasicBlockType::Normal).unwrap();
+
+        let result = function.add_edge(block1, block2);
+        assert!(result.is_ok());
+
+        let preds = function.get_predecessors(block2).unwrap();
+        assert_eq!(preds.len(), 1);
+        assert_eq!(preds[0], block1);
+
+        let succs = function.get_successors(block1).unwrap();
+        assert_eq!(succs.len(), 1);
+        assert_eq!(succs[0], block2);
+    }
+
+    #[test]
+    fn test_get_predecessors() {
+        let id = FunctionId::new(0, None, 0);
+        let mut function = Function::new(id.clone());
+        let block1 = function.create_block(BasicBlockType::Normal).unwrap();
+        let block2 = function.create_block(BasicBlockType::Normal).unwrap();
+
+        function.add_edge(block1, block2).unwrap();
+        let preds = function.get_predecessors(block2).unwrap();
+
+        assert_eq!(preds.len(), 1);
+        assert_eq!(preds[0], block1);
+    }
+
+    #[test]
+    fn test_get_successors() {
+        let id = FunctionId::new(0, None, 0);
+        let mut function = Function::new(id.clone());
+        let block1 = function.create_block(BasicBlockType::Normal).unwrap();
+        let block2 = function.create_block(BasicBlockType::Normal).unwrap();
+
+        function.add_edge(block1, block2).unwrap();
+        let succs = function.get_successors(block1).unwrap();
+
+        assert_eq!(succs.len(), 1);
+        assert_eq!(succs[0], block2);
+    }
+
+    #[test]
+    fn test_to_dot() {
+        let id = FunctionId::new(0, None, 0);
+        let mut function = Function::new(id.clone());
+        let block1_id = function.create_block(BasicBlockType::Normal).unwrap();
+        let block2_id = function.create_block(BasicBlockType::Normal).unwrap();
+
+        // add some instructions to the blocks
+        let block1 = function.get_block_mut(block1_id).unwrap();
+        block1.add_instruction(Instruction::new(Opcode::PushNumber, 0));
+        block1.add_instruction(Instruction::new(Opcode::PushNumber, 1));
+        let block2 = function.get_block_mut(block2_id).unwrap();
+        block2.add_instruction(Instruction::new(Opcode::PushNumber, 2));
+        block2.add_instruction(Instruction::new(Opcode::PushNumber, 3));
+
+        function.add_edge(block1_id, block2_id).unwrap();
+
+        // TODO: Right now, we'll just test that it doesn't throw an error since
+        // we can't easily predict the output.
+        let _ = function.to_dot();
     }
 }

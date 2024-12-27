@@ -249,3 +249,82 @@ impl RenderableNode for BasicBlock {
         label
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{instruction::Instruction, opcode::Opcode, operand::Operand};
+
+    #[test]
+    fn test_basic_block_id_display() {
+        let block = BasicBlockId::new(0, BasicBlockType::Normal);
+        assert_eq!(block.to_string(), "Block0");
+    }
+
+    #[test]
+    fn test_basic_block_new() {
+        let block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        assert_eq!(block.id.index, 0);
+        assert_eq!(block.id.block_type, BasicBlockType::Normal);
+        assert!(block.instructions.is_empty());
+    }
+
+    #[test]
+    fn test_basic_block_add_instruction() {
+        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        block.add_instruction(Instruction::new_with_operand(
+            Opcode::PushNumber,
+            0,
+            Operand::new_int(42),
+        ));
+        assert_eq!(block.instructions.len(), 1);
+    }
+
+    #[test]
+    fn test_basic_block_find_instruction() {
+        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        block.add_instruction(Instruction::new_with_operand(
+            Opcode::PushNumber,
+            0,
+            Operand::new_int(42),
+        ));
+        let instruction = block.find_instruction(|i| i.opcode == Opcode::PushNumber);
+        assert!(instruction.is_some());
+    }
+
+    #[test]
+    fn test_basic_block_len() {
+        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        block.add_instruction(Instruction::new_with_operand(
+            Opcode::PushNumber,
+            0,
+            Operand::new_int(42),
+        ));
+        assert_eq!(block.len(), 1);
+    }
+
+    #[test]
+    fn test_basic_block_is_empty() {
+        let block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        assert!(block.is_empty());
+    }
+
+    #[test]
+    fn test_basic_block_into_iter() {
+        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        block.add_instruction(Instruction::new_with_operand(
+            Opcode::PushNumber,
+            0,
+            Operand::new_int(42),
+        ));
+        block.add_instruction(Instruction::new_with_operand(
+            Opcode::PushNumber,
+            1,
+            Operand::new_int(42),
+        ));
+        let mut iter = block.into_iter();
+        assert_eq!(iter.next().unwrap().address, 0);
+        assert_eq!(iter.next().unwrap().address, 1);
+        assert!(iter.next().is_none());
+    }
+}
