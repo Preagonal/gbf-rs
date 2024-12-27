@@ -16,6 +16,11 @@ jobs:
     name: Run Code Coverage
     runs-on: ubuntu-latest
 
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: "-Cinstrument-coverage"
+      LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
+
     steps:
       # Step 1: Check out the repository
       - name: Checkout repository
