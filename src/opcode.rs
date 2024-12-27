@@ -34,7 +34,7 @@ macro_rules! define_opcodes {
         #[repr(u8)]
         pub enum Opcode {
             $(
-                /// Represents the opcode `$name`.
+                #[doc = concat!("Represents the opcode ", stringify!($name))]
                 $name = $value,
             )*
         }
