@@ -51,6 +51,24 @@ impl Instruction {
             operand: Some(operand),
         }
     }
+
+    /// Set the operand of the instruction.
+    ///
+    /// # Arguments
+    /// - `operand`: The operand to set.
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::instruction::Instruction;
+    /// use gbf_rs::operand::Operand;
+    /// use gbf_rs::opcode::Opcode;
+    ///
+    /// let mut instruction = Instruction::new(Opcode::PushNumber, 0);
+    /// instruction.set_operand(Operand::new_int(42));
+    /// ```
+    pub fn set_operand(&mut self, operand: Operand) {
+        self.operand = Some(operand);
+    }
 }
 
 /// Implement the `Display` trait for `Instruction`.

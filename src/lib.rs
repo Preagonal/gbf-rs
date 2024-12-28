@@ -5,6 +5,8 @@
 
 /// This module contains basic block definitions and operations.
 pub mod basic_block;
+/// This module reads bytecode from a reader and parses it into a module.
+pub mod bytecode_loader;
 /// This module contains the definition of a function.
 pub mod function;
 /// This module contains the definition of a module.
@@ -19,3 +21,5 @@ pub mod module;
 pub mod opcode;
 /// This module contains the definition of an operand.
 pub mod operand;
+/// This module contains utility functions and types.
+pub mod utils;
