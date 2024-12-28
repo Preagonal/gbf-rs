@@ -28,7 +28,7 @@ else
   echo "Running cargo test without doctests..."
   echo "Note: Doctests are not run locally to speed up the process."
   echo "      This will change when edition2024 is stable."
-  cargo test -q --all-targets --lib
+  cargo test --workspace --all-targets
   if [ $? -ne 0 ]; then
     echo "ERROR: Tests (excluding doctests) failed. Please fix and re-commit."
     exit 1
