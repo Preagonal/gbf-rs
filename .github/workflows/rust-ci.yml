@@ -23,4 +23,4 @@ jobs:
           override: true
 
       - name: Run CI script
-        run: ./scripts/test.sh
+        run: IS_CI=true ./scripts/pre-commit.sh
