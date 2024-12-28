@@ -201,22 +201,24 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     /// graph.add_edge(a, b).unwrap();
     /// ```
     pub fn add_edge(&mut self, from: NodeId, to: NodeId) -> Result<(), GraphError> {
+        // Check for self-loop
         if from == to {
             return Err(GraphError::SelfLoop(from.0));
         }
 
-        // Check that both nodes exist before modifying the graph
-        let from_node_exists = self.nodes.contains_key(&from);
-        let to_node_exists = self.nodes.contains_key(&to);
+        // Ensure both nodes exist
+        let from_exists = self.nodes.contains_key(&from);
+        let to_exists = self.nodes.contains_key(&to);
 
-        if !from_node_exists {
+        if !from_exists {
             return Err(GraphError::NodeNotFound(format!("NodeId({})", from.0)));
         }
-        if !to_node_exists {
+
+        if !to_exists {
             return Err(GraphError::NodeNotFound(format!("NodeId({})", to.0)));
         }
 
-        // Safe to mutate now since we know both nodes exist
+        // Extract and modify the nodes
         if let Some(from_node) = self.nodes.get_mut(&from) {
             if !from_node.successors.insert(to) {
                 return Err(GraphError::EdgeAlreadyExists(from.0, to.0));
