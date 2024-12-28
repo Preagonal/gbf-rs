@@ -70,9 +70,13 @@ pub enum SectionType {
 /// A structure for loading bytecode from a reader.
 pub struct BytecodeLoader<R: Read> {
     reader: GraalReader<R>,
-    function_map: HashMap<String, Gs2BytecodeAddress>,
     strings: Vec<String>,
-    instructions: Vec<Instruction>,
+
+    /// A map of function names to their addresses.
+    pub function_map: HashMap<String, Gs2BytecodeAddress>,
+
+    /// The instructions in the module.
+    pub instructions: Vec<Instruction>,
 }
 
 impl<R: Read> BytecodeLoader<R> {
