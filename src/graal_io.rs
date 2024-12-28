@@ -205,14 +205,14 @@ impl<R: Read> GraalReader<R> {
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
-    /// let mut reader = GraalReader::new(Cursor::new(vec![1, 0, 2, 0]));
+    /// let mut reader = GraalReader::new(Cursor::new(vec![0, 1, 0, 2]));
     /// assert_eq!(reader.read_u16().unwrap(), 1);
     /// assert_eq!(reader.read_u16().unwrap(), 2);
     /// ```
     pub fn read_u16(&mut self) -> Result<u16, GraalIoError> {
         let mut buffer = [0; 2];
         self.inner.read_exact(&mut buffer)?;
-        Ok(u16::from_le_bytes(buffer))
+        Ok(u16::from_be_bytes(buffer))
     }
 
     /// Read an unsigned int from the reader.
@@ -228,14 +228,14 @@ impl<R: Read> GraalReader<R> {
     /// use gbf_rs::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
-    /// let mut reader = GraalReader::new(Cursor::new(vec![1, 0, 0, 0, 2, 0, 0, 0]));
+    /// let mut reader = GraalReader::new(Cursor::new(vec![0, 0, 0, 1, 0, 0, 0, 2]));
     /// assert_eq!(reader.read_u32().unwrap(), 1);
     /// assert_eq!(reader.read_u32().unwrap(), 2);
     /// ```
     pub fn read_u32(&mut self) -> Result<u32, GraalIoError> {
         let mut buffer = [0; 4];
         self.inner.read_exact(&mut buffer)?;
-        Ok(u32::from_le_bytes(buffer))
+        Ok(u32::from_be_bytes(buffer))
     }
 
     /// Reads a Graal encoded unsigned 8-bit integer from the reader.
@@ -510,7 +510,7 @@ impl<W: Write> GraalWriter<W> {
     /// ```
     pub fn write_u8(&mut self, c: u8) -> Result<(), GraalIoError> {
         // Ensure the seek location is within bounds before resizing
-        self.write(&c.to_le_bytes())?;
+        self.write(&c.to_be_bytes())?;
         Ok(())
     }
 
@@ -531,7 +531,7 @@ impl<W: Write> GraalWriter<W> {
     /// writer.write_u16(1);
     /// ```
     pub fn write_u16(&mut self, s: u16) -> Result<(), GraalIoError> {
-        let bytes = s.to_le_bytes();
+        let bytes = s.to_be_bytes();
         self.write(&bytes)?;
         Ok(())
     }
@@ -553,7 +553,7 @@ impl<W: Write> GraalWriter<W> {
     /// writer.write_u32(1).unwrap();
     /// ```
     pub fn write_u32(&mut self, i: u32) -> Result<(), GraalIoError> {
-        let bytes = i.to_le_bytes();
+        let bytes = i.to_be_bytes();
         self.write(&bytes)?;
         Ok(())
     }
@@ -896,14 +896,14 @@ mod tests {
 
     #[test]
     fn test_read_u16() {
-        let mut reader = GraalReader::new(Cursor::new(vec![1, 0, 2, 0]));
+        let mut reader = GraalReader::new(Cursor::new(vec![0, 1, 0, 2]));
         assert_eq!(reader.read_u16().unwrap(), 1);
         assert_eq!(reader.read_u16().unwrap(), 2);
     }
 
     #[test]
     fn test_read_u32() {
-        let mut reader = GraalReader::new(Cursor::new(vec![1, 0, 0, 0, 2, 0, 0, 0]));
+        let mut reader = GraalReader::new(Cursor::new(vec![0, 0, 0, 1, 0, 0, 0, 2]));
         assert_eq!(reader.read_u32().unwrap(), 1);
         assert_eq!(reader.read_u32().unwrap(), 2);
     }
@@ -1013,7 +1013,7 @@ mod tests {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_u16(1).unwrap();
         writer.write_u16(2).unwrap();
-        assert_eq!(writer.inner.into_inner(), vec![1, 0, 2, 0]);
+        assert_eq!(writer.inner.into_inner(), vec![0, 1, 0, 2]);
     }
 
     #[test]
@@ -1021,7 +1021,7 @@ mod tests {
         let mut writer = GraalWriter::new(Cursor::new(vec![]));
         writer.write_u32(1).unwrap();
         writer.write_u32(2).unwrap();
-        assert_eq!(writer.inner.into_inner(), vec![1, 0, 0, 0, 2, 0, 0, 0]);
+        assert_eq!(writer.inner.into_inner(), vec![0, 0, 0, 1, 0, 0, 0, 2]);
     }
 
     #[test]

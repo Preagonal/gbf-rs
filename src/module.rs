@@ -13,27 +13,12 @@ pub enum ModuleError {
     FunctionNotFound(FunctionId),
 }
 
-/// Represents a section type in a module.
-pub enum SectionType {
-    /// The section contains flags for the module.
-    Gs1Flags,
-
-    /// The section contains the module's functions.
-    Functions,
-
-    /// The section contains the module's strings.
-    Strings,
-
-    /// The section contains the module's instructions.
-    Instructions,
-}
-
 /// Represents a GS2 module in a bytecode system. A module contains
 /// functions, strings, and other data.
 pub struct Module {
     /// The name of the module.
     pub name: String,
-    // TODO: Implement sections and remove dead code warning.
+    // TODO: Remove dead code annotation
     #[allow(dead_code)]
     strings: Vec<String>,
     functions: HashMap<FunctionId, Function>,
