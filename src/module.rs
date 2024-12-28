@@ -3,7 +3,10 @@
 use std::collections::HashMap;
 use thiserror::Error;
 
-use crate::function::{Function, FunctionId};
+use crate::{
+    bytecode_loader::{self, BytecodeLoaderError},
+    function::{Function, FunctionId},
+};
 
 /// Error type for module operations.
 #[derive(Error, Debug)]
@@ -18,9 +21,6 @@ pub enum ModuleError {
 pub struct Module {
     /// The name of the module.
     pub name: String,
-    // TODO: Remove dead code annotation
-    #[allow(dead_code)]
-    strings: Vec<String>,
     functions: HashMap<FunctionId, Function>,
 }
 
@@ -42,7 +42,6 @@ impl Module {
     pub fn new(name: String) -> Self {
         Self {
             name,
-            strings: Vec::new(),
             functions: HashMap::new(),
         }
     }
@@ -89,6 +88,43 @@ impl Module {
             .get(id)
             .ok_or(ModuleError::FunctionNotFound(id.clone()))
     }
+
+    /// Load bytecode into the module using a reader.
+    ///
+    /// # Arguments
+    /// - `reader`: The reader to use to load the bytecode.
+    ///
+    /// # Returns
+    /// - `Ok(())` if the bytecode was loaded successfully.
+    /// - `Err(BytecodeLoaderError)` if an error occurred while loading the bytecode.
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::module::Module;
+    ///
+    /// let mut module = Module::new("test.gs2".to_string());
+    /// let bytecode = vec![
+    ///     0x00, 0x00, 0x00, 0x01,
+    ///     0x00, 0x00, 0x00, 0x04,
+    ///     0x00, 0x00, 0x00, 0x00,
+    ///     0x00, 0x00, 0x00, 0x02,
+    ///     0x00, 0x00, 0x00, 0x00,
+    ///     0x00, 0x00, 0x00, 0x03,
+    ///     0x00, 0x00, 0x00, 0x00,
+    ///     0x00, 0x00, 0x00, 0x04,
+    ///     0x00, 0x00, 0x00, 0x00
+    /// ];
+    /// module.load_bytecode(&bytecode[..]).unwrap();
+    /// ```
+    pub fn load_bytecode<R: std::io::Read>(
+        &mut self,
+        reader: R,
+    ) -> Result<(), BytecodeLoaderError> {
+        let mut bytecode_loader = bytecode_loader::BytecodeLoader::new(reader);
+        bytecode_loader.load()?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -101,5 +137,16 @@ mod tests {
         let function_id = module.create_function();
         let function = module.get_function(&function_id).unwrap();
         assert_eq!(function.id, function_id);
+    }
+
+    #[test]
+    fn load_bytecode() {
+        let mut module = Module::new("test.gs2".to_string());
+        let bytecode = [
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+        ];
+        module.load_bytecode(&bytecode[..]).unwrap();
     }
 }

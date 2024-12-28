@@ -70,9 +70,6 @@ pub enum SectionType {
 /// A structure for loading bytecode from a reader.
 pub struct BytecodeLoader<R: Read> {
     reader: GraalReader<R>,
-    // TODO: Remove dead code annotation
-    #[allow(dead_code)]
-    name: String,
     function_map: HashMap<String, Gs2BytecodeAddress>,
     strings: Vec<String>,
     instructions: Vec<Instruction>,
@@ -97,7 +94,6 @@ impl<R: Read> BytecodeLoader<R> {
     pub fn new(reader: R) -> Self {
         Self {
             reader: GraalReader::new(reader),
-            name: String::new(),
             function_map: HashMap::new(),
             strings: Vec::new(),
             instructions: Vec::new(),
@@ -425,5 +421,64 @@ mod tests {
         );
         assert_eq!(loader.instructions[3].opcode, crate::opcode::Opcode::PushPi);
         assert_eq!(loader.instructions[4].opcode, crate::opcode::Opcode::Ret);
+    }
+
+    #[test]
+    fn test_load_invalid_section_type() {
+        let reader = std::io::Cursor::new(vec![0x00, 0x00, 0x00, 0x05]);
+        let mut loader = super::BytecodeLoader::new(reader);
+        let result = loader.load();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_invalid_section_length() {
+        let reader = std::io::Cursor::new(vec![
+            0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
+            0x00, 0x00, 0x00, 0x05, // Length: 5
+            0x00, 0x00, 0x00, 0x00, // Flags: 0
+        ]);
+        let mut loader = super::BytecodeLoader::new(reader);
+        let result = loader.load();
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Invalid section length for Gs1Flags: 5".to_string()
+        );
+    }
+
+    #[test]
+    fn test_load_string_index_out_of_bounds() {
+        let reader = std::io::Cursor::new(vec![
+            0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x00, 0x00, 0x00, 0x00, // Flags: 0
+            0x00, 0x00, 0x00, 0x02, // Section type: Functions
+            0x00, 0x00, 0x00, 0x09, // Length: 9
+            0x00, 0x00, 0x00, 0x00, // Function location: 0
+            0x6d, 0x61, 0x69, 0x6e, // Function name: "main"
+            0x00, // Null terminator
+            0x00, 0x00, 0x00, 0x03, // Section type: Strings
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x61, 0x62, 0x63, 0x00, // String: "abc"
+            0x00, 0x00, 0x00, 0x04, // Section type: Instructions
+            0x00, 0x00, 0x00, 0x0c, // Length: 12
+            0x01, // Opcode: Jmp
+            0xF3, // Opcode: ImmByte
+            0x01, // Operand: 1
+            0x14, // Opcode: PushNumber
+            0xF4, // Opcode: ImmShort
+            0x00, 0x01, // Operand: 1
+            0x15, // Opcode: PushString
+            0xF0, // Opcode: ImmStringByte
+            0x01, // Operand: 1 (out of bounds)
+            0x1b, // Opcode: PushPi
+            0x07, // Opcode: Ret
+        ]);
+
+        let mut loader = super::BytecodeLoader::new(reader);
+        let result = loader.load();
+
+        assert!(result.is_err());
     }
 }
