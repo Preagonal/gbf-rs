@@ -18,8 +18,7 @@ jobs:
 
     env:
       CARGO_INCREMENTAL: 0
-      # Using -Zprofile for LLVM instrumentation:
-      RUSTFLAGS: "-Cinstrument-coverage -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+      RUSTFLAGS: "-Cinstrument-coverage -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
       LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
       RUSTDOCFLAGS: "-Cpanic=abort"
       RUSTC_BOOTSTRAP: 1
@@ -33,7 +32,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           override: true
 
       # Step 3: Install llvm-tools-preview

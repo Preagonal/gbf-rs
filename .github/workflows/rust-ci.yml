@@ -22,11 +22,5 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Run cargo fmt
-        run: cargo fmt --all -- --check
-
-      - name: Run cargo clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
-
-      - name: Run cargo check
-        run: cargo check --workspace --all-targets
+      - name: Run CI script
+        run: ./scripts/test.sh
