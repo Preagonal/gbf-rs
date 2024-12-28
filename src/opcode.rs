@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 use thiserror::Error;
 
 /// Error type for invalid opcodes.
@@ -48,6 +48,14 @@ macro_rules! define_opcodes {
             /// # Returns
             /// - `Some(Opcode)` if the value corresponds to a valid opcode.
             /// - `None` if the value does not match any defined opcode.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::from_byte(0x1).unwrap();
+            /// assert_eq!(opcode, Opcode::Jmp);
+            /// ```
             pub fn from_byte(byte: u8) -> Result<Self, OpcodeError> {
                 match byte {
                     $(
@@ -61,20 +69,45 @@ macro_rules! define_opcodes {
             ///
             /// # Returns
             /// - The numeric value (`u8`) of the opcode.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jmp;
+            /// assert_eq!(opcode.to_byte(), 0x1);
+            /// ```
             pub fn to_byte(self) -> u8 {
                 self as u8
             }
 
+            /// Get the number of defined opcodes.
+            ///
+            /// # Returns
+            /// - The number of opcodes.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let count = Opcode::count();
+            /// ```
+            pub fn count() -> usize {
+                0 $(+ { let _ = stringify!($name); 1 })*
+            }
+        }
+
+        impl Display for Opcode {
             /// Convert an `Opcode` to a human-readable string.
             ///
             /// # Returns
             /// - A string representation of the opcode.
-            pub fn to_string(self) -> &'static str {
-                match self {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", match self {
                     $(
                         Opcode::$name => stringify!($name),
                     )*
-                }
+                })
             }
         }
 
@@ -85,6 +118,9 @@ macro_rules! define_opcodes {
             ///
             /// # Arguments
             /// - `name`: The string to convert.
+            ///
+            /// # Returns
+            /// - `Ok(Opcode)` if the string corresponds to a valid opcode.
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 match s {
                     $(
@@ -259,9 +295,15 @@ mod tests {
     }
 
     #[test]
-    fn test_to_string() {
+    fn test_fmt() {
         assert_eq!(Opcode::Jmp.to_string(), "Jmp");
         assert_eq!(Opcode::ConvertToString.to_string(), "ConvertToString");
+
+        let opcode = Opcode::from_byte(0x1).unwrap();
+        assert_eq!(format!("{}", opcode), "Jmp");
+
+        let opcode = Opcode::from_byte(0x22).unwrap();
+        assert_eq!(format!("{}", opcode), "ConvertToString");
     }
 
     #[test]
@@ -272,5 +314,10 @@ mod tests {
             Opcode::ConvertToString
         );
         assert!(Opcode::from_str("Invalid").is_err());
+    }
+
+    #[test]
+    fn test_count() {
+        assert_eq!(Opcode::count(), 122);
     }
 }

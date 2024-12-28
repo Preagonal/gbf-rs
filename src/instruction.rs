@@ -90,8 +90,8 @@ impl std::fmt::Display for Instruction {
     /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &self.operand {
-            Some(operand) => write!(f, "{} {}", self.opcode.to_string(), operand),
-            None => write!(f, "{}", self.opcode.to_string()),
+            Some(operand) => write!(f, "{} {}", self.opcode, operand),
+            None => write!(f, "{}", self.opcode),
         }
     }
 }
