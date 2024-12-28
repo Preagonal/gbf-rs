@@ -428,6 +428,27 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
 }
 
 impl<T: Eq + std::hash::Hash + Clone + std::fmt::Debug> DirectedGraph<T> {
+    /// Gets the successors of a NodeId
+    ///
+    /// # Arguments
+    /// - `node`: The NodeId.
+    ///
+    /// # Returns
+    /// A vector of references to the successor NodeIds
+    fn get_successors_sorted(&self, node: &Node<T>) -> Vec<NodeId> {
+        #[cfg(test)]
+        {
+            let mut sorted_successors: Vec<_> = node.successors.iter().copied().collect();
+            sorted_successors.sort();
+            sorted_successors
+        }
+
+        #[cfg(not(test))]
+        {
+            node.successors.iter().copied().collect()
+        }
+    }
+
     /// Performs a depth-first search (DFS) from the given node.
     ///
     /// # Arguments
@@ -483,17 +504,7 @@ impl<T: Eq + std::hash::Hash + Clone + std::fmt::Debug> DirectedGraph<T> {
         // Push the current NodeId to the result
         result.push(node);
 
-        // Sort successors for deterministic results in tests
-        #[cfg(test)]
-        let successors: Vec<_> = {
-            let mut sorted_successors: Vec<_> = current_node.successors.iter().copied().collect();
-            sorted_successors.sort();
-            sorted_successors
-        };
-
-        // Use an iterator for non-test builds
-        #[cfg(not(test))]
-        let successors = current_node.successors.iter().copied();
+        let successors = self.get_successors_sorted(current_node);
 
         // Recur for each successor
         for successor in successors {
@@ -568,17 +579,7 @@ impl<T: Eq + std::hash::Hash + Clone + std::fmt::Debug> DirectedGraph<T> {
             .get(&node_id)
             .ok_or_else(|| GraphError::NodeNotFound(format!("NodeId({})", node_id.0)))?;
 
-        // Sort successors for deterministic results in tests
-        #[cfg(test)]
-        let successors: Vec<_> = {
-            let mut sorted_successors: Vec<_> = node.successors.iter().copied().collect();
-            sorted_successors.sort();
-            sorted_successors
-        };
-
-        // Use an iterator for non-test builds
-        #[cfg(not(test))]
-        let successors = node.successors.iter().copied();
+        let successors = self.get_successors_sorted(node);
 
         // Recur for each successor
         for successor_id in successors {
@@ -700,6 +701,23 @@ mod tests {
     }
 
     #[test]
+    fn test_not_test_successors() {
+        let mut graph: DirectedGraph<String> = DirectedGraph::new();
+        let a = graph.add_node("a".to_string());
+        let b = graph.add_node("b".to_string());
+
+        graph.add_edge(a, b).unwrap();
+
+        // Use a dummy build flag to force `#[cfg(not(test))]` code execution.
+        #[cfg(not(test))]
+        {
+            let node = graph.nodes.get(&a).unwrap();
+            let successors = graph.get_successors_sorted(node);
+            assert_eq!(successors, vec![b]);
+        }
+    }
+
+    #[test]
     fn test_dfs() {
         // verified using https://graphonline.top/en/
         let mut graph: DirectedGraph<String> = DirectedGraph::new();
@@ -728,8 +746,25 @@ mod tests {
     }
 
     #[test]
+    fn test_dfs_with_cycle() {
+        // tests case where node is visited in DFS
+        let mut graph: DirectedGraph<String> = DirectedGraph::new();
+        let a = graph.add_node("a".to_string());
+        let b = graph.add_node("b".to_string());
+        let c = graph.add_node("c".to_string());
+
+        // Create a cycle: a -> b -> c -> a
+        graph.add_edge(a, b).unwrap();
+        graph.add_edge(b, c).unwrap();
+        graph.add_edge(c, a).unwrap();
+
+        // Perform DFS and ensure no infinite loop due to cycle
+        let result = graph.dfs(a).unwrap();
+        assert_eq!(result, vec![a, b, c]); // Order may vary
+    }
+
+    #[test]
     fn test_reverse_postorder() {
-        // verified using https://graphonline.top/en/
         let mut graph: DirectedGraph<String> = DirectedGraph::new();
 
         let a = graph.add_node("a".to_string());
@@ -753,6 +788,24 @@ mod tests {
         // Test invalid node
         let result = graph.reverse_postorder(NodeId(100));
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_reverse_postorder_with_cycle() {
+        // tests case where node is visited in reverse postorder
+        let mut graph: DirectedGraph<String> = DirectedGraph::new();
+        let a = graph.add_node("a".to_string());
+        let b = graph.add_node("b".to_string());
+        let c = graph.add_node("c".to_string());
+
+        // Create a cycle: a -> b -> c -> a
+        graph.add_edge(a, b).unwrap();
+        graph.add_edge(b, c).unwrap();
+        graph.add_edge(c, a).unwrap();
+
+        // Perform reverse postorder traversal
+        let result = graph.reverse_postorder(a).unwrap();
+        assert_eq!(result, vec![a, b, c]);
     }
 
     #[test]
