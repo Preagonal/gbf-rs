@@ -95,6 +95,25 @@ macro_rules! define_opcodes {
             pub fn count() -> usize {
                 0 $(+ { let _ = stringify!($name); 1 })*
             }
+
+            /// Get a list of all defined opcodes.
+            /// 
+            /// # Returns
+            /// - A vector containing all defined opcodes.
+            /// 
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            /// 
+            /// let opcodes = Opcode::all();
+            /// ```
+            pub fn all() -> &'static [Opcode] {
+                &[
+                    $(
+                        Opcode::$name,
+                    )*
+                ]
+            }
         }
 
         impl Display for Opcode {
@@ -304,6 +323,13 @@ mod tests {
 
         let opcode = Opcode::from_byte(0x22).unwrap();
         assert_eq!(format!("{}", opcode), "ConvertToString");
+
+        // Test all opcodes
+        for opcode in Opcode::all() {
+            let str_val = format!("{}", opcode);
+            let from_str = Opcode::from_str(&str_val).unwrap();
+            assert_eq!(*opcode, from_str);
+        }
     }
 
     #[test]
@@ -318,6 +344,6 @@ mod tests {
 
     #[test]
     fn test_count() {
-        assert_eq!(Opcode::count(), 122);
+        assert_eq!(Opcode::all().len(), Opcode::count());
     }
 }
