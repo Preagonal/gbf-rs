@@ -97,14 +97,14 @@ macro_rules! define_opcodes {
             }
 
             /// Get a list of all defined opcodes.
-            /// 
+            ///
             /// # Returns
             /// - A vector containing all defined opcodes.
-            /// 
+            ///
             /// # Example
             /// ```
             /// use gbf_rs::opcode::Opcode;
-            /// 
+            ///
             /// let opcodes = Opcode::all();
             /// ```
             pub fn all() -> &'static [Opcode] {
