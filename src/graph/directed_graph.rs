@@ -209,24 +209,25 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
         // Ensure both nodes exist
         let from_exists = self.nodes.contains_key(&from);
         let to_exists = self.nodes.contains_key(&to);
-
         if !from_exists {
             return Err(GraphError::NodeNotFound(format!("NodeId({})", from.0)));
         }
-
         if !to_exists {
             return Err(GraphError::NodeNotFound(format!("NodeId({})", to.0)));
         }
 
-        // Extract and modify the nodes
-        if let Some(from_node) = self.nodes.get_mut(&from) {
+        // Borrow mutably without overlap
+        {
+            let from_node = self.nodes.get_mut(&from).unwrap();
             if !from_node.successors.insert(to) {
                 return Err(GraphError::EdgeAlreadyExists(from.0, to.0));
             }
         }
 
-        if let Some(to_node) = self.nodes.get_mut(&to) {
-            to_node.predecessors.insert(from);
+        {
+            let to_node = self.nodes.get_mut(&to).unwrap();
+            let res = to_node.predecessors.insert(from);
+            debug_assert!(res, "Predecessor already exists -- this should not happen");
         }
 
         Ok(())
