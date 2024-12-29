@@ -17,11 +17,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CARGO_INCREMENTAL: 0
-      RUSTFLAGS: "-Cinstrument-coverage -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+      RUSTFLAGS: "-Cinstrument-coverage"
       LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
-      RUSTDOCFLAGS: "-Cpanic=abort"
-      RUSTC_BOOTSTRAP: 1
 
     steps:
       # Step 1: Check out the repository
