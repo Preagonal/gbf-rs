@@ -58,7 +58,7 @@ impl<T> Node<T> {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::Node;
+    /// use gbf_rs::directed_graph::Node;
     ///
     /// let node = Node::new(42);
     /// ```
@@ -103,7 +103,7 @@ impl<T> Default for DirectedGraph<T> {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let graph: DirectedGraph<i32> = DirectedGraph::default();
     /// ```
@@ -124,7 +124,7 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let graph: DirectedGraph<i32> = DirectedGraph::new();
     /// ```
@@ -143,7 +143,7 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
@@ -164,7 +164,7 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let node_id = graph.add_node(42);
@@ -193,7 +193,7 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
@@ -234,8 +234,8 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     }
 
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
-    /// use gbf_rs::graph::directed_graph::{NodeId, NodeResolver, RenderableNode};
+    /// use gbf_rs::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::{NodeId, NodeResolver, RenderableNode};
     ///
     /// // Define a simple renderable node that returns a fixed label.
     /// struct MyRenderableNode;
@@ -328,7 +328,7 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
@@ -357,7 +357,7 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
@@ -386,7 +386,7 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
@@ -413,7 +413,7 @@ impl<T: Eq + std::hash::Hash + Clone + Serialize + for<'de> Deserialize<'de>> Di
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
@@ -465,7 +465,7 @@ impl<T: Eq + std::hash::Hash + Clone + std::fmt::Debug> DirectedGraph<T> {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);
@@ -531,7 +531,7 @@ impl<T: Eq + std::hash::Hash + Clone + std::fmt::Debug> DirectedGraph<T> {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::graph::directed_graph::DirectedGraph;
+    /// use gbf_rs::directed_graph::DirectedGraph;
     ///
     /// let mut graph: DirectedGraph<i32> = DirectedGraph::new();
     /// let a = graph.add_node(42);

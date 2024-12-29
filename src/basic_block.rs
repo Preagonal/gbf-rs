@@ -7,7 +7,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{graph::directed_graph::RenderableNode, instruction::Instruction};
+use crate::{directed_graph::RenderableNode, instruction::Instruction};
 
 use std::slice::Iter;
 

@@ -7,12 +7,12 @@
 pub mod basic_block;
 /// This module reads bytecode from a reader and parses it into a module.
 pub mod bytecode_loader;
+/// This module contains the definition of a module.
+pub mod directed_graph;
 /// This module contains the definition of a function.
 pub mod function;
 /// This module contains the definition of a module.
 pub mod graal_io;
-/// This module contains the definition of a module.
-pub mod graph;
 /// This module contains the definition of an instruction.
 pub mod instruction;
 /// This module contains the definition of a module.

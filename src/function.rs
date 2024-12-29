@@ -5,10 +5,10 @@ use std::{collections::HashMap, hash::Hash};
 use thiserror::Error;
 
 use crate::basic_block::BasicBlockType;
-use crate::graph::directed_graph::{GraphError, NodeId, NodeResolver};
+use crate::directed_graph::{GraphError, NodeId, NodeResolver};
 use crate::{
     basic_block::{BasicBlock, BasicBlockId},
-    graph::directed_graph::DirectedGraph,
+    directed_graph::DirectedGraph,
 };
 
 /// Represents an error that can occur when working with functions.
