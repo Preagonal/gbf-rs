@@ -104,6 +104,32 @@ impl<R: Read> BytecodeLoader<R> {
         }
     }
 
+    /// Asserts that the section length is correct.
+    ///
+    /// # Arguments
+    /// - `section_type`: The type of the section.
+    /// - `expected_length`: The expected length of the section.
+    /// - `got_length`: The actual length of the section.
+    ///
+    /// # Returns
+    /// - A `Result` indicating success or failure.
+    ///
+    /// # Errors
+    /// - `BytecodeLoaderError::InvalidSectionLength` if the section length is incorrect.
+    fn expect_section_length(
+        section_type: SectionType,
+        expected_length: u32,
+        got_length: u32,
+    ) -> Result<(), BytecodeLoaderError> {
+        if expected_length != got_length {
+            return Err(BytecodeLoaderError::InvalidSectionLength(
+                section_type,
+                got_length,
+            ));
+        }
+        Ok(())
+    }
+
     /// Reads the flags section from the reader.
     ///
     /// We don't actually need to do anything with the flags section, so we just read it and ignore it.
@@ -112,12 +138,7 @@ impl<R: Read> BytecodeLoader<R> {
         let _flags = self.reader.read_u32().map_err(BytecodeLoaderError::from)?;
 
         // assert that the section length is correct
-        if section_length != 4 {
-            return Err(BytecodeLoaderError::InvalidSectionLength(
-                SectionType::Gs1Flags,
-                section_length,
-            ));
-        }
+        Self::expect_section_length(SectionType::Gs1Flags, 4, section_length)?;
 
         Ok(())
     }
@@ -152,12 +173,7 @@ impl<R: Read> BytecodeLoader<R> {
         }
 
         // assert that the section length is correct
-        if bytes_read != section_length {
-            return Err(BytecodeLoaderError::InvalidSectionLength(
-                SectionType::Functions,
-                section_length,
-            ));
-        }
+        Self::expect_section_length(SectionType::Functions, section_length, bytes_read)?;
 
         Ok(())
     }
@@ -186,12 +202,7 @@ impl<R: Read> BytecodeLoader<R> {
         }
 
         // assert that the section length is correct
-        if bytes_read != section_length {
-            return Err(BytecodeLoaderError::InvalidSectionLength(
-                SectionType::Strings,
-                section_length,
-            ));
-        }
+        Self::expect_section_length(SectionType::Strings, section_length, bytes_read)?;
 
         Ok(())
     }
@@ -291,12 +302,7 @@ impl<R: Read> BytecodeLoader<R> {
         }
 
         // assert that the section length is correct
-        if bytes_read != section_length {
-            return Err(BytecodeLoaderError::InvalidSectionLength(
-                SectionType::Instructions,
-                section_length,
-            ));
-        }
+        Self::expect_section_length(SectionType::Instructions, section_length, bytes_read)?;
 
         Ok(())
     }
@@ -452,6 +458,26 @@ mod tests {
     }
 
     #[test]
+    fn test_fmt_section_type() {
+        assert_eq!(
+            format!("{}", super::SectionType::Gs1Flags),
+            "Gs1Flags".to_string()
+        );
+        assert_eq!(
+            format!("{}", super::SectionType::Functions),
+            "Functions".to_string()
+        );
+        assert_eq!(
+            format!("{}", super::SectionType::Strings),
+            "Strings".to_string()
+        );
+        assert_eq!(
+            format!("{}", super::SectionType::Instructions),
+            "Instructions".to_string()
+        );
+    }
+
+    #[test]
     fn test_load_string_index_out_of_bounds() {
         let reader = std::io::Cursor::new(vec![
             0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
@@ -484,5 +510,148 @@ mod tests {
         let result = loader.load();
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_invalid_function_section_length() {
+        let reader = std::io::Cursor::new(vec![
+            0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x00, 0x00, 0x00, 0x00, // Flags: 0
+            0x00, 0x00, 0x00, 0x02, // Section type: Functions
+            0x00, 0x00, 0x00, 0x09, // Length: 9 (invalid)
+            0x00, 0x00, 0x00, 0x00, // Function location: 0
+            0x6d, 0x61, 0x69, 0x6e, // Function name: "main"
+            0x41, 0x00, // "A" and Null terminator
+            0x00, 0x00, 0x00, 0x03, // Section type: Strings
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x61, 0x62, 0x63, 0x00, // String: "abc"
+            0x00, 0x00, 0x00, 0x04, // Section type: Instructions
+            0x00, 0x00, 0x00, 0x0c, // Length: 12
+            0x01, // Opcode: Jmp
+            0xF3, // Opcode: ImmByte
+            0x01, // Operand: 1
+            0x14, // Opcode: PushNumber
+            0xF4, // Opcode: ImmShort
+            0x00, 0x01, // Operand: 1
+            0x15, // Opcode: PushString
+            0xF0, // Opcode: ImmStringByte
+            0x00, // Operand: 0
+            0x1b, // Opcode: PushPi
+            0x07, // Opcode: Ret
+        ]);
+
+        let mut loader = super::BytecodeLoader::new(reader);
+        let result = loader.load();
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_operands() {
+        let reader = std::io::Cursor::new(vec![
+            0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x00, 0x00, 0x00, 0x00, // Flags: 0
+            0x00, 0x00, 0x00, 0x02, // Section type: Functions
+            0x00, 0x00, 0x00, 0x09, // Length: 9
+            0x00, 0x00, 0x00, 0x00, // Function location: 0
+            0x6d, 0x61, 0x69, 0x6e, // Function name: "main"
+            0x00, // Null terminator
+            0x00, 0x00, 0x00, 0x03, // Section type: Strings
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x61, 0x62, 0x63, 0x00, // String: "abc"
+            0x00, 0x00, 0x00, 0x04, // Section type: Instructions
+            0x00, 0x00, 0x00, 0x23, // Length: 35
+            0x01, // Opcode: Jmp
+            0xF3, // Opcode: ImmByte
+            0x01, // Operand: 1
+            0x14, // Opcode: PushNumber
+            0xF4, // Opcode: ImmShort
+            0x00, 0x01, // Operand: 1
+            0x14, // Opcode: PushNumber
+            0xF5, // Opcode: ImmInt
+            0x00, 0x00, 0x00, 0x01, // Operand: 1
+            0x14, // Opcode: PushNumber
+            0xF6, // Opcode: ImmFloat
+            0x33, 0x2e, 0x31, 0x34, 0x00, // Operand: "3.14"
+            0x15, // Opcode: PushString
+            0xF0, // Opcode: ImmStringByte
+            0x00, // Operand: 0
+            0x15, // Opcode: PushString
+            0xF1, // Opcode: ImmStringShort
+            0x00, 0x00, // Operand: 0
+            0x15, // Opcode: PushString
+            0xF2, // Opcode: ImmStringInt
+            0x00, 0x00, 0x00, 0x00, // Operand: 0
+            0x1b, // Opcode: PushPi
+            0x07, // Opcode: Ret
+        ]);
+        let mut loader = super::BytecodeLoader::new(reader);
+        loader.load().unwrap();
+
+        assert_eq!(loader.function_map.len(), 1);
+        assert_eq!(loader.function_map.get("main"), Some(&0));
+        assert_eq!(loader.strings.len(), 1);
+        assert_eq!(loader.strings.first(), Some(&"abc".to_string()));
+        assert_eq!(loader.instructions.len(), 9);
+
+        assert_eq!(loader.instructions[0].opcode, crate::opcode::Opcode::Jmp);
+        assert_eq!(
+            loader.instructions[0].operand,
+            Some(crate::operand::Operand::new_int(1))
+        );
+        assert_eq!(
+            loader.instructions[1].opcode,
+            crate::opcode::Opcode::PushNumber
+        );
+        assert_eq!(
+            loader.instructions[1].operand,
+            Some(crate::operand::Operand::new_int(1))
+        );
+        assert_eq!(
+            loader.instructions[2].opcode,
+            crate::opcode::Opcode::PushNumber
+        );
+        assert_eq!(
+            loader.instructions[2].operand,
+            Some(crate::operand::Operand::new_int(1))
+        );
+        assert_eq!(
+            loader.instructions[3].opcode,
+            crate::opcode::Opcode::PushNumber
+        );
+        assert_eq!(
+            loader.instructions[3].operand,
+            Some(crate::operand::Operand::new_float("3.14".to_string()))
+        );
+        assert_eq!(
+            loader.instructions[4].opcode,
+            crate::opcode::Opcode::PushString
+        );
+        assert_eq!(
+            loader.instructions[4].operand,
+            Some(crate::operand::Operand::new_string("abc"))
+        );
+        assert_eq!(
+            loader.instructions[5].opcode,
+            crate::opcode::Opcode::PushString
+        );
+        assert_eq!(
+            loader.instructions[5].operand,
+            Some(crate::operand::Operand::new_string("abc"))
+        );
+        assert_eq!(
+            loader.instructions[6].opcode,
+            crate::opcode::Opcode::PushString
+        );
+        assert_eq!(
+            loader.instructions[6].operand,
+            Some(crate::operand::Operand::new_string("abc"))
+        );
+        assert_eq!(loader.instructions[7].opcode, crate::opcode::Opcode::PushPi);
+        assert_eq!(loader.instructions[7].operand, None);
+        assert_eq!(loader.instructions[8].opcode, crate::opcode::Opcode::Ret);
+        assert_eq!(loader.instructions[8].operand, None);
     }
 }
