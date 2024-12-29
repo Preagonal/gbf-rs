@@ -327,4 +327,23 @@ mod tests {
         assert_eq!(iter.next().unwrap().address, 1);
         assert!(iter.next().is_none());
     }
+
+    #[test]
+    fn test_basic_block_into_iter_ref() {
+        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        block.add_instruction(Instruction::new_with_operand(
+            Opcode::PushNumber,
+            0,
+            Operand::new_int(42),
+        ));
+        block.add_instruction(Instruction::new_with_operand(
+            Opcode::PushNumber,
+            1,
+            Operand::new_int(42),
+        ));
+        let mut iter = (&block).into_iter();
+        assert_eq!(iter.next().unwrap().address, 0);
+        assert_eq!(iter.next().unwrap().address, 1);
+        assert!(iter.next().is_none());
+    }
 }
