@@ -148,5 +148,9 @@ mod tests {
             0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
         ];
         module.load_bytecode(&bytecode[..]).unwrap();
+
+        // test failure case
+        let bytecode = [0x00, 0x00, 0x00, 0x01];
+        assert!(module.load_bytecode(&bytecode[..]).is_err());
     }
 }

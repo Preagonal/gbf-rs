@@ -16,10 +16,6 @@ jobs:
     name: Run Code Coverage
     runs-on: ubuntu-latest
 
-    # env:
-    #   RUSTFLAGS: "-Cinstrument-coverage"
-    #   LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
-
     steps:
       # Step 1: Check out the repository
       - name: Checkout repository
@@ -38,51 +34,7 @@ jobs:
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --workspace --codecov --output-path codecov.json
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
           files: codecov.json
-          fail_ci_if_error: true
-
-      # Step 3: Install llvm-tools-preview
-      # - name: Install llvm-tools-preview
-      #   run: rustup component add llvm-tools-preview
-
-      # Step 4: Install grcov
-      # - name: Install grcov
-      #   run: cargo install grcov
-
-      # Step 5: Prepare coverage directory
-      # - name: Prepare coverage directory
-      #   run: mkdir -p target/coverage
-
-      # # Step 6: Build the Project with instrumentation
-      # - name: Build Project
-      #   run: cargo build --workspace
-
-      # # Step 7: Run tests with coverage instrumentation
-      # - name: Run tests with coverage
-      #   run: cargo test --workspace --all-targets --verbose
-
-      # # Step 8: Generate lcov.info with grcov
-      # - name: Generate LCOV file
-      #   run: |
-      #     # Create a coverage/ subdir to store the LCOV output
-      #     mkdir -p target/coverage
-      #     # Generate the LCOV (lcov.info) file
-      #     grcov target/coverage \
-      #       -s . \
-      #       -b target/debug \
-      #       --llvm \
-      #       --branch \
-      #       --ignore-not-existing \
-      #       -t lcov \
-      #       -o target/coverage/lcov.info
-
-      # # Step 9: Upload coverage data to Codecov
-      # - name: Upload to Codecov
-      #   uses: codecov/codecov-action@v5
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     files: target/coverage/lcov.info
-      #     flags: unittests

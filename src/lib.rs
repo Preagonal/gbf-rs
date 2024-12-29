@@ -100,5 +100,10 @@ mod tests {
             00000003: PushPi\n\
             00000004: Ret\n"
         );
+
+        // test failure case
+        let reader = std::io::Cursor::new(vec![0x00, 0x00, 0x00, 0x01]);
+        let result = disassemble_bytecode(reader);
+        assert!(result.is_err());
     }
 }
