@@ -513,6 +513,32 @@ mod tests {
     }
 
     #[test]
+    fn test_invalid_instruction() {
+        let reader = std::io::Cursor::new(vec![
+            0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x00, 0x00, 0x00, 0x00, // Flags: 0
+            0x00, 0x00, 0x00, 0x02, // Section type: Functions
+            0x00, 0x00, 0x00, 0x09, // Length: 9
+            0x00, 0x00, 0x00, 0x00, // Function location: 0
+            0x6d, 0x61, 0x69, 0x6e, // Function name: "main"
+            0x00, // Null terminator
+            0x00, 0x00, 0x00, 0x03, // Section type: Strings
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x61, 0x62, 0x63, 0x00, // String: "abc"
+            0x00, 0x00, 0x00, 0x04, // Section type: Instructions
+            0x00, 0x00, 0x00, 0x02, // Length: 2
+            0xF3, // Opcode: ImmByte
+            0x01, // Operand: 1
+        ]);
+
+        let mut loader = super::BytecodeLoader::new(reader);
+        let result = loader.load();
+
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_load_invalid_function_section_length() {
         let reader = std::io::Cursor::new(vec![
             0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
