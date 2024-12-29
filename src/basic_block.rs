@@ -116,7 +116,7 @@ impl BasicBlock {
     /// use gbf_rs::operand::Operand;
     ///
     /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
-    /// block.add_instruction(Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_int(42)));
+    /// block.add_instruction(Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42)));
     /// ```
     pub fn add_instruction(&mut self, instruction: Instruction) {
         self.instructions.push(instruction);
@@ -138,7 +138,7 @@ impl BasicBlock {
     /// use gbf_rs::operand::Operand;
     ///
     /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
-    /// block.add_instruction(Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_int(42)));
+    /// block.add_instruction(Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42)));
     /// let instruction = block.find_instruction(|i| i.opcode == Opcode::PushNumber);
     /// ```
     pub fn find_instruction<F>(&self, predicate: F) -> Option<&Instruction>
@@ -275,7 +275,7 @@ mod tests {
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             0,
-            Operand::new_int(42),
+            Operand::new_number(42),
         ));
         assert_eq!(block.instructions.len(), 1);
     }
@@ -286,7 +286,7 @@ mod tests {
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             0,
-            Operand::new_int(42),
+            Operand::new_number(42),
         ));
         let instruction = block.find_instruction(|i| i.opcode == Opcode::PushNumber);
         assert!(instruction.is_some());
@@ -298,7 +298,7 @@ mod tests {
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             0,
-            Operand::new_int(42),
+            Operand::new_number(42),
         ));
         assert_eq!(block.len(), 1);
     }
@@ -315,12 +315,12 @@ mod tests {
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             0,
-            Operand::new_int(42),
+            Operand::new_number(42),
         ));
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             1,
-            Operand::new_int(42),
+            Operand::new_number(42),
         ));
         let mut iter = block.into_iter();
         assert_eq!(iter.next().unwrap().address, 0);
@@ -334,12 +334,12 @@ mod tests {
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             0,
-            Operand::new_int(42),
+            Operand::new_number(42),
         ));
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             1,
-            Operand::new_int(42),
+            Operand::new_number(42),
         ));
         let mut iter = (&block).into_iter();
         assert_eq!(iter.next().unwrap().address, 0);

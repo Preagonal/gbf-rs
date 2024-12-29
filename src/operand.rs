@@ -3,6 +3,16 @@
 use core::fmt;
 use serde::{Deserialize, Serialize};
 
+use thiserror::Error;
+
+/// Represents an error that can occur when parsing an operand.
+#[derive(Debug, Error)]
+pub enum OperandError {
+    /// Invalid conversion
+    #[error("Attempted to convert {0} operand to a {1}")]
+    InvalidConversion(String, String),
+}
+
 /// Represents an operand, which can be one of several types.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum Operand {
@@ -13,7 +23,7 @@ pub enum Operand {
     Float(String),
 
     /// An integer operand.
-    Int(i32),
+    Number(i32),
 }
 
 impl Operand {
@@ -24,6 +34,13 @@ impl Operand {
     ///
     /// # Returns
     /// - A new `Operand::String`.
+    ///
+    /// # Examples
+    /// ```
+    /// use gbf_rs::operand::Operand;
+    ///
+    /// let operand = Operand::new_string("Hello, world!");
+    /// ```
     pub fn new_string(value: impl Into<String>) -> Self {
         Operand::String(value.into())
     }
@@ -35,43 +52,84 @@ impl Operand {
     ///
     /// # Returns
     /// - A new `Operand::Float`.
+    ///
+    /// # Examples
+    /// ```
+    /// use gbf_rs::operand::Operand;
+    ///
+    /// let operand = Operand::new_float("3.14");
+    /// ```
     pub fn new_float(value: impl Into<String>) -> Self {
         Operand::Float(value.into())
     }
 
-    /// Creates a new integer operand.
+    /// Creates a new number operand.
     ///
     /// # Arguments
-    /// - `value`: The value of the integer operand.
+    /// - `value`: The value of the number operand.
     ///
     /// # Returns
-    /// - A new `Operand::Int`.
-    pub fn new_int(value: i32) -> Self {
-        Operand::Int(value)
+    /// - A new `Operand::Number`.
+    ///
+    /// # Examples
+    /// ```
+    /// use gbf_rs::operand::Operand;
+    ///
+    /// let operand = Operand::new_number(42);
+    /// ```
+    pub fn new_number(value: i32) -> Self {
+        Operand::Number(value)
     }
 
     /// Retrieves the value of the operand as a string reference, if applicable.
     ///
     /// # Returns
-    /// - `Some(&str)` for `Operand::String` and `Operand::Float`.
-    /// - `None` for `Operand::Int`.
-    pub fn get_string_value(&self) -> Option<&str> {
+    /// - The value of the operand as a string reference.
+    ///
+    /// # Errors
+    /// - `OperandError::InvalidConversion` if the operand is a number.
+    ///
+    /// # Examples
+    /// ```
+    /// use gbf_rs::operand::Operand;
+    ///
+    /// let operand = Operand::new_string("Hello, world!");
+    /// let value = operand.get_string_value().unwrap();
+    /// assert_eq!(value, "Hello, world!");
+    /// ```
+    pub fn get_string_value(&self) -> Result<&str, OperandError> {
         match self {
-            Operand::String(value) | Operand::Float(value) => Some(value),
-            Operand::Int(_) => None,
+            Operand::String(value) | Operand::Float(value) => Ok(value),
+            Operand::Number(_) => Err(OperandError::InvalidConversion(
+                "Number".to_string(),
+                "String".to_string(),
+            )),
         }
     }
 
-    /// Retrieves the value of the operand as an integer, if applicable.
+    /// Retrieves the value of the operand as a number, if applicable.
     ///
     /// # Returns
-    /// - `Some(i32)` for `Operand::Int`.
-    /// - `None` for `Operand::String` and `Operand::Float`.
-    pub fn get_int_value(&self) -> Option<i32> {
-        if let Operand::Int(value) = self {
-            Some(*value)
-        } else {
-            None
+    /// - The value of the operand as a number.
+    ///
+    /// # Errors
+    /// - `OperandError::InvalidConversion` if the operand is a string.
+    ///
+    /// # Examples
+    /// ```
+    /// use gbf_rs::operand::Operand;
+    ///
+    /// let operand = Operand::new_number(42);
+    /// let value = operand.get_number_value().unwrap();
+    /// assert_eq!(value, 42);
+    /// ```
+    pub fn get_number_value(&self) -> Result<i32, OperandError> {
+        match self {
+            Operand::Number(value) => Ok(*value),
+            Operand::String(_) | Operand::Float(_) => Err(OperandError::InvalidConversion(
+                "String/Float".to_string(),
+                "Number".to_string(),
+            )),
         }
     }
 }
@@ -81,7 +139,7 @@ impl fmt::Display for Operand {
         match self {
             Operand::String(value) => value.clone(),
             Operand::Float(value) => value.clone(),
-            Operand::Int(value) => value.to_string(),
+            Operand::Number(value) => value.to_string(),
         }
         .fmt(f)
     }
@@ -94,27 +152,42 @@ mod tests {
     #[test]
     fn string_operand() {
         let operand = Operand::new_string("Hello, world!");
-        assert_eq!(operand.get_string_value(), Some("Hello, world!"));
+        assert_eq!(operand.get_string_value().unwrap(), "Hello, world!");
         assert_eq!(operand.to_string(), "Hello, world!");
+    }
+
+    #[test]
+    fn test_illegal_conversion() {
+        // Create number -> string
+        let operand = Operand::new_number(42);
+        assert!(operand.get_string_value().is_err());
+
+        // Create string -> number
+        let operand = Operand::new_string("Hello, world!");
+        assert!(operand.get_number_value().is_err());
+
+        // double -> number
+        let operand = Operand::new_float("3.14");
+        assert!(operand.get_number_value().is_err());
     }
 
     #[test]
     fn float_operand() {
         let operand = Operand::new_float("3.14");
-        assert_eq!(operand.get_string_value(), Some("3.14"));
+        assert_eq!(operand.get_string_value().unwrap(), "3.14");
         assert_eq!(operand.to_string(), "3.14");
     }
 
     #[test]
     fn int_operand() {
-        let operand = Operand::new_int(42);
-        assert_eq!(operand.get_int_value(), Some(42));
+        let operand = Operand::new_number(42);
+        assert_eq!(operand.get_number_value().unwrap(), 42);
         assert_eq!(operand.to_string(), "42");
     }
 
     #[test]
     fn display_trait() {
-        let operand = Operand::new_int(123);
+        let operand = Operand::new_number(123);
         assert_eq!(operand.to_string(), "123");
         assert_eq!(format!("{}", operand), "123");
     }

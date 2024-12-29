@@ -252,15 +252,15 @@ impl<R: Read> BytecodeLoader<R> {
             }
             Opcode::ImmByte => {
                 let value = self.reader.read_u8().map_err(BytecodeLoaderError::from)?;
-                Ok(Some((Operand::new_int(value as i32), 1)))
+                Ok(Some((Operand::new_number(value as i32), 1)))
             }
             Opcode::ImmShort => {
                 let value = self.reader.read_u16().map_err(BytecodeLoaderError::from)?;
-                Ok(Some((Operand::new_int(value as i32), 2)))
+                Ok(Some((Operand::new_number(value as i32), 2)))
             }
             Opcode::ImmInt => {
                 let value = self.reader.read_u32().map_err(BytecodeLoaderError::from)?;
-                Ok(Some((Operand::new_int(value as i32), 4)))
+                Ok(Some((Operand::new_number(value as i32), 4)))
             }
             Opcode::ImmFloat => {
                 let value = self
@@ -419,7 +419,7 @@ mod tests {
         );
         assert_eq!(
             loader.instructions[1].operand,
-            Some(crate::operand::Operand::new_int(1))
+            Some(crate::operand::Operand::new_number(1))
         );
         assert_eq!(
             loader.instructions[2].opcode,
@@ -625,7 +625,7 @@ mod tests {
         assert_eq!(loader.instructions[0].opcode, crate::opcode::Opcode::Jmp);
         assert_eq!(
             loader.instructions[0].operand,
-            Some(crate::operand::Operand::new_int(1))
+            Some(crate::operand::Operand::new_number(1))
         );
         assert_eq!(
             loader.instructions[1].opcode,
@@ -633,7 +633,7 @@ mod tests {
         );
         assert_eq!(
             loader.instructions[1].operand,
-            Some(crate::operand::Operand::new_int(1))
+            Some(crate::operand::Operand::new_number(1))
         );
         assert_eq!(
             loader.instructions[2].opcode,
@@ -641,7 +641,7 @@ mod tests {
         );
         assert_eq!(
             loader.instructions[2].operand,
-            Some(crate::operand::Operand::new_int(1))
+            Some(crate::operand::Operand::new_number(1))
         );
         assert_eq!(
             loader.instructions[3].opcode,

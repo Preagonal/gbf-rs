@@ -52,7 +52,7 @@ fn load_simple_gs2() {
     );
     assert_eq!(
         thirteenth_instruction.operand,
-        Some(gbf_rs::operand::Operand::new_int(0))
+        Some(gbf_rs::operand::Operand::new_number(0))
     );
 }
 
@@ -75,7 +75,7 @@ fn load_multiple_functions() {
     assert_eq!(first_instruction.opcode, gbf_rs::opcode::Opcode::Jmp);
     assert_eq!(
         first_instruction.operand,
-        Some(gbf_rs::operand::Operand::new_int(79))
+        Some(gbf_rs::operand::Operand::new_number(79))
     );
 
     // Check the last instruction. In this case, it should be `Ret`
