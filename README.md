@@ -31,7 +31,7 @@ gbf-rs = "0.1.0"
 ```
 
 ### Minimum Supported Rust Version
-This project supports Rust 1.61.0 and later.
+This project supports Rust 1.70.0 and later.
 
 ### Usage
 
