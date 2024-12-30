@@ -59,7 +59,7 @@ TODO: Add example code.
 
 ### Prerequisites
 
-- Rust 1.61.0 or later
+- Rust 1.70.0 or later
 - Graphviz (optional, for rendering CFGs)
 
 ### Build and Test
