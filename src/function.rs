@@ -17,9 +17,9 @@ pub enum FunctionError {
     #[error("BasicBlock not found: {0}")]
     BasicBlockNotFound(BasicBlockId),
 
-    /// The requested `BasicBlock` does not have a `NodeId`.
-    #[error("BasicBlock with id {0} does not have a NodeId")]
-    BasicBlockNodeIdNotFound(BasicBlockId),
+    /// The requested `BasicBlock` does not have a `NodeIndex`.
+    #[error("BasicBlock with id {0} does not have a NodeIndex")]
+    BasicBlockNodeIndexNotFound(BasicBlockId),
 
     /// The function already has an entry block.
     #[error("Function already has an entry block")]
@@ -181,7 +181,7 @@ impl Function {
     /// - `node_id`: The `NodeIndex` to convert.
     ///
     /// # Returns
-    /// - The `BasicBlockId` of the block with the corresponding `NodeId`.
+    /// - The `BasicBlockId` of the block with the corresponding `NodeIndex`.
     fn node_id_to_block_id(&self, node_id: NodeIndex) -> Option<BasicBlockId> {
         self.node_to_block.get(&node_id).cloned()
     }
@@ -192,7 +192,7 @@ impl Function {
     /// - `block_id`: The `BasicBlockId` to convert.
     ///
     /// # Returns
-    /// - The `NodeId` of the block with the corresponding `BasicBlockId`.
+    /// - The `NodeIndex` of the block with the corresponding `BasicBlockId`.
     fn block_id_to_node_id(&self, block_id: BasicBlockId) -> Option<NodeIndex> {
         self.block_to_node.get(&block_id).cloned()
     }
@@ -288,7 +288,7 @@ impl Function {
     /// - `target`: The `BasicBlockId` of the target block.
     ///
     /// # Errors
-    /// - `FunctionError::BasicBlockNodeIdNotFound` if either block does not have a `NodeId`.
+    /// - `FunctionError::BasicBlockNodeIndexNotFound` if either block does not have a `NodeIndex`.
     /// - `FunctionError::GraphError` if the edge could not be added to the graph.
     ///
     /// # Example
@@ -308,10 +308,10 @@ impl Function {
     ) -> Result<(), FunctionError> {
         let source_node_id = self
             .block_id_to_node_id(source)
-            .ok_or(FunctionError::BasicBlockNodeIdNotFound(source))?;
+            .ok_or(FunctionError::BasicBlockNodeIndexNotFound(source))?;
         let target_node_id = self
             .block_id_to_node_id(target)
-            .ok_or(FunctionError::BasicBlockNodeIdNotFound(target))?;
+            .ok_or(FunctionError::BasicBlockNodeIndexNotFound(target))?;
 
         // With petgraph, this does not fail, so we simply do it:
         // It can panic if the node does not exist, but we have already checked that.
@@ -328,7 +328,7 @@ impl Function {
     /// - A vector of `BasicBlockId`s that are predecessors of the block.
     ///
     /// # Errors
-    /// - `FunctionError::BasicBlockNodeIdNotFound` if the block does not exist.
+    /// - `FunctionError::BasicBlockNodeIndexNotFound` if the block does not exist.
     /// - `FunctionError::GraphError` if the predecessors could not be retrieved from the graph.
     ///
     /// # Example
@@ -346,7 +346,7 @@ impl Function {
     pub fn get_predecessors(&self, id: BasicBlockId) -> Result<Vec<BasicBlockId>, FunctionError> {
         let node_id = self
             .block_id_to_node_id(id)
-            .ok_or(FunctionError::BasicBlockNodeIdNotFound(id))?;
+            .ok_or(FunctionError::BasicBlockNodeIndexNotFound(id))?;
 
         // Collect all incoming neighbors
         let preds = self
@@ -369,7 +369,7 @@ impl Function {
     /// - A vector of `BasicBlockId`s that are successors of the block.
     ///
     /// # Errors
-    /// - `FunctionError::BasicBlockNodeIdNotFound` if the block does not exist.
+    /// - `FunctionError::BasicBlockNodeIndexNotFound` if the block does not exist.
     /// - `FunctionError::GraphError` if the successors could not be retrieved from the graph.
     ///
     /// # Example
@@ -387,7 +387,7 @@ impl Function {
     pub fn get_successors(&self, id: BasicBlockId) -> Result<Vec<BasicBlockId>, FunctionError> {
         let node_id = self
             .block_id_to_node_id(id)
-            .ok_or(FunctionError::BasicBlockNodeIdNotFound(id))?;
+            .ok_or(FunctionError::BasicBlockNodeIndexNotFound(id))?;
 
         // Collect all outgoing neighbors
         let succs = self

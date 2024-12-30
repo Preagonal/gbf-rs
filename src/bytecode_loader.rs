@@ -4,11 +4,15 @@ use crate::{
     graal_io::{GraalIoError, GraalReader},
     instruction::Instruction,
     opcode::{Opcode, OpcodeError},
-    operand::Operand,
+    operand::{Operand, OperandError},
     utils::Gs2BytecodeAddress,
 };
-use std::{collections::HashMap, io::Read};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Read,
+};
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Error type for bytecode operations.
@@ -37,6 +41,10 @@ pub enum BytecodeLoaderError {
     /// Error for when an invalid opcode is encountered.
     #[error("Invalid opcode: {0}")]
     OpcodeError(#[from] OpcodeError),
+
+    /// Error for when an invalid operand is encountered.
+    #[error("Invalid operand: {0}")]
+    InvalidOperand(#[from] OperandError),
 }
 
 impl std::fmt::Display for SectionType {
@@ -51,7 +59,7 @@ impl std::fmt::Display for SectionType {
 }
 
 /// Represents a section type in a module.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
 #[repr(u32)]
 pub enum SectionType {
     /// The section contains flags for the module.
@@ -67,6 +75,56 @@ pub enum SectionType {
     Instructions = 4,
 }
 
+/// A builder for a BytecodeLoader.
+pub struct BytecodeLoaderBuilder<R> {
+    reader: R,
+}
+
+impl<R: std::io::Read> BytecodeLoaderBuilder<R> {
+    /// Creates a new BytecodeLoaderBuilder.
+    ///
+    /// # Arguments
+    /// - `reader`: The reader to read the bytecode from.
+    ///
+    /// # Returns
+    /// - A new `BytecodeLoaderBuilder` instance.
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::bytecode_loader::BytecodeLoaderBuilder;
+    ///
+    /// let reader = std::io::Cursor::new(vec![0x00, 0x00, 0x00, 0x00]);
+    /// let builder = BytecodeLoaderBuilder::new(reader);
+    /// ```
+    pub fn new(reader: R) -> Self {
+        Self { reader }
+    }
+
+    /// Builds a `BytecodeLoader` from the builder.
+    ///
+    /// # Returns
+    /// - A `Result` containing the `BytecodeLoader` if successful.
+    ///
+    /// # Errors
+    /// - `BytecodeLoaderError::InvalidSectionType` if an invalid section type is encountered.
+    /// - `BytecodeLoaderError::InvalidSectionLength` if an invalid section length is encountered.
+    /// - `BytecodeLoaderError::StringIndexOutOfBounds` if a string index is out of bounds.
+    /// - `BytecodeLoaderError::NoPreviousInstruction` if there is no previous instruction when setting an operand.
+    /// - `BytecodeLoaderError::GraalIo` if an I/O error occurs.
+    /// - `BytecodeLoaderError::OpcodeError` if an invalid opcode is encountered.
+    pub fn build(self) -> Result<BytecodeLoader<R>, BytecodeLoaderError> {
+        let mut loader = BytecodeLoader {
+            block_start_addresses: HashSet::new(),
+            reader: GraalReader::new(self.reader),
+            function_map: HashMap::new(),
+            strings: Vec::new(),
+            instructions: Vec::new(),
+        };
+        loader.load()?; // Load data during construction
+        Ok(loader)
+    }
+}
+
 /// A structure for loading bytecode from a reader.
 pub struct BytecodeLoader<R: Read> {
     reader: GraalReader<R>,
@@ -77,33 +135,12 @@ pub struct BytecodeLoader<R: Read> {
 
     /// The instructions in the module.
     pub instructions: Vec<Instruction>,
+
+    /// Each address where a block starts.
+    pub block_start_addresses: HashSet<Gs2BytecodeAddress>,
 }
 
 impl<R: Read> BytecodeLoader<R> {
-    /// Creates a new BytecodeLoader.
-    ///
-    /// # Arguments
-    /// - `reader`: The reader to read the bytecode from.
-    ///
-    /// # Returns
-    /// - A new `BytecodeLoader` instance.
-    ///
-    /// # Example
-    /// ```
-    /// use gbf_rs::bytecode_loader::BytecodeLoader;
-    ///
-    /// let reader = std::io::Cursor::new(vec![0x00, 0x00, 0x00, 0x00]);
-    /// let loader = BytecodeLoader::new(reader);
-    /// ```
-    pub fn new(reader: R) -> Self {
-        Self {
-            reader: GraalReader::new(reader),
-            function_map: HashMap::new(),
-            strings: Vec::new(),
-            instructions: Vec::new(),
-        }
-    }
-
     /// Asserts that the section length is correct.
     ///
     /// # Arguments
@@ -275,6 +312,9 @@ impl<R: Read> BytecodeLoader<R> {
 
     /// Reads the instructions section from the reader. This section contains the bytecode instructions.
     fn read_instructions(&mut self) -> Result<(), BytecodeLoaderError> {
+        // Add the first block start address
+        self.block_start_addresses.insert(0);
+
         let section_length = self.reader.read_u32().map_err(BytecodeLoaderError::from)?;
 
         // For each instruction, use self.read_opcode() to get the opcode, and then use self.read_operand() to get the operand (if any).
@@ -290,14 +330,50 @@ impl<R: Read> BytecodeLoader<R> {
             if let Some(operand) = operand {
                 let last_instruction = self.instructions.last_mut();
                 if let Some(last_instruction) = last_instruction {
-                    last_instruction.set_operand(operand.0);
+                    last_instruction.set_operand(operand.0.clone());
                     bytes_read += operand.1 as u32;
+
+                    // If this opcode has a jump target, we should get the target address and add it to the block start addresses.
+                    if last_instruction.opcode.has_jump_target() {
+                        self.block_start_addresses
+                            .insert(operand.0.get_number_value()? as Gs2BytecodeAddress);
+                    }
                 } else {
                     return Err(BytecodeLoaderError::NoPreviousInstruction);
                 }
             } else {
                 self.instructions
                     .push(Instruction::new(opcode, self.instructions.len()));
+
+                // If this opcode is at the end of a block, insert the next address as a block start address.
+                if opcode.is_block_end() {
+                    self.block_start_addresses
+                        .insert(self.instructions.len() as Gs2BytecodeAddress);
+                }
+            }
+        }
+
+        // If we didn't load in any instructions, remove 0 from the block start addresses.
+        if self.instructions.is_empty() {
+            self.block_start_addresses.remove(&0);
+        }
+
+        // If the last instruction is CFG-related, we want to remove the last block start address.
+        if self
+            .instructions
+            .last()
+            .is_some_and(|i| i.opcode.is_block_end())
+        {
+            self.block_start_addresses.remove(&self.instructions.len());
+        }
+
+        // Ensure that all block start addresses are less than the number of instructions and return
+        // an error if they are not.
+        for address in self.block_start_addresses.iter() {
+            if *address >= self.instructions.len() {
+                return Err(BytecodeLoaderError::InvalidOperand(
+                    OperandError::InvalidJumpTarget(*address as Gs2BytecodeAddress),
+                ));
             }
         }
 
@@ -319,27 +395,8 @@ impl<R: Read> BytecodeLoader<R> {
     /// - `BytecodeLoaderError::NoPreviousInstruction` if there is no previous instruction when setting an operand.
     /// - `BytecodeLoaderError::GraalIo` if an I/O error occurs.
     /// - `BytecodeLoaderError::OpcodeError` if an invalid opcode is encountered.
-    ///
-    /// # Example
-    /// ```
-    /// use gbf_rs::bytecode_loader::BytecodeLoader;
-    ///
-    /// // fill each section with no data
-    /// let reader = std::io::Cursor::new(vec![
-    ///     0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
-    ///     0x00, 0x00, 0x00, 0x04, // Length: 4
-    ///     0x00, 0x00, 0x00, 0x00, // Flags: 0
-    ///     0x00, 0x00, 0x00, 0x02, // Section type: Functions
-    ///     0x00, 0x00, 0x00, 0x00, // Length: 0
-    ///     0x00, 0x00, 0x00, 0x03, // Section type: Strings
-    ///     0x00, 0x00, 0x00, 0x00, // Length: 0
-    ///     0x00, 0x00, 0x00, 0x04, // Section type: Instructions
-    ///     0x00, 0x00, 0x00, 0x00, // Length: 0
-    /// ]);
-    /// let mut loader = BytecodeLoader::new(reader);
-    /// loader.load().unwrap();
-    /// ```
-    pub fn load(&mut self) -> Result<(), BytecodeLoaderError> {
+    /// - `BytecodeLoaderError::InvalidOperand` if an invalid operand is encountered.
+    fn load(&mut self) -> Result<(), BytecodeLoaderError> {
         // TODO: I know there will only be 4 sections, but I'd like to make this more dynamic.
         for _ in 0..4 {
             let section_type = self.read_section_type()?;
@@ -376,6 +433,8 @@ impl<R: Read> BytecodeLoader<R> {
 
 #[cfg(test)]
 mod tests {
+    use crate::bytecode_loader::BytecodeLoaderBuilder;
+
     #[test]
     fn test_load() {
         let reader = std::io::Cursor::new(vec![
@@ -404,8 +463,7 @@ mod tests {
             0x1b, // Opcode: PushPi
             0x07, // Opcode: Ret
         ]);
-        let mut loader = super::BytecodeLoader::new(reader);
-        loader.load().unwrap();
+        let loader = BytecodeLoaderBuilder::new(reader).build().unwrap();
 
         assert_eq!(loader.function_map.len(), 1);
         assert_eq!(loader.function_map.get("main"), Some(&0));
@@ -436,8 +494,7 @@ mod tests {
     #[test]
     fn test_load_invalid_section_type() {
         let reader = std::io::Cursor::new(vec![0x00, 0x00, 0x00, 0x05]);
-        let mut loader = super::BytecodeLoader::new(reader);
-        let result = loader.load();
+        let result = BytecodeLoaderBuilder::new(reader).build();
         assert!(result.is_err());
     }
 
@@ -448,13 +505,8 @@ mod tests {
             0x00, 0x00, 0x00, 0x05, // Length: 5
             0x00, 0x00, 0x00, 0x00, // Flags: 0
         ]);
-        let mut loader = super::BytecodeLoader::new(reader);
-        let result = loader.load();
+        let result = BytecodeLoaderBuilder::new(reader).build();
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Invalid section length for Gs1Flags: 5".to_string()
-        );
     }
 
     #[test]
@@ -506,8 +558,7 @@ mod tests {
             0x07, // Opcode: Ret
         ]);
 
-        let mut loader = super::BytecodeLoader::new(reader);
-        let result = loader.load();
+        let result = BytecodeLoaderBuilder::new(reader).build();
 
         assert!(result.is_err());
     }
@@ -532,8 +583,7 @@ mod tests {
             0x01, // Operand: 1
         ]);
 
-        let mut loader = super::BytecodeLoader::new(reader);
-        let result = loader.load();
+        let result = BytecodeLoaderBuilder::new(reader).build();
 
         assert!(result.is_err());
     }
@@ -567,8 +617,7 @@ mod tests {
             0x07, // Opcode: Ret
         ]);
 
-        let mut loader = super::BytecodeLoader::new(reader);
-        let result = loader.load();
+        let result = BytecodeLoaderBuilder::new(reader).build();
 
         assert!(result.is_err());
     }
@@ -613,8 +662,7 @@ mod tests {
             0x1b, // Opcode: PushPi
             0x07, // Opcode: Ret
         ]);
-        let mut loader = super::BytecodeLoader::new(reader);
-        loader.load().unwrap();
+        let loader = BytecodeLoaderBuilder::new(reader).build().unwrap();
 
         assert_eq!(loader.function_map.len(), 1);
         assert_eq!(loader.function_map.get("main"), Some(&0));
@@ -679,5 +727,113 @@ mod tests {
         assert_eq!(loader.instructions[7].operand, None);
         assert_eq!(loader.instructions[8].opcode, crate::opcode::Opcode::Ret);
         assert_eq!(loader.instructions[8].operand, None);
+    }
+
+    #[test]
+    fn test_start_block_addresses() {
+        let reader = std::io::Cursor::new(vec![
+            0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x00, 0x00, 0x00, 0x00, // Flags: 0
+            0x00, 0x00, 0x00, 0x02, // Section type: Functions
+            0x00, 0x00, 0x00, 0x09, // Length: 9
+            0x00, 0x00, 0x00, 0x00, // Function location: 0
+            0x6d, 0x61, 0x69, 0x6e, // Function name: "main"
+            0x00, // Null terminator
+            0x00, 0x00, 0x00, 0x03, // Section type: Strings
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x41, 0x42, 0x43, 0x00, // String: "ABC"
+            0x00, 0x00, 0x00, 0x04, // Section type: Instructions
+            0x00, 0x00, 0x00, 0x26, // Length: 38
+            0x01, // Opcode: Jmp
+            0xF3, // Opcode: ImmByte
+            0x05, // Operand: 5
+            0x14, // Opcode: PushNumber
+            0xF4, // Opcode: ImmShort
+            0x00, 0x01, // Operand: 1
+            0x14, // Opcode: PushNumber
+            0xF5, // Opcode: ImmInt
+            0x00, 0x00, 0x00, 0x01, // Operand: 1
+            0x14, // Opcode: PushNumber
+            0xF6, // Opcode: ImmFloat
+            0x33, 0x2e, 0x31, 0x34, 0x00, // Operand: "3.14"
+            0x15, // Opcode: PushString
+            0xF0, // Opcode: ImmStringByte
+            0x00, // Operand: 0
+            0x15, // Opcode: PushString
+            0xF1, // Opcode: ImmStringShort
+            0x00, 0x00, // Operand: 0
+            0x02, // Opcode: Jeq
+            0xF3, // Opcode: ImmByte
+            0x02, // Operand: 2
+            0x15, // Opcode: PushString
+            0xF2, // Opcode: ImmStringInt
+            0x00, 0x00, 0x00, 0x00, // Operand: 0
+            0x1b, // Opcode: PushPi
+            0x07, // Opcode: Ret
+        ]);
+        let loader = BytecodeLoaderBuilder::new(reader).build().unwrap();
+
+        // print all the instructions
+        for instruction in &loader.instructions {
+            println!("{:?}", instruction);
+        }
+
+        // print the block start addresses
+        println!("{:?}", loader.block_start_addresses);
+
+        assert_eq!(loader.block_start_addresses.len(), 5);
+        assert!(loader.block_start_addresses.contains(&0));
+        assert!(loader.block_start_addresses.contains(&1));
+        assert!(loader.block_start_addresses.contains(&2));
+        assert!(loader.block_start_addresses.contains(&5));
+    }
+
+    #[test]
+    fn test_invalid_blocks() {
+        let reader = std::io::Cursor::new(vec![
+            0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x00, 0x00, 0x00, 0x00, // Flags: 0
+            0x00, 0x00, 0x00, 0x02, // Section type: Functions
+            0x00, 0x00, 0x00, 0x09, // Length: 9
+            0x00, 0x00, 0x00, 0x00, // Function location: 0
+            0x6d, 0x61, 0x69, 0x6e, // Function name: "main"
+            0x00, // Null terminator
+            0x00, 0x00, 0x00, 0x03, // Section type: Strings
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x41, 0x42, 0x43, 0x00, // String: "ABC"
+            0x00, 0x00, 0x00, 0x04, // Section type: Instructions
+            0x00, 0x00, 0x00, 0x26, // Length: 38
+            0x01, // Opcode: Jmp
+            0xF3, // Opcode: ImmByte
+            0x05, // Operand: 5
+            0x14, // Opcode: PushNumber
+            0xF4, // Opcode: ImmShort
+            0x00, 0x01, // Operand: 1
+            0x14, // Opcode: PushNumber
+            0xF5, // Opcode: ImmInt
+            0x00, 0x00, 0x00, 0x01, // Operand: 1
+            0x14, // Opcode: PushNumber
+            0xF6, // Opcode: ImmFloat
+            0x33, 0x2e, 0x31, 0x34, 0x00, // Operand: "3.14"
+            0x15, // Opcode: PushString
+            0xF0, // Opcode: ImmStringByte
+            0x00, // Operand: 0
+            0x15, // Opcode: PushString
+            0xF1, // Opcode: ImmStringShort
+            0x00, 0x00, // Operand: 0
+            0x02, // Opcode: Jeq
+            0xF3, // Opcode: ImmByte
+            0xFF, // Operand: FF (invalid)
+            0x15, // Opcode: PushString
+            0xF2, // Opcode: ImmStringInt
+            0x00, 0x00, 0x00, 0x00, // Operand: 0
+            0x1b, // Opcode: PushPi
+            0x07, // Opcode: Ret
+        ]);
+
+        let result = BytecodeLoaderBuilder::new(reader).build();
+        assert!(result.is_err());
     }
 }

@@ -16,8 +16,9 @@ fn load_bytecode(name: &str) -> Result<impl Read, std::io::Error> {
 #[test]
 fn load_simple_gs2() {
     let reader = load_bytecode("simple.gs2bc").unwrap();
-    let mut bytecode_loader = gbf_rs::bytecode_loader::BytecodeLoader::new(reader);
-    bytecode_loader.load().unwrap();
+    let bytecode_loader = gbf_rs::bytecode_loader::BytecodeLoaderBuilder::new(reader)
+        .build()
+        .unwrap();
 
     // Check the number of functions. In this case, it should be zero since
     // GS2 does not officially consider our case of an "nameless" function.
@@ -59,8 +60,9 @@ fn load_simple_gs2() {
 #[test]
 fn load_multiple_functions() {
     let reader = load_bytecode("multiple-functions.gs2bc").unwrap();
-    let mut bytecode_loader = gbf_rs::bytecode_loader::BytecodeLoader::new(reader);
-    bytecode_loader.load().unwrap();
+    let bytecode_loader = gbf_rs::bytecode_loader::BytecodeLoaderBuilder::new(reader)
+        .build()
+        .unwrap();
 
     // Check the number of functions. In this case, it should be 5
     let functions = bytecode_loader.function_map;

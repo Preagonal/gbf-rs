@@ -63,6 +63,9 @@ pub enum BasicBlockConnectionType {
     /// The edge represents the start of a "With" block.
     With,
 
+    /// The edge represents the start of a "ForEach" block.
+    ForEach,
+
     /// The edge represents a short-circuit
     ShortCircuit,
 }

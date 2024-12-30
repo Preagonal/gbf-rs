@@ -5,12 +5,18 @@ use serde::{Deserialize, Serialize};
 
 use thiserror::Error;
 
+use crate::utils::Gs2BytecodeAddress;
+
 /// Represents an error that can occur when parsing an operand.
 #[derive(Debug, Error)]
 pub enum OperandError {
     /// Invalid conversion
     #[error("Attempted to convert {0} operand to a {1}")]
     InvalidConversion(String, String),
+
+    /// Invalid jump target
+    #[error("Invalid jump target: {0}")]
+    InvalidJumpTarget(Gs2BytecodeAddress),
 }
 
 /// Represents an operand, which can be one of several types.

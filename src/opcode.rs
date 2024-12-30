@@ -114,6 +114,99 @@ macro_rules! define_opcodes {
                     )*
                 ]
             }
+
+            /// If the opcode is a conditional jump instruction.
+            ///
+            /// # Returns
+            /// - `true` if the opcode is a conditional jump instruction.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jeq;
+            /// assert!(opcode.is_conditional_jump());
+            /// ```
+            pub fn is_conditional_jump(self) -> bool {
+                return match self {
+                    $(
+                        Opcode::$name => {
+                            matches!(self, Opcode::Jeq | Opcode::Jne)
+                        },
+                    )*
+                };
+            }
+
+            /// If the opcode is an unconditional jump instruction.
+            ///
+            /// # Returns
+            /// - `true` if the opcode is an unconditional jump instruction.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jmp;
+            /// assert!(opcode.is_unconditional_jump());
+            /// ```
+            pub fn is_unconditional_jump(self) -> bool {
+                return match self {
+                    $(
+                        Opcode::$name => {
+                            matches!(self, Opcode::Jmp)
+                        },
+                    )*
+                };
+            }
+
+            /// If this CFG-related opcode has a corresponding jump target as an operand.
+            ///
+            /// # Returns
+            /// - `true` if the opcode has a jump target.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jmp;
+            /// assert!(opcode.has_jump_target());
+            /// ```
+            pub fn has_jump_target(self) -> bool {
+                return self.is_conditional_jump() || self.is_unconditional_jump() || match self {
+                    $(
+                        Opcode::$name => {
+                            matches!(self, Opcode::With | Opcode::ShortCircuitAnd | Opcode::ShortCircuitOr | Opcode::ForEach)
+                        },
+                    )*
+                };
+            }
+
+            /// If this CFG-related opcode should always be the last opcode in a block. If there is an
+            /// instruction that succeeds this opcode, it should be considered the start of a different block.
+            ///
+            /// # Returns
+            /// - `true` if the opcode is block-ending.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Ret;
+            /// assert!(opcode.is_block_end());
+            /// ```
+            pub fn is_block_end(self) -> bool {
+                return self.has_jump_target() || match self {
+                    $(
+                        Opcode::$name => {
+                            matches!(self, Opcode::Ret | Opcode::ShortCircuitEnd | Opcode::WithEnd)
+                        },
+                    )*
+                };
+            }
         }
 
         impl Display for Opcode {
@@ -345,5 +438,44 @@ mod tests {
     #[test]
     fn test_count() {
         assert_eq!(Opcode::all().len(), Opcode::count());
+    }
+
+    #[test]
+    fn test_is_conditional_jump() {
+        assert!(Opcode::Jeq.is_conditional_jump());
+        assert!(Opcode::Jne.is_conditional_jump());
+        assert!(!Opcode::Jmp.is_conditional_jump());
+    }
+
+    #[test]
+    fn test_is_unconditional_jump() {
+        assert!(Opcode::Jmp.is_unconditional_jump());
+        assert!(!Opcode::Jeq.is_unconditional_jump());
+        assert!(!Opcode::Jne.is_unconditional_jump());
+    }
+
+    #[test]
+    fn test_has_jump_target() {
+        assert!(Opcode::Jmp.has_jump_target());
+        assert!(Opcode::Jeq.has_jump_target());
+        assert!(Opcode::Jne.has_jump_target());
+        assert!(Opcode::With.has_jump_target());
+        assert!(Opcode::ShortCircuitAnd.has_jump_target());
+        assert!(Opcode::ShortCircuitOr.has_jump_target());
+        assert!(Opcode::Jmp.has_jump_target());
+    }
+
+    #[test]
+    fn test_is_block_end() {
+        assert!(Opcode::Jmp.is_block_end());
+        assert!(Opcode::Ret.is_block_end());
+        assert!(Opcode::ShortCircuitEnd.is_block_end());
+        assert!(Opcode::WithEnd.is_block_end());
+        assert!(Opcode::Jeq.is_block_end());
+        assert!(Opcode::Jne.is_block_end());
+        assert!(Opcode::ShortCircuitAnd.is_block_end());
+        assert!(Opcode::ShortCircuitOr.is_block_end());
+        assert!(Opcode::ForEach.is_block_end());
+        assert!(Opcode::ShortCircuitEnd.is_block_end());
     }
 }

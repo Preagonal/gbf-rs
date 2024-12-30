@@ -94,9 +94,8 @@ impl Module {
     /// # Arguments
     /// - `reader`: The reader to use to load the bytecode.
     ///
-    /// # Returns
-    /// - `Ok(())` if the bytecode was loaded successfully.
-    /// - `Err(BytecodeLoaderError)` if an error occurred while loading the bytecode.
+    /// # Errors
+    /// - `BytecodeLoaderError`: An error occurred while loading the bytecode.
     ///
     /// # Example
     /// ```
@@ -120,9 +119,7 @@ impl Module {
         &mut self,
         reader: R,
     ) -> Result<(), BytecodeLoaderError> {
-        let mut bytecode_loader = bytecode_loader::BytecodeLoader::new(reader);
-        bytecode_loader.load()?;
-
+        let _loader = bytecode_loader::BytecodeLoaderBuilder::new(reader).build()?;
         Ok(())
     }
 }

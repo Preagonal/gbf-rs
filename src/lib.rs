@@ -3,7 +3,7 @@
 //! This crate provides basic block definitions, function definitions, module definitions,
 //! graph definitions, instruction definitions, opcode definitions, and operand definitions.
 
-use bytecode_loader::{BytecodeLoader, BytecodeLoaderError};
+use bytecode_loader::{BytecodeLoaderBuilder, BytecodeLoaderError};
 
 /// This module contains basic block definitions and operations.
 pub mod basic_block;
@@ -44,8 +44,8 @@ pub mod utils;
 /// let result = disassemble_bytecode(reader).unwrap();
 /// ```
 pub fn disassemble_bytecode<R: std::io::Read>(reader: R) -> Result<String, BytecodeLoaderError> {
-    let mut loader = BytecodeLoader::new(reader);
-    loader.load()?;
+    // create a new bytecode loader builder
+    let loader = BytecodeLoaderBuilder::new(reader).build()?;
 
     // write a string representation of the bytecode using each instruction in the instructions vec
     let mut result = String::new();

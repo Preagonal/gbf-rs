@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::opcode::Opcode;
 use crate::operand::Operand;
+use crate::utils::Gs2BytecodeAddress;
 
 /// Represents an instruction in a bytecode system.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -12,7 +13,7 @@ pub struct Instruction {
     pub opcode: Opcode,
 
     /// The address of the instruction.
-    pub address: usize,
+    pub address: Gs2BytecodeAddress,
 
     /// The operand of the instruction, if any.
     pub operand: Option<Operand>,
