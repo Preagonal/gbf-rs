@@ -7,19 +7,17 @@ use bytecode_loader::{BytecodeLoader, BytecodeLoaderError};
 
 /// This module contains basic block definitions and operations.
 pub mod basic_block;
-/// This module reads bytecode from a reader and parses it into a module.
+/// This module reads bytecode from a reader and disassembles it.
 pub mod bytecode_loader;
-/// This module contains the definition of a module.
-pub mod directed_graph;
 /// This module contains the definition of a function.
 pub mod function;
-/// This module contains the definition of a module.
+/// This module contains the definition of Graal IO.
 pub mod graal_io;
 /// This module contains the definition of an instruction.
 pub mod instruction;
 /// This module contains the definition of a module.
 pub mod module;
-/// This module contains the definition of an operand.
+/// This module contains the definition of an opcode.
 pub mod opcode;
 /// This module contains the definition of an operand.
 pub mod operand;

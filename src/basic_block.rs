@@ -1,13 +1,10 @@
 #![deny(missing_docs)]
 
-use std::{
-    fmt::{self, Write},
-    vec,
-};
+use std::{fmt, vec};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{directed_graph::RenderableNode, instruction::Instruction};
+use crate::instruction::Instruction;
 
 use std::slice::Iter;
 
@@ -49,6 +46,32 @@ impl fmt::Display for BasicBlockId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Block{}", self.index)
     }
+}
+
+/// Represents the edge type between two basic blocks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum BasicBlockConnectionType {
+    /// The connection represents a conditional branch.
+    Conditional,
+
+    /// The edge represents a fallthrough.
+    Fallthrough,
+
+    /// The edge represents an unconditional branch.
+    Unconditional,
+
+    /// The edge represents the start of a "With" block.
+    With,
+
+    /// The edge represents a short-circuit
+    ShortCircuit,
+}
+
+/// Represents an edge between two basic blocks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct BasicBlockConnection {
+    /// The type of the connection.
+    pub connection_type: BasicBlockConnectionType,
 }
 
 impl BasicBlockId {
@@ -206,47 +229,6 @@ impl IntoIterator for BasicBlock {
     /// - An iterator over the instructions in the block.
     fn into_iter(self) -> Self::IntoIter {
         self.instructions.into_iter()
-    }
-}
-
-impl RenderableNode for BasicBlock {
-    /// Render the block's node representation for Graphviz with customizable padding.
-    ///
-    /// # Arguments
-    ///
-    /// * `padding` - The number of spaces to use for indentation.
-    fn render_node(&self, padding: usize) -> String {
-        let mut label = String::new();
-        let indent = " ".repeat(padding);
-
-        // Start the HTML-like table for Graphviz.
-        writeln!(
-            &mut label,
-            r#"{indent}<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">"#,
-            indent = indent
-        )
-        .unwrap();
-
-        // Render each instruction as a table row with indentation.
-        for inst in &self.instructions {
-            writeln!(
-                &mut label,
-                r#"{indent}    <TR>
-{indent}        <TD ALIGN="LEFT">{:04X}</TD>
-{indent}        <TD ALIGN="LEFT">  </TD>
-{indent}        <TD ALIGN="LEFT">{}</TD>
-{indent}    </TR>"#,
-                inst.address,
-                inst,
-                indent = indent
-            )
-            .unwrap();
-        }
-
-        // Close the HTML-like table.
-        writeln!(&mut label, "{indent}</TABLE>", indent = indent).unwrap();
-
-        label
     }
 }
 

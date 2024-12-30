@@ -2,14 +2,12 @@
 
 use std::fmt;
 use std::{collections::HashMap, hash::Hash};
+
+use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::Direction;
 use thiserror::Error;
 
-use crate::basic_block::BasicBlockType;
-use crate::directed_graph::{GraphError, NodeId, NodeResolver};
-use crate::{
-    basic_block::{BasicBlock, BasicBlockId},
-    directed_graph::DirectedGraph,
-};
+use crate::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
 
 /// Represents an error that can occur when working with functions.
 #[derive(Error, Debug)]
@@ -25,10 +23,6 @@ pub enum FunctionError {
     /// The function already has an entry block.
     #[error("Function already has an entry block")]
     EntryBlockAlreadyExists,
-
-    /// An error occurred while working with the graph.
-    #[error("Graph error: {0}")]
-    GraphError(#[from] GraphError),
 }
 
 /// Represents the identifier of a function.
@@ -40,9 +34,9 @@ pub struct FunctionId {
 }
 
 impl fmt::Display for FunctionId {
-    /// Display the `BasicBlockId` as `BasicBlock{index}`.
+    /// Display the `Function` as `Function{index}`.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "BasicBlock{}", self.index)
+        write!(f, "Function{}", self.index)
     }
 }
 
@@ -98,11 +92,15 @@ pub struct Function {
     pub id: FunctionId,
     entry_block: BasicBlockId,
     blocks: HashMap<BasicBlockId, BasicBlock>,
-    cfg: DirectedGraph<BasicBlockId>,
-    // used to convert NodeId to BasicBlockId
-    node_to_block: HashMap<NodeId, BasicBlockId>,
-    // used to convert BasicBlockId to NodeId
-    block_to_node: HashMap<BasicBlockId, NodeId>,
+
+    // Our petgraph-based control-flow graph
+    cfg: DiGraph<(), ()>,
+
+    // used to convert NodeIndex to BasicBlockId
+    node_to_block: HashMap<NodeIndex, BasicBlockId>,
+
+    // used to convert BasicBlockId to NodeIndex
+    block_to_node: HashMap<BasicBlockId, NodeIndex>,
 }
 
 impl Function {
@@ -115,16 +113,17 @@ impl Function {
     /// - A new `Function` instance.
     pub fn new(id: FunctionId) -> Self {
         let mut blocks = HashMap::new();
-        let mut node_to_block = HashMap::new();
-        let mut block_to_node = HashMap::new();
+        let mut node_to_block: HashMap<NodeIndex, BasicBlockId> = HashMap::new();
+        let mut block_to_node: HashMap<BasicBlockId, NodeIndex> = HashMap::new();
+        let mut cfg = DiGraph::new();
 
-        // create control flow graph
-        let mut cfg: DirectedGraph<BasicBlockId> = DirectedGraph::new();
-
-        // initialize entry block
+        // Initialize entry block
         let entry_block = BasicBlockId::new(blocks.len(), BasicBlockType::Entry);
         blocks.insert(entry_block, BasicBlock::new(entry_block));
-        let entry_node_id = cfg.add_node(entry_block);
+
+        // Add an empty node in the graph to represent this BasicBlock
+        let entry_node_id = cfg.add_node(());
+
         node_to_block.insert(entry_node_id, entry_block);
         block_to_node.insert(entry_block, entry_node_id);
 
@@ -162,33 +161,38 @@ impl Function {
         if block_type == BasicBlockType::Entry {
             return Err(FunctionError::EntryBlockAlreadyExists);
         }
+
         let id = BasicBlockId::new(self.blocks.len(), block_type);
         self.blocks.insert(id, BasicBlock::new(id));
-        let node_id = self.cfg.add_node(id);
+
+        // Insert a node in the petgraph to represent this BasicBlock
+        let node_id = self.cfg.add_node(());
+
         self.block_to_node.insert(id, node_id);
         self.node_to_block.insert(node_id, id);
+
         Ok(id)
     }
 
-    /// Convert a `NodeId` to a `BasicBlockId`.
+    /// Convert a `NodeIndex` to a `BasicBlockId`.
     ///
     /// # Arguments
-    /// - `node_id`: The `NodeId` to convert.
+    /// - `node_id`: The `NodeIndex` to convert.
     ///
     /// # Returns
     /// - The `BasicBlockId` of the block with the corresponding `NodeId`.
-    fn node_id_to_block_id(&self, node_id: NodeId) -> Option<BasicBlockId> {
+    fn node_id_to_block_id(&self, node_id: NodeIndex) -> Option<BasicBlockId> {
         self.node_to_block.get(&node_id).cloned()
     }
 
-    /// Convert a `BasicBlockId` to a `NodeId`.
+    /// Convert a `BasicBlockId` to a `NodeIndex`.
     ///
     /// # Arguments
     /// - `block_id`: The `BasicBlockId` to convert.
     ///
     /// # Returns
     /// - The `NodeId` of the block with the corresponding `BasicBlockId`.
-    fn block_id_to_node_id(&self, block_id: BasicBlockId) -> Option<NodeId> {
+    fn block_id_to_node_id(&self, block_id: BasicBlockId) -> Option<NodeIndex> {
         self.block_to_node.get(&block_id).cloned()
     }
 
@@ -307,9 +311,11 @@ impl Function {
         let target_node_id = self
             .block_id_to_node_id(target)
             .ok_or(FunctionError::BasicBlockNodeIdNotFound(target))?;
-        self.cfg
-            .add_edge(source_node_id, target_node_id)
-            .map_err(FunctionError::GraphError)
+
+        // With petgraph, this does not fail, so we simply do it:
+        // It can panic if the node does not exist, but we have already checked that.
+        self.cfg.add_edge(source_node_id, target_node_id, ());
+        Ok(())
     }
 
     /// Get the predecessors of a `BasicBlock`.
@@ -340,10 +346,12 @@ impl Function {
         let node_id = self
             .block_id_to_node_id(id)
             .ok_or(FunctionError::BasicBlockNodeIdNotFound(id))?;
+
+        // Collect all incoming neighbors
         let preds = self
             .cfg
-            .get_predecessors(node_id)
-            .map_err(FunctionError::GraphError)?;
+            .neighbors_directed(node_id, Direction::Incoming)
+            .collect::<Vec<_>>();
 
         Ok(preds
             .into_iter()
@@ -379,54 +387,21 @@ impl Function {
         let node_id = self
             .block_id_to_node_id(id)
             .ok_or(FunctionError::BasicBlockNodeIdNotFound(id))?;
+
+        // Collect all outgoing neighbors
         let succs = self
             .cfg
-            .get_successors(node_id)
-            .map_err(FunctionError::GraphError)?;
+            .neighbors_directed(node_id, Direction::Outgoing)
+            .collect::<Vec<_>>();
 
         Ok(succs
             .into_iter()
             .filter_map(|succ| self.node_id_to_block_id(succ))
             .collect())
     }
-
-    /// Get dot representation of the function
-    ///
-    /// # Returns
-    /// - A string containing the dot representation of the function.
-    ///
-    /// # Example
-    /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
-    ///
-    /// let mut function = Function::new(FunctionId::new(0, None, 0));
-    /// let block1 = function.create_block(BasicBlockType::Normal).unwrap();
-    /// let block2 = function.create_block(BasicBlockType::Normal).unwrap();
-    ///
-    /// function.add_edge(block1, block2);
-    /// let dot = function.to_dot();
-    /// ```
-    pub fn to_dot(&self) -> String {
-        self.cfg.to_dot(self)
-    }
 }
-
-impl NodeResolver for Function {
-    type NodeData = BasicBlock;
-
-    /// Resolve a NodeId to the corresponding BasicBlock.
-    fn resolve(&self, node_id: NodeId) -> Option<&Self::NodeData> {
-        self.node_to_block
-            .get(&node_id)
-            .and_then(|block_id| self.blocks.get(block_id))
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::{instruction::Instruction, opcode::Opcode};
-
     use super::*;
 
     #[test]
@@ -481,7 +456,7 @@ mod tests {
     #[test]
     fn test_display_function_id() {
         let id = FunctionId::new(0, None, 0);
-        assert_eq!(id.to_string(), "BasicBlock0");
+        assert_eq!(id.to_string(), "Function0");
     }
 
     #[test]
@@ -557,27 +532,5 @@ mod tests {
 
         assert_eq!(succs.len(), 1);
         assert_eq!(succs[0], block2);
-    }
-
-    #[test]
-    fn test_to_dot() {
-        let id = FunctionId::new(0, None, 0);
-        let mut function = Function::new(id.clone());
-        let block1_id = function.create_block(BasicBlockType::Normal).unwrap();
-        let block2_id = function.create_block(BasicBlockType::Normal).unwrap();
-
-        // add some instructions to the blocks
-        let block1 = function.get_block_mut(block1_id).unwrap();
-        block1.add_instruction(Instruction::new(Opcode::PushNumber, 0));
-        block1.add_instruction(Instruction::new(Opcode::PushNumber, 1));
-        let block2 = function.get_block_mut(block2_id).unwrap();
-        block2.add_instruction(Instruction::new(Opcode::PushNumber, 2));
-        block2.add_instruction(Instruction::new(Opcode::PushNumber, 3));
-
-        function.add_edge(block1_id, block2_id).unwrap();
-
-        // TODO: Right now, we'll just test that it doesn't throw an error since
-        // we can't easily predict the output.
-        let _ = function.to_dot();
     }
 }
