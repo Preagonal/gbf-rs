@@ -161,6 +161,29 @@ macro_rules! define_opcodes {
                 };
             }
 
+            /// If this CFG-related opcode contains a branch with a fall-through path to the next instruction.
+            ///
+            /// # Returns
+            /// - `true` if the opcode is a block-starting opcode.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jmp;
+            /// assert!(!opcode.has_fall_through());
+            /// ```
+            pub fn has_fall_through(self) -> bool {
+                return self.is_conditional_jump() || match self {
+                    $(
+                        Opcode::$name => {
+                            matches!(self, Opcode::With | Opcode::ShortCircuitAnd | Opcode::ShortCircuitOr | Opcode::ForEach)
+                        },
+                    )*
+                };
+            }
+
             /// If this CFG-related opcode has a corresponding jump target as an operand.
             ///
             /// # Returns
@@ -175,13 +198,7 @@ macro_rules! define_opcodes {
             /// assert!(opcode.has_jump_target());
             /// ```
             pub fn has_jump_target(self) -> bool {
-                return self.is_conditional_jump() || self.is_unconditional_jump() || match self {
-                    $(
-                        Opcode::$name => {
-                            matches!(self, Opcode::With | Opcode::ShortCircuitAnd | Opcode::ShortCircuitOr | Opcode::ForEach)
-                        },
-                    )*
-                };
+                return self.is_unconditional_jump() || self.has_fall_through();
             }
 
             /// If this CFG-related opcode should always be the last opcode in a block. If there is an

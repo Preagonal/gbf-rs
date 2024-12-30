@@ -7,11 +7,14 @@ use crate::{
     operand::{Operand, OperandError},
     utils::Gs2BytecodeAddress,
 };
+
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeSet, HashMap},
     io::Read,
 };
 
+use log::warn;
+use petgraph::graph::{DiGraph, NodeIndex};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -114,11 +117,14 @@ impl<R: std::io::Read> BytecodeLoaderBuilder<R> {
     /// - `BytecodeLoaderError::OpcodeError` if an invalid opcode is encountered.
     pub fn build(self) -> Result<BytecodeLoader<R>, BytecodeLoaderError> {
         let mut loader = BytecodeLoader {
-            block_start_addresses: HashSet::new(),
+            block_breaks: BTreeSet::new(),
             reader: GraalReader::new(self.reader),
             function_map: HashMap::new(),
             strings: Vec::new(),
             instructions: Vec::new(),
+            raw_block_graph: DiGraph::new(),
+            raw_block_address_to_node: HashMap::new(),
+            block_address_to_function: HashMap::new(),
         };
         loader.load()?; // Load data during construction
         Ok(loader)
@@ -136,8 +142,17 @@ pub struct BytecodeLoader<R: Read> {
     /// The instructions in the module.
     pub instructions: Vec<Instruction>,
 
-    /// Each address where a block starts.
-    pub block_start_addresses: HashSet<Gs2BytecodeAddress>,
+    // A HashSet of where block breaks occur.
+    block_breaks: BTreeSet<Gs2BytecodeAddress>,
+
+    /// The relationship between each block start address and the next block start address.
+    raw_block_graph: DiGraph<Gs2BytecodeAddress, ()>,
+
+    /// A map of block start addresses to their corresponding node in the graph.
+    raw_block_address_to_node: HashMap<Gs2BytecodeAddress, NodeIndex>,
+
+    /// A map of block start addresses to their corresponding function name.
+    pub block_address_to_function: HashMap<Gs2BytecodeAddress, String>,
 }
 
 impl<R: Read> BytecodeLoader<R> {
@@ -180,6 +195,14 @@ impl<R: Read> BytecodeLoader<R> {
         Ok(())
     }
 
+    /// Insert a block start into the graph
+    ///
+    /// # Arguments
+    /// - `address`: The address of the block.
+    fn insert_block_start(&mut self, address: Gs2BytecodeAddress) {
+        self.block_breaks.insert(address);
+    }
+
     /// Reads the functions section from the reader. This section contains the names of the functions
     /// in the module.
     ///
@@ -207,6 +230,8 @@ impl<R: Read> BytecodeLoader<R> {
                 .insert(function_name.clone(), function_location);
             bytes_read += 4 + function_name.len() as u32;
             bytes_read += 1; // Null terminator
+
+            self.insert_block_start(function_location);
         }
 
         // assert that the section length is correct
@@ -313,72 +338,67 @@ impl<R: Read> BytecodeLoader<R> {
     /// Reads the instructions section from the reader. This section contains the bytecode instructions.
     fn read_instructions(&mut self) -> Result<(), BytecodeLoaderError> {
         // Add the first block start address
-        self.block_start_addresses.insert(0);
+        self.insert_block_start(0);
 
         let section_length = self.reader.read_u32().map_err(BytecodeLoaderError::from)?;
 
-        // For each instruction, use self.read_opcode() to get the opcode, and then use self.read_operand() to get the operand (if any).
-        // We should only read up to section_length bytes.
         let mut bytes_read = 0;
         while bytes_read < section_length {
             let opcode = self.read_opcode()?;
             bytes_read += 1;
 
             let operand = self.read_operand(opcode)?;
-            // If the operand exists, we add the operand to the last instruction.
-            // If the operand does not exist, we create a new instruction with the opcode.
-            if let Some(operand) = operand {
-                let last_instruction = self.instructions.last_mut();
-                if let Some(last_instruction) = last_instruction {
-                    last_instruction.set_operand(operand.0.clone());
-                    bytes_read += operand.1 as u32;
 
-                    // If this opcode has a jump target, we should get the target address and add it to the block start addresses.
-                    if last_instruction.opcode.has_jump_target() {
-                        self.block_start_addresses
-                            .insert(operand.0.get_number_value()? as Gs2BytecodeAddress);
-                    }
-                } else {
-                    return Err(BytecodeLoaderError::NoPreviousInstruction);
+            if let Some(operand) = operand {
+                // Separate scope for mutable borrow of instructions
+                {
+                    let last_instruction = self
+                        .instructions
+                        .last_mut()
+                        .ok_or(BytecodeLoaderError::NoPreviousInstruction)?;
+
+                    last_instruction.set_operand(operand.0.clone());
+                }
+
+                bytes_read += operand.1 as u32;
+
+                debug_assert!(self.instructions.last().is_some());
+
+                // We can unwrap here because we know that the last instruction exists in the scope above
+                if self.instructions.last().unwrap().opcode.has_jump_target() {
+                    self.insert_block_start(operand.0.get_number_value()? as Gs2BytecodeAddress);
                 }
             } else {
-                self.instructions
-                    .push(Instruction::new(opcode, self.instructions.len()));
+                // Create a new instruction
+                let address = self.instructions.len();
+                self.instructions.push(Instruction::new(opcode, address));
 
-                // If this opcode is at the end of a block, insert the next address as a block start address.
                 if opcode.is_block_end() {
-                    self.block_start_addresses
-                        .insert(self.instructions.len() as Gs2BytecodeAddress);
+                    let current_address = address as Gs2BytecodeAddress;
+                    self.insert_block_start(current_address + 1);
                 }
             }
         }
 
-        // If we didn't load in any instructions, remove 0 from the block start addresses.
+        // Verify the section length
+        Self::expect_section_length(SectionType::Instructions, section_length, bytes_read)?;
+
+        // Handle the case of empty instructions
         if self.instructions.is_empty() {
-            self.block_start_addresses.remove(&0);
+            warn!("No instructions were loaded.");
+            self.block_breaks.clear();
         }
 
-        // If the last instruction is CFG-related, we want to remove the last block start address.
-        if self
-            .instructions
-            .last()
-            .is_some_and(|i| i.opcode.is_block_end())
-        {
-            self.block_start_addresses.remove(&self.instructions.len());
-        }
-
-        // Ensure that all block start addresses are less than the number of instructions and return
-        // an error if they are not.
-        for address in self.block_start_addresses.iter() {
-            if *address >= self.instructions.len() {
+        // Validate all addresses
+        let instruction_count = self.instructions.len() as Gs2BytecodeAddress;
+        for address in self.block_breaks.iter() {
+            // It is legal to jump to the "end" of the instructions, but not past it.
+            if *address > instruction_count {
                 return Err(BytecodeLoaderError::InvalidOperand(
-                    OperandError::InvalidJumpTarget(*address as Gs2BytecodeAddress),
+                    OperandError::InvalidJumpTarget(*address),
                 ));
             }
         }
-
-        // assert that the section length is correct
-        Self::expect_section_length(SectionType::Instructions, section_length, bytes_read)?;
 
         Ok(())
     }
@@ -416,9 +436,114 @@ impl<R: Read> BytecodeLoader<R> {
             }
         }
 
+        // After reading in all of the block breaks, we can now create the graph.
+        for block_break in self.block_breaks.iter() {
+            let node = self.raw_block_graph.add_node(*block_break);
+            self.raw_block_address_to_node.insert(*block_break, node);
+        }
+
+        // Iterate through each instruction to figure out the edges
+        for instruction in self.instructions.iter() {
+            let current_instruction_address = instruction.address as Gs2BytecodeAddress;
+            let current_block_address = self.find_block_start_address(current_instruction_address);
+
+            // If the current instruction is a jump, then we need to add an edge to the target block start
+            if instruction.opcode.has_jump_target() {
+                let source_node = self
+                    .raw_block_address_to_node
+                    .get(&current_block_address)
+                    // We can unwrap here because we know that the current block address exists
+                    // If it doesn't, then there is a bug that needs to be fixed in the internal
+                    // logic of the loader.
+                    .unwrap();
+
+                // Unwrap here because we know that the operand exists due to a previous check in
+                // `read_instructions`
+                let target_address =
+                    instruction.operand.as_ref().unwrap().get_number_value()? as Gs2BytecodeAddress;
+
+                // Also unwrap here because we know that the target address exists in the block breaks
+                let target_node = self.raw_block_address_to_node.get(&target_address).unwrap();
+
+                self.raw_block_graph
+                    .add_edge(*source_node, *target_node, ());
+            }
+
+            // If the current opcode has a fallthrough, then we need to add an edge to the next block start
+            if instruction.opcode.has_fall_through() {
+                let source_node = self
+                    .raw_block_address_to_node
+                    .get(&current_block_address)
+                    // We can unwrap here because we know that the current block address exists
+                    // If it doesn't, then there is a bug that needs to be fixed in the internal
+                    // logic of the loader.
+                    .unwrap();
+
+                // Find the next block start address
+                let next_block_address = current_instruction_address + 1;
+
+                // Also unwrap here because we know that the target address exists in the block breaks
+                let target_node = self
+                    .raw_block_address_to_node
+                    .get(&next_block_address)
+                    .unwrap();
+
+                self.raw_block_graph
+                    .add_edge(*source_node, *target_node, ());
+            }
+        }
+
+        // Iterate through each function
+        for (function_name, function_address) in self.function_map.iter() {
+            // Do a depth-first search to find all of the blocks that are reachable from the function address
+            let function_node = self
+                .raw_block_address_to_node
+                .get(function_address)
+                .unwrap();
+
+            let mut dfs = petgraph::visit::Dfs::new(&self.raw_block_graph, *function_node);
+            while let Some(node) = dfs.next(&self.raw_block_graph) {
+                let block_address = *self.raw_block_graph.node_weight(node).unwrap();
+                self.block_address_to_function
+                    .insert(block_address, function_name.clone());
+            }
+        }
+
         Ok(())
     }
 
+    /// Get the function name for a given address.
+    ///
+    /// # Arguments
+    /// - `address`: The address to get the function name for.
+    ///
+    /// # Returns
+    /// - The function name, if it exists.
+    pub fn get_function_name_for_address(&self, address: Gs2BytecodeAddress) -> Option<String> {
+        let block_start = self.find_block_start_address(address);
+        self.block_address_to_function.get(&block_start).cloned()
+    }
+
+    /// Helper function to figure out what block the address is in. This basically looks
+    /// at the argument, and finds the closest block start address that is less than or equal
+    ///
+    /// # Arguments
+    /// - `address`: The address to find the block for.
+    ///
+    /// # Returns
+    /// - The block start address.
+    pub fn find_block_start_address(&self, address: Gs2BytecodeAddress) -> Gs2BytecodeAddress {
+        let mut block_start = 0;
+        for block_break in self.block_breaks.iter() {
+            if *block_break > address {
+                break;
+            }
+            block_start = *block_break;
+        }
+        block_start
+    }
+
+    /// Reads a section type from the reader.
     fn read_section_type(&mut self) -> Result<SectionType, BytecodeLoaderError> {
         let section_type = self.reader.read_u32().map_err(BytecodeLoaderError::from)?;
         match section_type {
@@ -737,7 +862,7 @@ mod tests {
             0x00, 0x00, 0x00, 0x00, // Flags: 0
             0x00, 0x00, 0x00, 0x02, // Section type: Functions
             0x00, 0x00, 0x00, 0x09, // Length: 9
-            0x00, 0x00, 0x00, 0x00, // Function location: 0
+            0x00, 0x00, 0x00, 0x03, // Function location: 3
             0x6d, 0x61, 0x69, 0x6e, // Function name: "main"
             0x00, // Null terminator
             0x00, 0x00, 0x00, 0x03, // Section type: Strings
@@ -774,19 +899,14 @@ mod tests {
         ]);
         let loader = BytecodeLoaderBuilder::new(reader).build().unwrap();
 
-        // print all the instructions
-        for instruction in &loader.instructions {
-            println!("{:?}", instruction);
-        }
-
-        // print the block start addresses
-        println!("{:?}", loader.block_start_addresses);
-
-        assert_eq!(loader.block_start_addresses.len(), 5);
-        assert!(loader.block_start_addresses.contains(&0));
-        assert!(loader.block_start_addresses.contains(&1));
-        assert!(loader.block_start_addresses.contains(&2));
-        assert!(loader.block_start_addresses.contains(&5));
+        assert_eq!(loader.block_breaks.len(), 7);
+        assert!(loader.block_breaks.contains(&0));
+        assert!(loader.block_breaks.contains(&1));
+        assert!(loader.block_breaks.contains(&2));
+        assert!(loader.block_breaks.contains(&3));
+        assert!(loader.block_breaks.contains(&5));
+        assert!(loader.block_breaks.contains(&7));
+        assert!(loader.block_breaks.contains(&10));
     }
 
     #[test]
@@ -833,7 +953,8 @@ mod tests {
             0x07, // Opcode: Ret
         ]);
 
-        let result = BytecodeLoaderBuilder::new(reader).build();
-        assert!(result.is_err());
+        // print instructions
+        let loader = BytecodeLoaderBuilder::new(reader).build();
+        assert!(loader.is_err());
     }
 }

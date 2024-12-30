@@ -1,15 +1,17 @@
 #![deny(missing_docs)]
 
-use std::{fmt, vec};
+use std::{
+    fmt,
+    ops::{Deref, Index},
+    vec,
+};
 
 use serde::{Deserialize, Serialize};
 
-use crate::instruction::Instruction;
-
-use std::slice::Iter;
+use crate::{instruction::Instruction, utils::Gs2BytecodeAddress};
 
 /// Represents the type of a basic block.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum BasicBlockType {
     /// Used for blocks that are entry blocks of a function.
     Entry,
@@ -30,15 +32,20 @@ pub enum BasicBlockType {
     /// }
     /// ```
     EntryAndExit,
+    /// Special case for a block that is at the end of a module
+    ModuleEnd,
 }
 
 /// Represents the identifier of a basic block.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
 pub struct BasicBlockId {
     index: usize,
 
     /// The type of the basic block.
     pub block_type: BasicBlockType,
+
+    /// The offset of the block
+    pub address: Gs2BytecodeAddress,
 }
 
 impl fmt::Display for BasicBlockId {
@@ -91,10 +98,14 @@ impl BasicBlockId {
     /// use gbf_rs::basic_block::BasicBlockId;
     /// use gbf_rs::basic_block::BasicBlockType;
     ///
-    /// let block = BasicBlockId::new(0, BasicBlockType::Normal);
+    /// let block = BasicBlockId::new(0, BasicBlockType::Normal, 0);
     /// ```
-    pub fn new(index: usize, block_type: BasicBlockType) -> Self {
-        Self { index, block_type }
+    pub fn new(index: usize, block_type: BasicBlockType, offset: Gs2BytecodeAddress) -> Self {
+        Self {
+            index,
+            block_type,
+            address: offset,
+        }
     }
 }
 
@@ -120,7 +131,7 @@ impl BasicBlock {
     /// ```
     /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
     ///
-    /// let block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+    /// let block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
     /// ```
     pub fn new(id: BasicBlockId) -> Self {
         Self {
@@ -141,11 +152,32 @@ impl BasicBlock {
     /// use gbf_rs::opcode::Opcode;
     /// use gbf_rs::operand::Operand;
     ///
-    /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+    /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
     /// block.add_instruction(Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42)));
     /// ```
     pub fn add_instruction(&mut self, instruction: Instruction) {
         self.instructions.push(instruction);
+    }
+
+    /// Gets the last instruction in the block.
+    ///
+    /// # Returns
+    /// - A reference to the last instruction in the block
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
+    /// use gbf_rs::instruction::Instruction;
+    /// use gbf_rs::opcode::Opcode;
+    ///
+    /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
+    /// block.add_instruction(Instruction::new(Opcode::PushNumber, 0));
+    /// block.add_instruction(Instruction::new(Opcode::Ret, 1));
+    /// let last_instruction = block.last_instruction();
+    /// assert_eq!(last_instruction.unwrap().opcode, Opcode::Ret);
+    /// ```
+    pub fn last_instruction(&self) -> Option<&Instruction> {
+        self.instructions.last()
     }
 
     /// Find an instruction based on a predicate.
@@ -163,7 +195,7 @@ impl BasicBlock {
     /// use gbf_rs::opcode::Opcode;
     /// use gbf_rs::operand::Operand;
     ///
-    /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+    /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
     /// block.add_instruction(Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42)));
     /// let instruction = block.find_instruction(|i| i.opcode == Opcode::PushNumber);
     /// ```
@@ -183,7 +215,7 @@ impl BasicBlock {
     /// ```
     /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
     ///
-    /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+    /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
     /// assert_eq!(block.len(), 0);
     /// ```
     pub fn len(&self) -> usize {
@@ -199,7 +231,7 @@ impl BasicBlock {
     /// ```
     /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
     ///
-    /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+    /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
     /// assert!(block.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
@@ -207,17 +239,16 @@ impl BasicBlock {
     }
 }
 
-/// Allow iterating over `&BasicBlock` to get immutable references to instructions.
-impl<'a> IntoIterator for &'a BasicBlock {
-    type Item = &'a Instruction;
-    type IntoIter = Iter<'a, Instruction>;
+/// Implement Deref
+impl Deref for BasicBlock {
+    type Target = Vec<Instruction>;
 
-    /// Create an iterator over the instructions in the block.
+    /// Get a reference to the instructions in the block.
     ///
     /// # Returns
-    /// - An iterator over the instructions in the block.
-    fn into_iter(self) -> Self::IntoIter {
-        self.instructions.iter()
+    /// - A reference to the instructions in the block.
+    fn deref(&self) -> &Self::Target {
+        &self.instructions
     }
 }
 
@@ -235,6 +266,21 @@ impl IntoIterator for BasicBlock {
     }
 }
 
+impl Index<usize> for BasicBlock {
+    type Output = Instruction;
+
+    /// Get an instruction by index.
+    ///
+    /// # Arguments
+    /// - `index`: The index of the instruction to get.
+    ///
+    /// # Returns
+    /// - A reference to the instruction at the given index.
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.instructions[index]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -242,13 +288,13 @@ mod tests {
 
     #[test]
     fn test_basic_block_id_display() {
-        let block = BasicBlockId::new(0, BasicBlockType::Normal);
+        let block = BasicBlockId::new(0, BasicBlockType::Normal, 3);
         assert_eq!(block.to_string(), "Block0");
     }
 
     #[test]
     fn test_basic_block_new() {
-        let block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        let block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 4));
         assert_eq!(block.id.index, 0);
         assert_eq!(block.id.block_type, BasicBlockType::Normal);
         assert!(block.instructions.is_empty());
@@ -256,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_basic_block_add_instruction() {
-        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 7));
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             0,
@@ -267,7 +313,7 @@ mod tests {
 
     #[test]
     fn test_basic_block_find_instruction() {
-        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 10));
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             0,
@@ -279,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_basic_block_len() {
-        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 32));
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             0,
@@ -290,13 +336,13 @@ mod tests {
 
     #[test]
     fn test_basic_block_is_empty() {
-        let block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        let block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 23));
         assert!(block.is_empty());
     }
 
     #[test]
     fn test_basic_block_into_iter() {
-        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 11));
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             0,
@@ -315,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_basic_block_into_iter_ref() {
-        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal));
+        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 42));
         block.add_instruction(Instruction::new_with_operand(
             Opcode::PushNumber,
             0,
@@ -326,7 +372,7 @@ mod tests {
             1,
             Operand::new_number(42),
         ));
-        let mut iter = (&block).into_iter();
+        let mut iter = block.iter();
         assert_eq!(iter.next().unwrap().address, 0);
         assert_eq!(iter.next().unwrap().address, 1);
         assert!(iter.next().is_none());
