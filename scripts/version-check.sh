@@ -19,7 +19,16 @@ get_current_version() {
     echo "$CURRENT_VERSION"
 }
 
-# Extract major and minor versions
+# Extract version from README.md
+get_readme_version() {
+    README_VERSION=$(grep 'gbf-rs =' README.md | sed 's/.*gbf-rs = "//;s/"//;s/.*\[dependencies\]//')
+    if [ -z "$README_VERSION" ]; then
+        error "Could not find version in README.md"
+    fi
+    echo "$README_VERSION"
+}
+
+# Extract major, minor, and patch versions
 parse_version() {
     VERSION="$1"
     MAJOR=$(echo "$VERSION" | cut -d. -f1)
@@ -41,6 +50,13 @@ check_minor_version() {
     fi
 }
 
+# Ensure the README version matches the current version
+check_readme_version() {
+    if [ "$CURRENT_VERSION" != "$README_VERSION" ]; then
+        error "Version mismatch: README.md version is $README_VERSION, but Cargo.toml version is $CURRENT_VERSION"
+    fi
+}
+
 # Main script logic
 echo "Fetching main branch version..."
 MAIN_VERSION=$(get_main_version)
@@ -59,10 +75,17 @@ parse_version "$CURRENT_VERSION"
 CURRENT_MAJOR="$MAJOR"
 CURRENT_MINOR="$MINOR"
 
+echo "Fetching README version..."
+README_VERSION=$(get_readme_version)
+echo "README version: $README_VERSION"
+
 echo "Checking major version..."
 check_major_version
 
 echo "Checking minor version..."
 check_minor_version
+
+echo "Checking README version..."
+check_readme_version
 
 echo "All version checks passed!"

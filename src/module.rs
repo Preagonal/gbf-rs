@@ -1,12 +1,16 @@
 #![deny(missing_docs)]
 
-use std::collections::BTreeMap;
+use std::{
+    collections::HashMap,
+    fmt::{self, Display, Formatter},
+};
 use thiserror::Error;
 
 use crate::{
-    basic_block::BasicBlockType,
+    basic_block::{BasicBlockId, BasicBlockType},
     bytecode_loader::{self, BytecodeLoaderError},
     function::{Function, FunctionId},
+    instruction::Instruction,
     utils::Gs2BytecodeAddress,
 };
 
@@ -15,11 +19,19 @@ use crate::{
 pub enum ModuleError {
     /// Error for when a function is not found in the module.
     #[error("Function not found: {0}")]
-    FunctionNotFound(FunctionId),
+    FunctionNotFoundById(FunctionId),
 
-    /// Error for when a "nameless" or entry module is defined more than once.
-    #[error("Entry module created more than once")]
-    EntryModuleDefinedMoreThanOnce,
+    /// Error for when a function is not found in the module.
+    #[error("Function not found: {0}")]
+    FunctionNotFoundByName(String),
+
+    /// When a function is created with a name that already exists.
+    #[error("Function with name {0} already exists.")]
+    DuplicateFunctionName(String),
+
+    /// When a function is created with an address that already exists.
+    #[error("Function with address {0} already exists with the name {1}.")]
+    DuplicateFunctionAddress(Gs2BytecodeAddress, String),
 
     /// Error for when the bytecode loader fails to load bytecode.
     #[error("BytecodeLoaderError: {0}")]
@@ -32,6 +44,7 @@ pub struct ModuleBuilder {
     reader: Option<Box<dyn std::io::Read>>,
 }
 
+/// Public API for `ModuleBuilder`.
 impl ModuleBuilder {
     /// Create a new `ModuleBuilder`.
     ///
@@ -65,10 +78,10 @@ impl ModuleBuilder {
     /// ```
     /// use gbf_rs::module::ModuleBuilder;
     ///
-    /// let builder = ModuleBuilder::new().name("test".to_string());
+    /// let builder = ModuleBuilder::new().name("test");
     /// ```
-    pub fn name(mut self, name: String) -> Self {
-        self.name = Some(name);
+    pub fn name<N: Into<String>>(mut self, name: N) -> Self {
+        self.name = Some(name.into());
         self
     }
 
@@ -100,27 +113,25 @@ impl ModuleBuilder {
     /// ```
     /// use gbf_rs::module::ModuleBuilder;
     ///
-    /// let module = ModuleBuilder::new().name("test".to_string()).build().unwrap();
+    /// let module = ModuleBuilder::new().name("test").build().unwrap();
     /// ```
     pub fn build(self) -> Result<Module, ModuleError> {
         let mut module = Module {
             name: self.name,
-            functions: BTreeMap::new(),
-            entry_function: None,
-            name_to_function: BTreeMap::new(),
+            functions: Vec::new(),
+            id_to_index: HashMap::new(),
+            name_to_id: HashMap::new(),
+            address_to_id: HashMap::new(),
         };
 
         // Create entry function
-        let fun_id = FunctionId::new(0, None, 0);
+        let fun_id = FunctionId::new(module.functions.len(), None, 0);
 
         // Create new function struct
-        module
-            .functions
-            .insert(fun_id.clone(), Function::new(fun_id.clone()));
-
-        module.name_to_function.insert(None, fun_id.clone());
-
-        module.entry_function = Some(fun_id);
+        module.functions.push(Function::new(fun_id.clone()));
+        module.id_to_index.insert(fun_id.clone(), 0);
+        module.name_to_id.insert(None, fun_id.clone());
+        module.address_to_id.insert(0, fun_id.clone());
 
         if let Some(reader) = self.reader {
             module.load(reader)?;
@@ -130,22 +141,22 @@ impl ModuleBuilder {
     }
 }
 
-impl Default for ModuleBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// Represents a GS2 module in a bytecode system. A module contains
 /// functions, strings, and other data.
 pub struct Module {
     /// The name of the module.
     pub name: Option<String>,
-    functions: BTreeMap<FunctionId, Function>,
-    name_to_function: BTreeMap<Option<String>, FunctionId>,
-    entry_function: Option<FunctionId>,
+    /// A list of functions in the module, which provides fast sequential access.
+    functions: Vec<Function>,
+    /// A map of function IDs to their index in the functions vector.
+    id_to_index: HashMap<FunctionId, usize>,
+    /// A map of function names to their IDs.
+    name_to_id: HashMap<Option<String>, FunctionId>,
+    /// A map of function addresses to their IDs.
+    address_to_id: HashMap<Gs2BytecodeAddress, FunctionId>,
 }
 
+/// Public API for `Module`.
 impl Module {
     /// Create a new function in the module.
     ///
@@ -159,25 +170,40 @@ impl Module {
     /// ```
     /// use gbf_rs::module::ModuleBuilder;
     ///
-    /// let mut module = ModuleBuilder::new().name("test.gs2".to_string()).build().unwrap();
-    /// let function_id = module.create_function("test_function".to_string(), 123).unwrap();
+    /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
+    /// let function_id = module.create_function("test_function", 123).unwrap();
     /// ```
-    pub fn create_function(
+    pub fn create_function<N: Into<String>>(
         &mut self,
-        name: String,
-        offset: Gs2BytecodeAddress,
+        name: N,
+        address: Gs2BytecodeAddress,
     ) -> Result<FunctionId, ModuleError> {
-        // If offset is 0, throw error
-        if offset == 0 {
-            return Err(ModuleError::EntryModuleDefinedMoreThanOnce);
+        let name = name.into();
+        let function_id = FunctionId::new(self.functions.len(), Some(name.clone()), address);
+
+        // Check for duplicate function name
+        if self.name_to_id.contains_key(&Some(name.clone())) {
+            return Err(ModuleError::DuplicateFunctionName(name));
         }
-        let function_id = FunctionId::new(self.functions.len(), Some(name.clone()), offset);
+
+        // Check for duplicate function address
+        if self.address_to_id.contains_key(&address) {
+            let existing_id = self.address_to_id.get(&address).unwrap().clone();
+            let existing_name = existing_id.name.unwrap_or("{entry function}".to_string());
+            return Err(ModuleError::DuplicateFunctionAddress(
+                address,
+                existing_name,
+            ));
+        }
 
         // Create new function struct
-        self.functions
-            .insert(function_id.clone(), Function::new(function_id.clone()));
-        self.name_to_function
+        self.functions.push(Function::new(function_id.clone()));
+        self.id_to_index
+            .insert(function_id.clone(), self.functions.len() - 1);
+        self.name_to_id
             .insert(Some(name.clone()), function_id.clone());
+        self.address_to_id.insert(address, function_id.clone());
+
         Ok(function_id)
     }
 
@@ -193,70 +219,104 @@ impl Module {
     /// ```
     /// use gbf_rs::module::ModuleBuilder;
     ///
-    /// let mut module = ModuleBuilder::new().name("test.gs2".to_string()).build().unwrap();
-    /// let function_id = module.create_function("test_function".to_string(), 123).unwrap();
-    /// assert!(module.has_function(Some("test_function".to_string())));
+    /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
+    /// let function_id = module.create_function("test_function", 123).unwrap();
+    /// assert!(module.has_function("test_function"));
     /// ```
-    pub fn has_function(&self, name: Option<String>) -> bool {
-        // Entry function is always present
-        if name.is_none() {
-            return true;
-        }
-        let name = name.unwrap();
-
-        self.functions
-            .keys()
-            .any(|id| (id.name.as_ref() == Some(&name)))
+    pub fn has_function<N: Into<String>>(&self, name: N) -> bool {
+        let name = name.into();
+        self.name_to_id.contains_key(&Some(name))
     }
 
-    /// Get a function by its `FunctionId`.
+    /// Get function by name
     ///
     /// # Arguments
-    /// - `id`: The `FunctionId` of the function to retrieve.
+    /// - `name`: The name of the function to retrieve.
     ///
     /// # Returns
     /// - A reference to the function, if it exists.
     ///
     /// # Errors
-    /// - `ModuleError::FunctionNotFound` if the function does not exist.
+    /// - `ModuleError::FunctionNotFoundByName` if the function does not exist.
     ///
     /// # Example
     /// ```
     /// use gbf_rs::module::ModuleBuilder;
     ///
-    /// let mut module = ModuleBuilder::new().name("test.gs2".to_string()).build().unwrap();
-    /// let function_id = module.create_function("test_function".to_string(), 123).unwrap();
-    /// let function = module.get_function(&function_id).unwrap();
+    /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
+    /// let function_id = module.create_function("test_function", 123).unwrap();
+    /// let function = module.get_function_by_name("test_function").unwrap();
     /// ```
-    pub fn get_function(&self, id: &FunctionId) -> Result<&Function, ModuleError> {
-        self.functions
-            .get(id)
-            .ok_or(ModuleError::FunctionNotFound(id.clone()))
+    pub fn get_function_by_name<N: Into<String>>(&self, name: N) -> Result<&Function, ModuleError> {
+        let name = name.into();
+        let id = self.get_function_id_by_name(name)?;
+        self.get_function_by_id(&id)
     }
 
-    /// Get a mutable reference to a function by its `FunctionId`.
+    /// Get the entry function of the module.
+    ///
+    /// # Returns
+    /// - A reference to the entry function.
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::module::ModuleBuilder;
+    ///
+    /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
+    /// let function_id = module.create_function("test_function", 123).unwrap();
+    /// let entry_function = module.get_entry_function();
+    /// ```
+    pub fn get_entry_function(&self) -> &Function {
+        // Get the function at address 0
+        self.functions.first().expect("Entry function must exist")
+    }
+
+    /// Get the entry function id of the module (mutable).
+    ///
+    /// # Returns
+    /// - A mutable reference to the entry function.
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::module::ModuleBuilder;
+    ///
+    /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
+    /// let function_id = module.create_function("test_function", 123).unwrap();
+    /// let entry_function = module.get_entry_function_mut();
+    /// ```
+    pub fn get_entry_function_mut(&mut self) -> &mut Function {
+        // Get the function at address 0
+        self.functions
+            .get_mut(0)
+            .expect("Entry function must exist")
+    }
+
+    /// Get function by name (mutable)
     ///
     /// # Arguments
-    /// - `id`: The `FunctionId` of the function to retrieve.
+    /// - `name`: The name of the function to retrieve.
     ///
     /// # Returns
     /// - A mutable reference to the function, if it exists.
     ///
     /// # Errors
-    /// - `ModuleError::FunctionNotFound` if the function does not exist.
+    /// - `ModuleError::FunctionNotFoundByName` if the function does not exist.
     ///
     /// # Example
     /// ```
     /// use gbf_rs::module::ModuleBuilder;
     ///
-    /// let mut module = ModuleBuilder::new().name("test.gs2".to_string()).build().unwrap();
-    /// let function_id = module.create_function("test_function".to_string(), 123).unwrap();
-    /// let function = module.get_function_mut(&function_id).unwrap();
+    /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
+    /// let function_id = module.create_function("test_function", 123).unwrap();
+    /// let function = module.get_function_by_name_mut("test_function").unwrap();
     /// ```
-    pub fn get_function_mut(&mut self, id: &FunctionId) -> Result<&mut Function, ModuleError> {
-        self.functions
-            .get_mut(id)
-            .ok_or(ModuleError::FunctionNotFound(id.clone()))
+    pub fn get_function_by_name_mut<N: Into<String>>(
+        &mut self,
+        name: N,
+    ) -> Result<&mut Function, ModuleError> {
+        let name = name.into();
+        let id = self.get_function_id_by_name(name)?;
+        self.get_function_by_id_mut(&id)
     }
 
     /// Get function id by name
@@ -266,124 +326,27 @@ impl Module {
     ///
     /// # Returns
     /// - The `FunctionId` of the function, if it exists.
-    pub fn get_function_id_by_name(&self, name: Option<String>) -> Option<FunctionId> {
-        self.name_to_function.get(&name).cloned()
-    }
-
-    /// Load bytecode into the module using a reader.
-    ///
-    /// # Arguments
-    /// - `reader`: The reader to use to load the bytecode.
     ///
     /// # Errors
-    /// - `ModuleError::BytecodeLoaderError` if the bytecode loader fails to load the bytecode.
-    /// - `ModuleError::EntryModuleDefinedMoreThanOnce` if the entry function is already set.
-    fn load<R: std::io::Read>(&mut self, reader: R) -> Result<(), ModuleError> {
-        let loaded_bytecode = bytecode_loader::BytecodeLoaderBuilder::new(reader).build()?;
-
-        // Iterate through each instruction in the bytecode
-        for (offset, instruction) in loaded_bytecode.instructions.iter().enumerate() {
-            let function_name = loaded_bytecode.get_function_name_for_address(offset);
-
-            // Create new function if it doesn't exist
-            if !self.has_function(function_name.clone()) {
-                debug_assert!(function_name.is_some());
-                let function_name = function_name.clone().unwrap();
-                self.create_function(
-                    function_name.clone(),
-                    *loaded_bytecode
-                        .function_map
-                        .get(&function_name.clone())
-                        // TODO: Safely unwrap since we know the function exists
-                        .unwrap(),
-                )?;
-            }
-
-            // Create BasicBlock for the function if it doesn't exist
-            // We can safely unwrap here since we know the function exists
-            let function_id = self.get_function_id_by_name(function_name).unwrap();
-
-            // Get the function reference
-            let function = self.functions.get_mut(&function_id).unwrap();
-
-            // Get the start address for the basic block
-            let start_address = loaded_bytecode.find_block_start_address(offset);
-
-            // Create new basic block if it doesn't exist
-            if !function.has_basic_block_by_address(start_address) {
-                // We won't run into this error because we are not making an entry block here
-                function
-                    .create_block(BasicBlockType::Normal, start_address)
-                    .unwrap();
-            }
-
-            // Get the basic block reference
-            let block_id = function.get_block_id_by_address(start_address).unwrap();
-            let block = function.get_block_mut(block_id).unwrap();
-
-            // Add the instruction to the basic block
-            block.add_instruction(instruction.clone());
-        }
-
-        // To the entry block, let's create a new basic block with address set to the length of the bytecode
-        // This is the block that will be used to represent the end of the module
-        let entry = self.get_function_id_by_name(None);
-        let entry = self.get_function_mut(&entry.unwrap()).unwrap();
-        entry
-            .create_block(
-                BasicBlockType::ModuleEnd,
-                loaded_bytecode.instructions.len() as Gs2BytecodeAddress,
-            )
-            .unwrap();
-
-        // Iterate through each function that was created. For each function, we will iterate through
-        // each basic block and find the terminator instruction. Based on the terminator opcode,
-        // we will connect edges in the graph.
-        for function in self.functions.values_mut() {
-            let block_ids = function.get_block_ids();
-            for block_id in block_ids {
-                let block = function.get_block(block_id).unwrap();
-                // TODO: Check explicit clone here
-                let terminator = block.last_instruction().cloned();
-
-                // TODO: Handle this better, blocks should always have a terminator
-                if terminator.is_none() {
-                    continue;
-                }
-
-                // Get the terminator instruction
-                let terminator = terminator.unwrap();
-                let terminator_opcode = terminator.opcode;
-                let terminator_operand = terminator.operand;
-                let terminator_address = terminator.address;
-
-                if terminator_opcode.has_fall_through() {
-                    // Get the next block address
-                    let next_block_address = terminator_address + 1 as Gs2BytecodeAddress;
-                    // TODO: Double check unwrap here
-                    let next_block_id = function
-                        .get_block_id_by_address(next_block_address)
-                        .unwrap();
-
-                    // Connect the blocks
-                    // TODO: Double check unwrap here
-                    function.add_edge(block_id, next_block_id).unwrap();
-                }
-
-                if terminator_opcode.has_jump_target() {
-                    // Get the branch address
-                    let branch_address = terminator_operand.unwrap().get_number_value().unwrap()
-                        as Gs2BytecodeAddress;
-                    // TODO: Double check unwrap here
-                    let branch_block_id = function.get_block_id_by_address(branch_address).unwrap(); // TODO: Double check unwrap here
-
-                    // Connect the blocks
-                    // TODO: Check unwrap here
-                    function.add_edge(block_id, branch_block_id).unwrap();
-                }
-            }
-        }
-        Ok(())
+    /// - `ModuleError::FunctionNotFoundByName` if the function does not exist.
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::module::ModuleBuilder;
+    ///
+    /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
+    /// let function_id = module.create_function("test_function", 123).unwrap();
+    /// let function_id = module.get_function_id_by_name("test_function").unwrap();
+    /// ```
+    pub fn get_function_id_by_name<N: Into<String>>(
+        &self,
+        name: N,
+    ) -> Result<FunctionId, ModuleError> {
+        let name = name.into();
+        self.name_to_id
+            .get(&Some(name.clone()))
+            .cloned()
+            .ok_or(ModuleError::FunctionNotFoundByName(name))
     }
 
     /// Get the number of functions in the module.
@@ -395,8 +358,8 @@ impl Module {
     /// ```
     /// use gbf_rs::module::ModuleBuilder;
     ///
-    /// let mut module = ModuleBuilder::new().name("test.gs2".to_string()).build().unwrap();
-    /// let function_id = module.create_function("test_function".to_string(), 123).unwrap();
+    /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
+    /// let function_id = module.create_function("test_function", 123).unwrap();
     /// assert_eq!(module.len(), 2);
     /// ```
     pub fn len(&self) -> usize {
@@ -412,7 +375,7 @@ impl Module {
     /// ```
     /// use gbf_rs::module::ModuleBuilder;
     ///
-    /// let module = ModuleBuilder::new().name("test.gs2".to_string()).build().unwrap();
+    /// let module = ModuleBuilder::new().name("test.gs2").build().unwrap();
     /// assert!(!module.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
@@ -421,31 +384,212 @@ impl Module {
     }
 }
 
-// Deref implementation for Module
+/// Internal API for `Module`.
+impl Module {
+    /// Load bytecode into the module using a reader.
+    ///
+    /// # Arguments
+    /// - `reader`: The reader to use to load the bytecode.
+    ///
+    /// # Errors
+    /// - `ModuleError::BytecodeLoaderError` if the bytecode loader fails to load the bytecode.
+    /// - `ModuleError::EntryModuleDefinedMoreThanOnce` if the entry function is already set.
+    fn load<R: std::io::Read>(&mut self, reader: R) -> Result<(), ModuleError> {
+        let loaded_bytecode = bytecode_loader::BytecodeLoaderBuilder::new(reader).build()?;
+
+        // Iterate through each instruction in the bytecode
+        for (offset, instruction) in loaded_bytecode.instructions.iter().enumerate() {
+            let function_name = loaded_bytecode.get_function_name_for_address(offset);
+
+            if let Some(function_name) = function_name.clone() {
+                if !self.has_function(function_name.clone()) {
+                    let offset = loaded_bytecode
+                        .function_map
+                        .get(&function_name)
+                        .expect("Function must exist in the function map");
+                    self.create_function(function_name.clone(), *offset)?;
+                }
+            }
+
+            let is_entry = function_name.is_none();
+
+            // Get the function reference. If the function is an entry function, we will use the entry function, otherwise we will use the function name
+            let function = if is_entry {
+                self.get_entry_function_mut()
+            } else {
+                self.get_function_by_name_mut(function_name.unwrap())?
+            };
+
+            // Get the start address for the basic block
+            let start_address = loaded_bytecode.find_block_start_address(offset);
+
+            // Create new basic block if it doesn't exist
+            if !function.basic_block_exists_by_address(start_address) {
+                // We won't run into this error because we are not making an entry block here
+                function
+                    .create_block(BasicBlockType::Normal, start_address)
+                    .unwrap();
+            }
+
+            // Get the basic block reference
+            let block_id = function
+                .get_basic_block_id_by_address(start_address)
+                .unwrap();
+            let block = function.get_basic_block_by_id_mut(block_id).unwrap();
+
+            // Add the instruction to the basic block
+            block.add_instruction(instruction.clone());
+        }
+
+        // To the entry block, let's create a new basic block with address set to the length of the bytecode
+        // This is the block that will be used to represent the end of the module
+        let entry = self.get_entry_function_mut();
+        entry
+            .create_block(
+                BasicBlockType::ModuleEnd,
+                loaded_bytecode.instructions.len() as Gs2BytecodeAddress,
+            )
+            .unwrap();
+
+        // Iterate through each function that was created. For each function, we will iterate through
+        // each basic block and find the terminator instruction. Based on the terminator opcode,
+        // we will connect edges in the graph.
+        for function in self.functions.iter_mut() {
+            let block_data: Vec<_> = function
+                .iter()
+                .map(|block| (block.id, block.last_instruction().cloned()))
+                .collect();
+
+            for (id, terminator) in block_data {
+                Self::process_block_edges(function, id, terminator);
+            }
+        }
+        Ok(())
+    }
+
+    fn process_block_edges(
+        function: &mut Function,
+        id: BasicBlockId,
+        terminator: Option<Instruction>,
+    ) {
+        if let Some(terminator) = terminator {
+            let terminator_opcode = terminator.opcode;
+            let terminator_operand = terminator.operand;
+            let terminator_address = terminator.address;
+
+            if terminator_opcode.has_fall_through() {
+                let next_block_address = terminator_address + 1 as Gs2BytecodeAddress;
+                let next_block_id = function
+                    .get_basic_block_id_by_address(next_block_address)
+                    .expect("Block must exist");
+                function.add_edge(id, next_block_id).unwrap();
+            }
+
+            if terminator_opcode.has_jump_target() {
+                if let Some(branch_address) =
+                    terminator_operand.and_then(|o| o.get_number_value().ok())
+                {
+                    let branch_block_id = function
+                        .get_basic_block_id_by_address(branch_address as Gs2BytecodeAddress)
+                        .unwrap();
+                    function.add_edge(id, branch_block_id).unwrap();
+                }
+            }
+        }
+    }
+
+    /// Get a function by its `FunctionId`.
+    ///
+    /// # Arguments
+    /// - `id`: The `FunctionId` of the function to retrieve.
+    ///
+    /// # Returns
+    /// - A reference to the function, if it exists.
+    ///
+    /// # Errors
+    /// - `ModuleError::FunctionNotFoundById` if the function does not exist.
+    fn get_function_by_id(&self, id: &FunctionId) -> Result<&Function, ModuleError> {
+        let index = self
+            .id_to_index
+            .get(id)
+            .ok_or(ModuleError::FunctionNotFoundById(id.clone()))?;
+
+        // Provides fast sequential access, but panics if the index is out of bounds
+        Ok(&self.functions[*index])
+    }
+
+    /// Get a mutable reference to a function by its `FunctionId`.
+    ///
+    /// # Arguments
+    /// - `id`: The `FunctionId` of the function to retrieve.
+    ///
+    /// # Returns
+    /// - A mutable reference to the function, if it exists.
+    ///
+    /// # Errors
+    /// - `ModuleError::FunctionNotFoundById` if the function does not exist.
+    fn get_function_by_id_mut(&mut self, id: &FunctionId) -> Result<&mut Function, ModuleError> {
+        let index = self
+            .id_to_index
+            .get(id)
+            .ok_or(ModuleError::FunctionNotFoundById(id.clone()))?;
+
+        // Provides fast sequential access, but panics if the index is out of bounds
+        Ok(&mut self.functions[*index])
+    }
+}
+
+// === Implementations ===
+
+/// Display implementation for `Module`.
+impl Display for Module {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", self.name.as_deref().unwrap_or("Unnamed Module"))
+    }
+}
+
+/// Default implementation for `ModuleBuilder`.
+impl Default for ModuleBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Deref implementation for `Module`.
 impl std::ops::Deref for Module {
-    type Target = BTreeMap<FunctionId, Function>;
+    type Target = Vec<Function>;
 
     fn deref(&self) -> &Self::Target {
         &self.functions
     }
 }
 
-// Index implementation for Module using usize
+/// Index implementation for `Module`.
 impl std::ops::Index<usize> for Module {
     type Output = Function;
 
     fn index(&self, index: usize) -> &Self::Output {
-        self.functions.values().nth(index).unwrap()
+        &self.functions[index]
     }
 }
 
-// IntoIterator implementation for Module
-impl IntoIterator for Module {
-    type Item = (FunctionId, Function);
-    type IntoIter = std::collections::btree_map::IntoIter<FunctionId, Function>;
+/// Immutable IntoIterator implementation for `Module`.
+impl<'a> IntoIterator for &'a Module {
+    type Item = &'a Function;
+    type IntoIter = std::slice::Iter<'a, Function>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.functions.into_iter()
+        self.functions.iter()
+    }
+}
+
+/// Mutable IntoIterator implementation for `Module`.
+impl<'a> IntoIterator for &'a mut Module {
+    type Item = &'a mut Function;
+    type IntoIter = std::slice::IterMut<'a, Function>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.functions.iter_mut()
     }
 }
 
