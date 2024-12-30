@@ -30,17 +30,39 @@ fn load_simple_gs2() {
     assert_eq!(functions, 1);
 
     // Find the number of Basic Blocks in the function. In this case, it should be 1
-    let function = module.get_function_id_by_name(None).unwrap();
-    let function = module.get_function(&function).unwrap();
+    let function = module.get_entry_function();
     let basic_blocks = function.len();
+
     // We have a ModuleEnd block at the end of the module
     assert_eq!(basic_blocks, 2);
 
     // Find the number of instructions in the Basic Block. In this case, it should be 3
-    let basic_block = function.get_block_id_by_address(0).unwrap();
-    let basic_block = function.get_block(basic_block).unwrap();
+    let basic_block_id = function
+        .get_basic_block_id_by_address(function.id.address)
+        .unwrap();
+    let basic_block = function.get_basic_block_by_id(basic_block_id).unwrap();
     let instructions = basic_block.len();
     assert_eq!(instructions, 32);
+
+    // Re-initialize the reader & module, but this time, try out the iterators.
+    let reader = load_bytecode("simple.gs2bc").unwrap();
+    let module = gbf_rs::module::ModuleBuilder::new()
+        .name("simple.gs2".to_string())
+        .reader(Box::new(reader))
+        .build()
+        .unwrap();
+
+    let mut curr_addr = module.get_entry_function().id.address;
+    assert_eq!(curr_addr, 0);
+    for function in &module {
+        for basic_block in function {
+            for instruction in basic_block {
+                // Each instruction should be sequential
+                assert_eq!(instruction.address, curr_addr);
+                curr_addr += 1;
+            }
+        }
+    }
 }
 
 #[test]
@@ -58,8 +80,7 @@ fn load_multiple_functions() {
     assert_eq!(functions, 6);
 
     // Function 0: Entry Point
-    let function = module.get_function_id_by_name(None).unwrap();
-    let function = module.get_function(&function).unwrap();
+    let function = module.get_entry_function();
     let basic_blocks = function.len();
 
     // We have a ModuleEnd block at the end of the module
@@ -67,17 +88,16 @@ fn load_multiple_functions() {
 
     // Function 1: onCreated
     let function = module
-        .get_function_id_by_name(Some("onCreated".to_string()))
+        .get_function_by_name("onCreated".to_string())
         .unwrap();
-    let function = module.get_function(&function).unwrap();
     let basic_blocks = function.len();
     assert_eq!(basic_blocks, 1);
 
     // first instruction PushArray, last instruction Ret
     let basic_block = function
-        .get_block_id_by_address(function.id.address)
+        .get_basic_block_id_by_address(function.id.address)
         .unwrap();
-    let basic_block = function.get_block(basic_block).unwrap();
+    let basic_block = function.get_basic_block_by_id(basic_block).unwrap();
     let instructions = basic_block.len();
     assert_eq!(instructions, 20);
     assert_eq!(
@@ -90,54 +110,42 @@ fn load_multiple_functions() {
     );
 
     // Function 2: foo
-    let function = module
-        .get_function_id_by_name(Some("foo".to_string()))
-        .unwrap();
-    let function = module.get_function(&function).unwrap();
+    let function = module.get_function_by_name("foo".to_string()).unwrap();
     let basic_blocks = function.len();
     assert_eq!(basic_blocks, 1);
 
     // first instruction PushArray, last instruction Ret
     let basic_block = function
-        .get_block_id_by_address(function.id.address)
+        .get_basic_block_id_by_address(function.id.address)
         .unwrap();
-    let basic_block = function.get_block(basic_block).unwrap();
+    let basic_block = function.get_basic_block_by_id(basic_block).unwrap();
     let instructions = basic_block.len();
     assert_eq!(instructions, 8);
 
     // Function 3: bar
-    let function = module
-        .get_function_id_by_name(Some("bar".to_string()))
-        .unwrap();
-    let function = module.get_function(&function).unwrap();
+    let function = module.get_function_by_name("bar".to_string()).unwrap();
     let basic_blocks = function.len();
     assert_eq!(basic_blocks, 1);
     let basic_block = function
-        .get_block_id_by_address(function.id.address)
+        .get_basic_block_id_by_address(function.id.address)
         .unwrap();
-    let basic_block = function.get_block(basic_block).unwrap();
+    let basic_block = function.get_basic_block_by_id(basic_block).unwrap();
     let instructions = basic_block.len();
     assert_eq!(instructions, 8);
 
     // Function 4: baz
-    let function = module
-        .get_function_id_by_name(Some("baz".to_string()))
-        .unwrap();
-    let function = module.get_function(&function).unwrap();
+    let function = module.get_function_by_name("baz".to_string()).unwrap();
     let basic_blocks = function.len();
     assert_eq!(basic_blocks, 1);
     let basic_block = function
-        .get_block_id_by_address(function.id.address)
+        .get_basic_block_id_by_address(function.id.address)
         .unwrap();
-    let basic_block = function.get_block(basic_block).unwrap();
+    let basic_block = function.get_basic_block_by_id(basic_block).unwrap();
     let instructions = basic_block.len();
     assert_eq!(instructions, 5);
 
     // Function 5: fib
-    let function = module
-        .get_function_id_by_name(Some("fib".to_string()))
-        .unwrap();
-    let function = module.get_function(&function).unwrap();
+    let function = module.get_function_by_name("fib".to_string()).unwrap();
     let basic_blocks = function.len();
     assert_eq!(basic_blocks, 3);
 

@@ -1,8 +1,9 @@
 #![deny(missing_docs)]
 
-use std::collections::BTreeMap;
-use std::fmt;
+use std::collections::HashMap;
+use std::fmt::{self, Display, Formatter};
 use std::hash::Hash;
+use std::ops::{Deref, Index};
 
 use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::Direction;
@@ -36,20 +37,10 @@ pub enum FunctionError {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
 pub struct FunctionId {
     index: usize,
-    // TODO: It would be nice to be able to copy instead of clone by
-    // implementing Copy, but String does not implement Copy. We could
-    // use a reference in the future.
     /// The name of the function, if it is not the entry point.
     pub name: Option<String>,
     /// The address of the function in the module.
     pub address: Gs2BytecodeAddress,
-}
-
-impl fmt::Display for FunctionId {
-    /// Display the `Function` as `Function{index}`.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Function{}", self.index)
-    }
 }
 
 impl FunctionId {
@@ -102,17 +93,18 @@ impl FunctionId {
 pub struct Function {
     /// The identifier of the function.
     pub id: FunctionId,
-    entry_block: BasicBlockId,
-    blocks: BTreeMap<BasicBlockId, BasicBlock>,
-
-    // Our petgraph-based control-flow graph
+    /// A vector of all the `BasicBlock`s in the function.
+    blocks: Vec<BasicBlock>,
+    /// Maps `BasicBlockId` to their index in the `blocks` vector.
+    block_map: HashMap<BasicBlockId, usize>,
+    /// The control-flow graph of the function.
     cfg: DiGraph<(), ()>,
-
-    // used to convert NodeIndex to BasicBlockId
-    node_to_block: BTreeMap<NodeIndex, BasicBlockId>,
-
-    // used to convert BasicBlockId to NodeIndex
-    block_to_node: BTreeMap<BasicBlockId, NodeIndex>,
+    /// Used to convert `NodeIndex` to `BasicBlockId`.
+    graph_node_to_block: HashMap<NodeIndex, BasicBlockId>,
+    /// Used to convert `BasicBlockId` to `NodeIndex`.
+    block_to_graph_node: HashMap<BasicBlockId, NodeIndex>,
+    /// A map of function addresses to their IDs.
+    address_to_id: HashMap<Gs2BytecodeAddress, FunctionId>,
 }
 
 impl Function {
@@ -124,28 +116,31 @@ impl Function {
     /// # Returns
     /// - A new `Function` instance.
     pub fn new(id: FunctionId) -> Self {
-        let mut blocks = BTreeMap::new();
-        let mut node_to_block: BTreeMap<NodeIndex, BasicBlockId> = BTreeMap::new();
-        let mut block_to_node: BTreeMap<BasicBlockId, NodeIndex> = BTreeMap::new();
+        let mut blocks = Vec::new();
+        let mut block_map = HashMap::new();
+        let mut graph_node_to_block = HashMap::new();
+        let mut block_to_graph_node = HashMap::new();
+        let address_to_id = HashMap::new();
         let mut cfg = DiGraph::new();
 
         // Initialize entry block
         let entry_block = BasicBlockId::new(blocks.len(), BasicBlockType::Entry, id.address);
-        blocks.insert(entry_block, BasicBlock::new(entry_block));
+        blocks.push(BasicBlock::new(entry_block));
+        block_map.insert(entry_block, 0);
 
         // Add an empty node in the graph to represent this BasicBlock
         let entry_node_id = cfg.add_node(());
-
-        node_to_block.insert(entry_node_id, entry_block);
-        block_to_node.insert(entry_block, entry_node_id);
+        graph_node_to_block.insert(entry_node_id, entry_block);
+        block_to_graph_node.insert(entry_block, entry_node_id);
 
         Self {
             id,
-            entry_block,
             blocks,
+            block_map,
             cfg,
-            node_to_block,
-            block_to_node,
+            graph_node_to_block,
+            block_to_graph_node,
+            address_to_id,
         }
     }
 
@@ -176,37 +171,15 @@ impl Function {
         }
 
         let id = BasicBlockId::new(self.blocks.len(), block_type, address);
-        self.blocks.insert(id, BasicBlock::new(id));
+        self.blocks.push(BasicBlock::new(id));
+        self.block_map.insert(id, self.blocks.len() - 1);
 
         // Insert a node in the petgraph to represent this BasicBlock
         let node_id = self.cfg.add_node(());
-
-        self.block_to_node.insert(id, node_id);
-        self.node_to_block.insert(node_id, id);
+        self.block_to_graph_node.insert(id, node_id);
+        self.graph_node_to_block.insert(node_id, id);
 
         Ok(id)
-    }
-
-    /// Convert a `NodeIndex` to a `BasicBlockId`.
-    ///
-    /// # Arguments
-    /// - `node_id`: The `NodeIndex` to convert.
-    ///
-    /// # Returns
-    /// - The `BasicBlockId` of the block with the corresponding `NodeIndex`.
-    fn node_id_to_block_id(&self, node_id: NodeIndex) -> Option<BasicBlockId> {
-        self.node_to_block.get(&node_id).cloned()
-    }
-
-    /// Convert a `BasicBlockId` to a `NodeIndex`.
-    ///
-    /// # Arguments
-    /// - `block_id`: The `BasicBlockId` to convert.
-    ///
-    /// # Returns
-    /// - The `NodeIndex` of the block with the corresponding `BasicBlockId`.
-    fn block_id_to_node_id(&self, block_id: BasicBlockId) -> Option<NodeIndex> {
-        self.block_to_node.get(&block_id).cloned()
     }
 
     /// Get a reference to a `BasicBlock` by its `BasicBlockId`.
@@ -227,15 +200,18 @@ impl Function {
     ///
     /// let mut function = Function::new(FunctionId::new(0, None, 0));
     /// let block_id = function.create_block(BasicBlockType::Normal, 0).unwrap();
-    /// let block_ref = function.get_block(block_id).unwrap();
+    /// let block_ref = function.get_basic_block_by_id(block_id).unwrap();
     /// ```
-    pub fn get_block(&self, id: BasicBlockId) -> Result<&BasicBlock, FunctionError> {
-        self.blocks
+    pub fn get_basic_block_by_id(&self, id: BasicBlockId) -> Result<&BasicBlock, FunctionError> {
+        let index = self
+            .block_map
             .get(&id)
-            .ok_or(FunctionError::BasicBlockNotFoundById(id))
+            .ok_or(FunctionError::BasicBlockNotFoundById(id))?;
+        Ok(&self.blocks[*index])
     }
 
-    /// Get a mutable reference to a `BasicBlock` by its `BasicBlockId`.
+    /// Get a reference to a `BasicBlock` by its address. The block address
+    /// -must- be the start address of the block.
     ///
     /// # Arguments
     /// - `id`: The `BasicBlockId` of the block.
@@ -253,24 +229,29 @@ impl Function {
     ///
     /// let mut function = Function::new(FunctionId::new(0, None, 0));
     /// let block_id = function.create_block(BasicBlockType::Normal, 0).unwrap();
-    /// let block_ref = function.get_block_mut(block_id).unwrap();
+    /// let block_ref = function.get_basic_block_by_id_mut(block_id).unwrap();
     /// ```
-    pub fn get_block_mut(&mut self, id: BasicBlockId) -> Result<&mut BasicBlock, FunctionError> {
-        self.blocks
-            .get_mut(&id)
-            .ok_or(FunctionError::BasicBlockNotFoundById(id))
+    pub fn get_basic_block_by_id_mut(
+        &mut self,
+        id: BasicBlockId,
+    ) -> Result<&mut BasicBlock, FunctionError> {
+        let index = self
+            .block_map
+            .get(&id)
+            .ok_or(FunctionError::BasicBlockNotFoundById(id))?;
+        Ok(&mut self.blocks[*index])
     }
 
-    /// Gets a block id based on its address.
+    /// Get a reference to a `BasicBlock` by its address.
     ///
     /// # Arguments
     /// - `address`: The address of the block.
     ///
     /// # Returns
-    /// - The `BasicBlockId` of the block with the corresponding address.
+    /// - A reference to the `BasicBlock`.
     ///
     /// # Errors
-    /// - `FunctionError::BasicBlockNotFound` if the block does not exist.
+    /// - `FunctionError::BasicBlockNotFoundByAddress` if the block does not exist.
     ///
     /// # Example
     /// ```
@@ -279,19 +260,43 @@ impl Function {
     ///
     /// let mut function = Function::new(FunctionId::new(0, None, 0));
     /// let block_id = function.create_block(BasicBlockType::Normal, 0x100).unwrap();
-    /// let block_id = function.get_block_id_by_address(0x100).unwrap();
+    /// let block_ref = function.get_basic_block_by_start_address(0x100).unwrap();
     /// ```
-    pub fn get_block_id_by_address(
+    pub fn get_basic_block_by_start_address(
         &self,
         address: Gs2BytecodeAddress,
-    ) -> Result<BasicBlockId, FunctionError> {
-        for block_id in self.blocks.keys() {
-            if block_id.address == address {
-                return Ok(*block_id);
-            }
-        }
+    ) -> Result<&BasicBlock, FunctionError> {
+        let id = self.get_basic_block_id_by_address(address)?;
+        self.get_basic_block_by_id(id)
+    }
 
-        Err(FunctionError::BasicBlockNotFoundByAddress(address))
+    /// Get a reference to a `BasicBlock` by its address (mutable). The block address
+    /// -must- be the start address of the block.
+    ///
+    /// # Arguments
+    /// - `address`: The address of the block.
+    ///
+    /// # Returns
+    /// - A reference to the `BasicBlock`.
+    ///
+    /// # Errors
+    /// - `FunctionError::BasicBlockNotFoundByAddress` if the block does not exist.
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::function::{Function, FunctionId};
+    /// use gbf_rs::basic_block::BasicBlockType;
+    ///
+    /// let mut function = Function::new(FunctionId::new(0, None, 0));
+    /// let block_id = function.create_block(BasicBlockType::Normal, 0x100).unwrap();
+    /// let block_ref = function.get_basic_block_by_start_address_mut(0x100).unwrap();
+    /// ```
+    pub fn get_basic_block_by_start_address_mut(
+        &mut self,
+        address: Gs2BytecodeAddress,
+    ) -> Result<&mut BasicBlock, FunctionError> {
+        let id = self.get_basic_block_id_by_address(address)?;
+        self.get_basic_block_by_id_mut(id)
     }
 
     /// Check if a block exists by its address.
@@ -310,15 +315,13 @@ impl Function {
     ///
     /// let mut function = Function::new(FunctionId::new(0, None, 0));
     /// let block_id = function.create_block(BasicBlockType::Normal, 0x100).unwrap();
-    /// assert!(function.has_basic_block_by_address(0x100));
+    /// assert!(function.basic_block_exists_by_address(0x100));
     /// ```
-    pub fn has_basic_block_by_address(&self, address: Gs2BytecodeAddress) -> bool {
-        self.blocks
-            .iter()
-            .any(|(block_id, _)| block_id.address == address)
+    pub fn basic_block_exists_by_address(&self, address: Gs2BytecodeAddress) -> bool {
+        self.blocks.iter().any(|block| block.id.address == address)
     }
 
-    /// Get the entry block of the function.
+    /// Get the entry basic block of the function.
     ///
     /// # Returns
     /// - A reference to the entry block.
@@ -328,10 +331,10 @@ impl Function {
     /// use gbf_rs::function::{Function, FunctionId};
     ///
     /// let mut function = Function::new(FunctionId::new(0, None, 0));
-    /// let entry = function.get_entry_block();
+    /// let entry = function.get_entry_basic_block();
     /// ```
-    pub fn get_entry_block(&self) -> &BasicBlock {
-        self.get_block(self.entry_block).unwrap()
+    pub fn get_entry_basic_block(&self) -> &BasicBlock {
+        self.blocks.first().unwrap()
     }
 
     /// Get the entry block of the function.
@@ -344,10 +347,10 @@ impl Function {
     /// use gbf_rs::function::{Function, FunctionId};
     ///
     /// let mut function = Function::new(FunctionId::new(0, None, 0));
-    /// let entry = function.get_entry_block_mut();
+    /// let entry = function.get_entry_basic_block_mut();
     /// ```
-    pub fn get_entry_block_mut(&mut self) -> &mut BasicBlock {
-        self.get_block_mut(self.entry_block).unwrap()
+    pub fn get_entry_basic_block_mut(&mut self) -> &mut BasicBlock {
+        self.blocks.first_mut().unwrap()
     }
 
     /// Add an edge between two `BasicBlock`s.
@@ -386,29 +389,6 @@ impl Function {
         // It can panic if the node does not exist, but we have already checked that.
         self.cfg.add_edge(source_node_id, target_node_id, ());
         Ok(())
-    }
-
-    /// Get a vector of all the block ids in the function.
-    ///
-    /// # Arguments
-    /// - `function`: The function to get the block ids from.
-    ///
-    /// # Returns
-    /// - A vector of all the block ids in the function.
-    ///
-    /// # Example
-    /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
-    /// use gbf_rs::basic_block::BasicBlockId;
-    ///
-    /// let mut function = Function::new(FunctionId::new(0, None, 0));
-    /// let block1 = function.create_block(BasicBlockType::Normal, 0).unwrap();
-    /// let block2 = function.create_block(BasicBlockType::Normal, 0).unwrap();
-    /// let block3 = function.create_block(BasicBlockType::Normal, 0).unwrap();
-    /// ```
-    pub fn get_block_ids(&self) -> Vec<BasicBlockId> {
-        self.blocks.keys().cloned().collect()
     }
 
     /// Get the number of `BasicBlock`s in the function.
@@ -532,31 +512,101 @@ impl Function {
     }
 }
 
-// Deref implementation for Function
-impl std::ops::Deref for Function {
-    type Target = BTreeMap<BasicBlockId, BasicBlock>;
+/// Internal API for `Function`.
+impl Function {
+    /// Gets a block id based on its address.
+    ///
+    /// # Arguments
+    /// - `address`: The address of the block.
+    ///
+    /// # Returns
+    /// - The `BasicBlockId` of the block with the corresponding address.
+    ///
+    /// # Errors
+    /// - `FunctionError::BasicBlockNotFoundByAddress` if the block does not exist.
+    pub fn get_basic_block_id_by_address(
+        &self,
+        address: Gs2BytecodeAddress,
+    ) -> Result<BasicBlockId, FunctionError> {
+        self.blocks
+            .iter()
+            .find(|block| block.id.address == address)
+            .map(|block| block.id)
+            .ok_or(FunctionError::BasicBlockNotFoundByAddress(address))
+    }
+
+    /// Convert a `NodeIndex` to a `BasicBlockId`.
+    ///
+    /// # Arguments
+    /// - `node_id`: The `NodeIndex` to convert.
+    ///
+    /// # Returns
+    /// - The `BasicBlockId` of the block with the corresponding `NodeIndex`.
+    fn node_id_to_block_id(&self, node_id: NodeIndex) -> Option<BasicBlockId> {
+        self.graph_node_to_block.get(&node_id).cloned()
+    }
+
+    /// Convert a `BasicBlockId` to a `NodeIndex`.
+    ///
+    /// # Arguments
+    /// - `block_id`: The `BasicBlockId` to convert.
+    ///
+    /// # Returns
+    /// - The `NodeIndex` of the block with the corresponding `BasicBlockId`.
+    fn block_id_to_node_id(&self, block_id: BasicBlockId) -> Option<NodeIndex> {
+        self.block_to_graph_node.get(&block_id).cloned()
+    }
+}
+
+// === Implementations ===
+
+/// Display implementation for `FunctionId`.
+impl Display for FunctionId {
+    /// Display the `Function` as its name.
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        if let Some(name) = &self.name {
+            write!(f, "{}", name)
+        } else {
+            write!(f, "Unnamed Function (Entry)")
+        }
+    }
+}
+
+/// Deref implementation for Function
+impl Deref for Function {
+    type Target = [BasicBlock];
 
     fn deref(&self) -> &Self::Target {
         &self.blocks
     }
 }
 
-// Index implementation for function, with usize
-impl std::ops::Index<usize> for Function {
+/// Index implementation for function, with usize
+impl Index<usize> for Function {
     type Output = BasicBlock;
 
     fn index(&self, index: usize) -> &Self::Output {
-        self.blocks.values().nth(index).unwrap()
+        &self.blocks[index]
     }
 }
 
-// IntoIterator implementation for Function
-impl IntoIterator for Function {
-    type Item = BasicBlock;
-    type IntoIter = std::collections::btree_map::IntoValues<BasicBlockId, BasicBlock>;
+/// IntoIterator implementation immutable reference
+impl<'a> IntoIterator for &'a Function {
+    type Item = &'a BasicBlock;
+    type IntoIter = std::slice::Iter<'a, BasicBlock>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.blocks.into_values()
+        self.blocks.iter()
+    }
+}
+
+/// IntoIterator implementation mutable reference
+impl<'a> IntoIterator for &'a mut Function {
+    type Item = &'a mut BasicBlock;
+    type IntoIter = std::slice::IterMut<'a, BasicBlock>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.blocks.iter_mut()
     }
 }
 
@@ -579,13 +629,12 @@ mod tests {
         let mut function = Function::new(id.clone());
         let block_id = function.create_block(BasicBlockType::Normal, 32).unwrap();
 
-        assert_eq!(function.blocks.len(), 2);
-        assert!(function.blocks.contains_key(&block_id));
+        assert_eq!(function.len(), 2);
 
         // check block id & node id mappings
-        let node_id = function.block_to_node.get(&block_id).unwrap();
-        let new_block_id = function.node_to_block.get(node_id).unwrap();
-        assert_eq!(block_id, *new_block_id);
+        let node_id = function.block_to_graph_node.get(&block_id).unwrap();
+        let new_block_id = function.graph_node_to_block.get(node_id).unwrap();
+        assert_eq!(*new_block_id, block_id);
 
         // test EntryBlockAlreadyExists error
         let result = function.create_block(BasicBlockType::Entry, 0);
@@ -597,7 +646,7 @@ mod tests {
         let id = FunctionId::new(0, None, 0);
         let mut function = Function::new(id.clone());
         let block_id = function.create_block(BasicBlockType::Normal, 32).unwrap();
-        let block = function.get_block(block_id).unwrap();
+        let block = function.get_basic_block_by_id(block_id).unwrap();
 
         assert_eq!(block.id, block_id);
     }
@@ -607,7 +656,7 @@ mod tests {
         let id = FunctionId::new(0, None, 0);
         let mut function = Function::new(id);
         let block_id = function.create_block(BasicBlockType::Normal, 43).unwrap();
-        let block = function.get_block_mut(block_id).unwrap();
+        let block = function.get_basic_block_by_id_mut(block_id).unwrap();
 
         block.id = BasicBlockId::new(0, BasicBlockType::Exit, 43);
         assert_eq!(block.id, BasicBlockId::new(0, BasicBlockType::Exit, 43));
@@ -616,7 +665,7 @@ mod tests {
     #[test]
     fn test_display_function_id() {
         let id = FunctionId::new(0, None, 0);
-        assert_eq!(id.to_string(), "Function0");
+        assert_eq!(id.to_string(), "Unnamed Function (Entry)");
     }
 
     #[test]
@@ -632,17 +681,17 @@ mod tests {
     fn test_get_entry_block() {
         let id = FunctionId::new(0, None, 0);
         let function = Function::new(id.clone());
-        let entry = function.get_entry_block();
+        let entry = function.get_entry_basic_block();
 
-        assert_eq!(entry.id, function.entry_block);
+        assert_eq!(entry.id, function.get_entry_basic_block().id);
     }
 
     #[test]
     fn test_get_entry_block_mut() {
         let id = FunctionId::new(0, None, 0);
         let mut function = Function::new(id.clone());
-        let entry_id = function.entry_block;
-        let entry = function.get_entry_block_mut();
+        let entry_id = function.get_entry_basic_block().id;
+        let entry = function.get_entry_basic_block_mut();
 
         assert_eq!(entry.id, entry_id);
     }

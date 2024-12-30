@@ -48,13 +48,6 @@ pub struct BasicBlockId {
     pub address: Gs2BytecodeAddress,
 }
 
-impl fmt::Display for BasicBlockId {
-    /// Display the `BasicBlockId` as `block_{index}`.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Block{}", self.index)
-    }
-}
-
 /// Represents the edge type between two basic blocks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BasicBlockConnectionType {
@@ -180,32 +173,6 @@ impl BasicBlock {
         self.instructions.last()
     }
 
-    /// Find an instruction based on a predicate.
-    ///
-    /// # Arguments
-    /// - `predicate`: The predicate to use to find the instruction.
-    ///
-    /// # Returns
-    /// A reference to the instruction if found, or `None` if not found.
-    ///
-    /// # Example
-    /// ```
-    /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
-    /// use gbf_rs::instruction::Instruction;
-    /// use gbf_rs::opcode::Opcode;
-    /// use gbf_rs::operand::Operand;
-    ///
-    /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
-    /// block.add_instruction(Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42)));
-    /// let instruction = block.find_instruction(|i| i.opcode == Opcode::PushNumber);
-    /// ```
-    pub fn find_instruction<F>(&self, predicate: F) -> Option<&Instruction>
-    where
-        F: Fn(&Instruction) -> bool,
-    {
-        self.instructions.iter().find(|i| predicate(i))
-    }
-
     /// Get the number of instructions in the block.
     ///
     /// # Returns
@@ -239,6 +206,14 @@ impl BasicBlock {
     }
 }
 
+// == Implementations ==
+impl fmt::Display for BasicBlockId {
+    /// Display the `BasicBlockId`.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Block at address 0x{:X}", self.address)
+    }
+}
+
 /// Implement Deref
 impl Deref for BasicBlock {
     type Target = Vec<Instruction>;
@@ -249,20 +224,6 @@ impl Deref for BasicBlock {
     /// - A reference to the instructions in the block.
     fn deref(&self) -> &Self::Target {
         &self.instructions
-    }
-}
-
-/// Allow iterating over `BasicBlock` (owned) to consume it and get owned instructions.
-impl IntoIterator for BasicBlock {
-    type Item = Instruction;
-    type IntoIter = vec::IntoIter<Instruction>;
-
-    /// Create an iterator over the instructions in the block.
-    ///
-    /// # Returns
-    /// - An iterator over the instructions in the block.
-    fn into_iter(self) -> Self::IntoIter {
-        self.instructions.into_iter()
     }
 }
 
@@ -281,6 +242,34 @@ impl Index<usize> for BasicBlock {
     }
 }
 
+/// IntoIterator implementation immutable reference
+impl<'a> IntoIterator for &'a BasicBlock {
+    type Item = &'a Instruction;
+    type IntoIter = vec::IntoIter<&'a Instruction>;
+
+    /// Get an iterator over the instructions in the block.
+    ///
+    /// # Returns
+    /// - An iterator over the instructions in the block.
+    fn into_iter(self) -> Self::IntoIter {
+        self.instructions.iter().collect::<Vec<_>>().into_iter()
+    }
+}
+
+/// IntoIterator implementation mutable reference
+impl<'a> IntoIterator for &'a mut BasicBlock {
+    type Item = &'a mut Instruction;
+    type IntoIter = vec::IntoIter<&'a mut Instruction>;
+
+    /// Get a mutable iterator over the instructions in the block.
+    ///
+    /// # Returns
+    /// - A mutable iterator over the instructions in the block.
+    fn into_iter(self) -> Self::IntoIter {
+        self.instructions.iter_mut().collect::<Vec<_>>().into_iter()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -289,7 +278,7 @@ mod tests {
     #[test]
     fn test_basic_block_id_display() {
         let block = BasicBlockId::new(0, BasicBlockType::Normal, 3);
-        assert_eq!(block.to_string(), "Block0");
+        assert_eq!(block.to_string(), "Block at address 0x3");
     }
 
     #[test]
@@ -309,18 +298,6 @@ mod tests {
             Operand::new_number(42),
         ));
         assert_eq!(block.instructions.len(), 1);
-    }
-
-    #[test]
-    fn test_basic_block_find_instruction() {
-        let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 10));
-        block.add_instruction(Instruction::new_with_operand(
-            Opcode::PushNumber,
-            0,
-            Operand::new_number(42),
-        ));
-        let instruction = block.find_instruction(|i| i.opcode == Opcode::PushNumber);
-        assert!(instruction.is_some());
     }
 
     #[test]
