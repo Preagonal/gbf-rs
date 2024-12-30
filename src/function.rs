@@ -5,6 +5,7 @@ use std::{collections::HashMap, hash::Hash};
 
 use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::Direction;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
@@ -26,7 +27,7 @@ pub enum FunctionError {
 }
 
 /// Represents the identifier of a function.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FunctionId {
     index: usize,
     name: Option<String>,
@@ -86,7 +87,7 @@ impl FunctionId {
 }
 
 /// Represents a function in a module.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Function {
     /// The identifier of the function.
     pub id: FunctionId,
