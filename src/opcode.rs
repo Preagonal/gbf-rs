@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 use thiserror::Error;
 
 /// Error type for invalid opcodes.
@@ -48,6 +48,14 @@ macro_rules! define_opcodes {
             /// # Returns
             /// - `Some(Opcode)` if the value corresponds to a valid opcode.
             /// - `None` if the value does not match any defined opcode.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::from_byte(0x1).unwrap();
+            /// assert_eq!(opcode, Opcode::Jmp);
+            /// ```
             pub fn from_byte(byte: u8) -> Result<Self, OpcodeError> {
                 match byte {
                     $(
@@ -61,20 +69,174 @@ macro_rules! define_opcodes {
             ///
             /// # Returns
             /// - The numeric value (`u8`) of the opcode.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jmp;
+            /// assert_eq!(opcode.to_byte(), 0x1);
+            /// ```
             pub fn to_byte(self) -> u8 {
                 self as u8
             }
 
+            /// Get the number of defined opcodes.
+            ///
+            /// # Returns
+            /// - The number of opcodes.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let count = Opcode::count();
+            /// ```
+            pub fn count() -> usize {
+                0 $(+ { let _ = stringify!($name); 1 })*
+            }
+
+            /// Get a list of all defined opcodes.
+            ///
+            /// # Returns
+            /// - A vector containing all defined opcodes.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcodes = Opcode::all();
+            /// ```
+            pub fn all() -> &'static [Opcode] {
+                &[
+                    $(
+                        Opcode::$name,
+                    )*
+                ]
+            }
+
+            /// If the opcode is a conditional jump instruction.
+            ///
+            /// # Returns
+            /// - `true` if the opcode is a conditional jump instruction.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jeq;
+            /// assert!(opcode.is_conditional_jump());
+            /// ```
+            pub fn is_conditional_jump(self) -> bool {
+                return match self {
+                    $(
+                        Opcode::$name => {
+                            matches!(self, Opcode::Jeq | Opcode::Jne)
+                        },
+                    )*
+                };
+            }
+
+            /// If the opcode is an unconditional jump instruction.
+            ///
+            /// # Returns
+            /// - `true` if the opcode is an unconditional jump instruction.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jmp;
+            /// assert!(opcode.is_unconditional_jump());
+            /// ```
+            pub fn is_unconditional_jump(self) -> bool {
+                return match self {
+                    $(
+                        Opcode::$name => {
+                            matches!(self, Opcode::Jmp)
+                        },
+                    )*
+                };
+            }
+
+            /// If this CFG-related opcode contains a branch with a fall-through path to the next instruction.
+            ///
+            /// # Returns
+            /// - `true` if the opcode is a block-starting opcode.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jmp;
+            /// assert!(!opcode.has_fall_through());
+            /// ```
+            pub fn has_fall_through(self) -> bool {
+                return self.is_conditional_jump() || match self {
+                    $(
+                        Opcode::$name => {
+                            matches!(self, Opcode::With | Opcode::ShortCircuitAnd | Opcode::ShortCircuitOr | Opcode::ForEach)
+                        },
+                    )*
+                };
+            }
+
+            /// If this CFG-related opcode has a corresponding jump target as an operand.
+            ///
+            /// # Returns
+            /// - `true` if the opcode has a jump target.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jmp;
+            /// assert!(opcode.has_jump_target());
+            /// ```
+            pub fn has_jump_target(self) -> bool {
+                return self.is_unconditional_jump() || self.has_fall_through();
+            }
+
+            /// If this CFG-related opcode should always be the last opcode in a block. If there is an
+            /// instruction that succeeds this opcode, it should be considered the start of a different block.
+            ///
+            /// # Returns
+            /// - `true` if the opcode is block-ending.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Ret;
+            /// assert!(opcode.is_block_end());
+            /// ```
+            pub fn is_block_end(self) -> bool {
+                return self.has_jump_target() || match self {
+                    $(
+                        Opcode::$name => {
+                            matches!(self, Opcode::Ret | Opcode::ShortCircuitEnd | Opcode::WithEnd)
+                        },
+                    )*
+                };
+            }
+        }
+
+        impl Display for Opcode {
             /// Convert an `Opcode` to a human-readable string.
             ///
             /// # Returns
             /// - A string representation of the opcode.
-            pub fn to_string(self) -> &'static str {
-                match self {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", match self {
                     $(
                         Opcode::$name => stringify!($name),
                     )*
-                }
+                })
             }
         }
 
@@ -85,6 +247,9 @@ macro_rules! define_opcodes {
             ///
             /// # Arguments
             /// - `name`: The string to convert.
+            ///
+            /// # Returns
+            /// - `Ok(Opcode)` if the string corresponds to a valid opcode.
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 match s {
                     $(
@@ -259,9 +424,22 @@ mod tests {
     }
 
     #[test]
-    fn test_to_string() {
+    fn test_fmt() {
         assert_eq!(Opcode::Jmp.to_string(), "Jmp");
         assert_eq!(Opcode::ConvertToString.to_string(), "ConvertToString");
+
+        let opcode = Opcode::from_byte(0x1).unwrap();
+        assert_eq!(format!("{}", opcode), "Jmp");
+
+        let opcode = Opcode::from_byte(0x22).unwrap();
+        assert_eq!(format!("{}", opcode), "ConvertToString");
+
+        // Test all opcodes
+        for opcode in Opcode::all() {
+            let str_val = format!("{}", opcode);
+            let from_str = Opcode::from_str(&str_val).unwrap();
+            assert_eq!(*opcode, from_str);
+        }
     }
 
     #[test]
@@ -272,5 +450,49 @@ mod tests {
             Opcode::ConvertToString
         );
         assert!(Opcode::from_str("Invalid").is_err());
+    }
+
+    #[test]
+    fn test_count() {
+        assert_eq!(Opcode::all().len(), Opcode::count());
+    }
+
+    #[test]
+    fn test_is_conditional_jump() {
+        assert!(Opcode::Jeq.is_conditional_jump());
+        assert!(Opcode::Jne.is_conditional_jump());
+        assert!(!Opcode::Jmp.is_conditional_jump());
+    }
+
+    #[test]
+    fn test_is_unconditional_jump() {
+        assert!(Opcode::Jmp.is_unconditional_jump());
+        assert!(!Opcode::Jeq.is_unconditional_jump());
+        assert!(!Opcode::Jne.is_unconditional_jump());
+    }
+
+    #[test]
+    fn test_has_jump_target() {
+        assert!(Opcode::Jmp.has_jump_target());
+        assert!(Opcode::Jeq.has_jump_target());
+        assert!(Opcode::Jne.has_jump_target());
+        assert!(Opcode::With.has_jump_target());
+        assert!(Opcode::ShortCircuitAnd.has_jump_target());
+        assert!(Opcode::ShortCircuitOr.has_jump_target());
+        assert!(Opcode::Jmp.has_jump_target());
+    }
+
+    #[test]
+    fn test_is_block_end() {
+        assert!(Opcode::Jmp.is_block_end());
+        assert!(Opcode::Ret.is_block_end());
+        assert!(Opcode::ShortCircuitEnd.is_block_end());
+        assert!(Opcode::WithEnd.is_block_end());
+        assert!(Opcode::Jeq.is_block_end());
+        assert!(Opcode::Jne.is_block_end());
+        assert!(Opcode::ShortCircuitAnd.is_block_end());
+        assert!(Opcode::ShortCircuitOr.is_block_end());
+        assert!(Opcode::ForEach.is_block_end());
+        assert!(Opcode::ShortCircuitEnd.is_block_end());
     }
 }

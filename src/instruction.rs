@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::opcode::Opcode;
 use crate::operand::Operand;
+use crate::utils::Gs2BytecodeAddress;
 
 /// Represents an instruction in a bytecode system.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -12,7 +13,7 @@ pub struct Instruction {
     pub opcode: Opcode,
 
     /// The address of the instruction.
-    pub address: usize,
+    pub address: Gs2BytecodeAddress,
 
     /// The operand of the instruction, if any.
     pub operand: Option<Operand>,
@@ -64,7 +65,7 @@ impl Instruction {
     /// use gbf_rs::opcode::Opcode;
     ///
     /// let mut instruction = Instruction::new(Opcode::PushNumber, 0);
-    /// instruction.set_operand(Operand::new_int(42));
+    /// instruction.set_operand(Operand::new_number(42));
     /// ```
     pub fn set_operand(&mut self, operand: Operand) {
         self.operand = Some(operand);
@@ -84,14 +85,14 @@ impl std::fmt::Display for Instruction {
     /// use gbf_rs::operand::Operand;
     /// use gbf_rs::opcode::Opcode;
     ///
-    /// let instruction = Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_int(42));
+    /// let instruction = Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42));
     /// let string = instruction.to_string();
     /// assert_eq!(string, "PushNumber 42");
     /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &self.operand {
-            Some(operand) => write!(f, "{} {}", self.opcode.to_string(), operand),
-            None => write!(f, "{}", self.opcode.to_string()),
+            Some(operand) => write!(f, "{} {}", self.opcode, operand),
+            None => write!(f, "{}", self.opcode),
         }
     }
 }
@@ -107,7 +108,7 @@ mod tests {
         assert_eq!(instruction.to_string(), "PushNumber");
 
         let instruction =
-            Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_int(42));
+            Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42));
         assert_eq!(instruction.to_string(), "PushNumber 42");
 
         let instruction = Instruction::new_with_operand(
