@@ -16,6 +16,9 @@ pub trait NodeResolver {
 
     /// Resolves a NodeIndex to its associated metadata.
     fn resolve(&self, node_index: NodeIndex) -> Option<&Self::NodeData>;
+
+    /// Resolves the color of the edge between two nodes.
+    fn resolve_edge_color(&self, source: NodeIndex, target: NodeIndex) -> String;
 }
 
 /// Trait to print the graph in DOT format. The must also implement `NodeResolver`.
@@ -245,12 +248,15 @@ impl CfgDot {
                     .position(|e| e.source() == source)
                     .unwrap();
 
-                // Connect source -> target:port.
+                let edge_color = resolver.resolve_edge_color(source, target);
+
+                // Connect source -> target:port with the specified edge color.
                 dot.push_str(&format!(
-                    "    N{} -> N{}:{};\n",
+                    "    N{} -> N{}:{}:n [color=\"{}\"]; \n",
                     source.index(),
                     target.index(),
-                    port
+                    port,
+                    edge_color
                 ));
             }
         }
@@ -298,6 +304,10 @@ mod tests {
 
         fn resolve(&self, node_index: NodeIndex) -> Option<&Self::NodeData> {
             self.nodes.get(&node_index)
+        }
+
+        fn resolve_edge_color(&self, _source: NodeIndex, _target: NodeIndex) -> String {
+            "#ff0000".to_string()
         }
     }
 

@@ -622,6 +622,44 @@ impl NodeResolver for Function {
                     .and_then(|index| self.blocks.get(*index))
             })
     }
+
+    fn resolve_edge_color(&self, source: NodeIndex, target: NodeIndex) -> String {
+        // Get the last instruction of the source block
+        let source_block_id = self
+            .graph_node_to_block
+            .get(&source)
+            .expect("Source block not found");
+        let source_block = self
+            .get_basic_block_by_id(*source_block_id)
+            .expect("Source block not found");
+        let source_last_instruction = source_block.last().unwrap();
+
+        let target_block_id = self
+            .graph_node_to_block
+            .get(&target)
+            .expect("Target block not found");
+        let target_block = self
+            .get_basic_block_by_id(*target_block_id)
+            .expect("Target block not found");
+
+        // Figure out if the edge represents a branch by seeing if the target
+        // block address is NOT the next address after the source instruction.
+        let source_last_address = source_last_instruction.address;
+        let target_address = target_block.id.address;
+        if source_last_address + 1 != target_address {
+            // This represents a branch. Color the edge green.
+            return "#bbff00".to_string();
+        }
+
+        // If the opcode of the last instruction is a fall through, color the edge red since
+        // the target block's address is the next address
+        if source_last_instruction.opcode.has_fall_through() {
+            return "#bb0000".to_string();
+        }
+
+        // Otherwise, color the edge green (e.g. normal control flow)
+        "#00bbff".to_string()
+    }
 }
 
 impl DotRenderableGraph for Function {

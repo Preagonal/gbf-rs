@@ -8,7 +8,11 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{cfg_dot::RenderableNode, instruction::Instruction, utils::Gs2BytecodeAddress};
+use crate::{
+    cfg_dot::RenderableNode,
+    instruction::Instruction,
+    utils::{Gs2BytecodeAddress, OPERAND_TRUNCATE_LENGTH},
+};
 
 /// Represents the type of a basic block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
@@ -290,20 +294,35 @@ impl RenderableNode for BasicBlock {
 
         // Render each instruction as a table row with indentation.
         for inst in &self.instructions {
+            // Get the string of an operand, if it exists, or a space.
+            // If the resulting operand exceeds OPERAND_TRUNCATE_LENGTH,
+            // truncate it and append an ellipsis.
+
+            let operand = inst
+                .operand
+                .as_ref()
+                .map(|op| {
+                    let mut op_str = op.to_string();
+                    if op_str.len() > OPERAND_TRUNCATE_LENGTH {
+                        op_str.truncate(OPERAND_TRUNCATE_LENGTH);
+                        op_str.push_str("...");
+                    }
+                    op_str
+                })
+                .unwrap_or_else(|| " ".to_string());
+
             writeln!(
                 &mut label,
                 r##"{indent}    <TR>
-{indent}        <TD ALIGN="LEFT"><FONT COLOR="#a3e635">{:04X}</FONT></TD>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="#bbff00">{:04X}</FONT></TD>
 {indent}        <TD ALIGN="LEFT">  </TD>
 {indent}        <TD ALIGN="LEFT"><FONT COLOR="#ffbb00">{}</FONT></TD>
 {indent}        <TD ALIGN="LEFT">  </TD>
-{indent}        <TD ALIGN="LEFT"><FONT COLOR="#3388ff">{}</FONT></TD>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="#00bbff">{}</FONT></TD>
 {indent}    </TR>"##,
                 inst.address,
                 inst.opcode,
-                inst.operand
-                    .clone()
-                    .unwrap_or(crate::operand::Operand::String(" ".to_string())),
+                operand,
                 indent = indent
             )
             .unwrap();
