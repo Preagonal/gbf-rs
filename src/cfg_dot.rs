@@ -23,10 +23,6 @@ pub trait NodeResolver {
 pub struct CfgDotConfig {
     /// The direction of the graph layout.
     pub rankdir: String,
-    /// The type of splines to use for edges.
-    pub splines: String,
-    /// Whether to allow node overlap.
-    pub overlap: String,
     /// The color of the edges.
     pub edge_color: String,
     /// The arrowhead style of the edges.
@@ -47,8 +43,6 @@ impl Default for CfgDotConfig {
     fn default() -> Self {
         Self {
             rankdir: "TB".to_string(),
-            splines: "ortho".to_string(),
-            overlap: "false".to_string(),
             edge_color: "#ffffff".to_string(),
             arrowhead: "normal".to_string(),
             node_shape: "none".to_string(),
@@ -76,18 +70,6 @@ impl CfgDotBuilder {
     /// Sets the direction of the graph layout.
     pub fn rankdir(mut self, rankdir: &str) -> Self {
         self.config.rankdir = rankdir.to_string();
-        self
-    }
-
-    /// Sets the type of splines to use for edges.
-    pub fn splines(mut self, splines: &str) -> Self {
-        self.config.splines = splines.to_string();
-        self
-    }
-
-    /// Sets whether to allow node overlap.
-    pub fn overlap(mut self, overlap: &str) -> Self {
-        self.config.overlap = overlap.to_string();
         self
     }
 
@@ -148,17 +130,43 @@ pub struct CfgDot {
 
 impl CfgDot {
     /// Renders the DOT representation of a `DiGraph` using the provided resolver.
+    ///
+    /// This method:
+    /// - Defines a directed graph (`digraph CFG`).
+    /// - Applies graph-level and node-level styles from `self.config`.
+    /// - Iterates over each node in the graph, resolving it via `resolver`.
+    /// - Calculates the number of incoming edges for each node to create "ports" for the edges.
+    /// - Constructs an HTML-like table label for each node with indentation to make it readable.
+    /// - Iterates over all edges and connects them to the correct node ports.
+    ///
+    /// The `data.render_node(8)` call uses an indentation of 8 spaces for the node's content.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `R` - A type that implements `NodeResolver`.
+    /// * `N` - Node weight type of the `DiGraph`.
+    /// * `E` - Edge weight type of the `DiGraph`.
+    ///
+    /// # Arguments
+    ///
+    /// * `graph` - The directed graph to render.
+    /// * `resolver` - An object that resolves each node index to a data structure that can be rendered.
+    ///
+    /// # Returns
+    ///
+    /// A `String` containing the entire DOT (Graphviz) representation of the graph.
     pub fn render<R, N, E>(&self, graph: &DiGraph<N, E>, resolver: &R) -> String
     where
         R: NodeResolver,
     {
+        // Prepare a buffer for the DOT output.
         let mut dot = String::new();
 
-        // Start the graph definition.
+        // Start graph definition.
         dot.push_str("digraph CFG {\n");
         dot.push_str(&format!(
-            "    graph [rankdir={}, splines={}, bgcolor=\"{}\", overlap={}];\n",
-            self.config.rankdir, self.config.splines, self.config.bgcolor, self.config.overlap
+            "    graph [rankdir={}, bgcolor=\"{}\"];\n",
+            self.config.rankdir, self.config.bgcolor
         ));
         dot.push_str(&format!(
             "    edge [color=\"{}\", arrowhead=\"{}\"]; \n",
@@ -169,34 +177,90 @@ impl CfgDot {
             self.config.node_shape, self.config.fontname, self.config.fontsize
         ));
 
-        // Render each node using the resolver.
+        // Iterate over each node in the graph.
         for (node_index, _node_data) in graph.node_references() {
+            // Attempt to resolve the node data. If it's `None`, skip it.
             if let Some(data) = resolver.resolve(node_index) {
+                // Count the number of incoming edges (for ports).
+                let incoming_edges = graph
+                    .edges_directed(node_index, petgraph::Direction::Incoming)
+                    .count();
+
+                // Build the <TD> tags, each with a unique PORT attribute.
+                let mut port_str = String::new();
+                if incoming_edges == 0 {
+                    // If there are no incoming edges, we add one empty cell for spacing.
+                    port_str.push_str("                        <TD></TD>\n");
+                } else {
+                    // Create a <TD> for each incoming edge port.
+                    for i in 0..incoming_edges {
+                        port_str.push_str(&format!(
+                            "                        <TD PORT=\"{}\"></TD>\n",
+                            i
+                        ));
+                    }
+                }
+
+                // Start building up the node's DOT string line-by-line.
                 dot.push_str(&format!(
-                    "    N{} [shape=plaintext,style=filled,fillcolor=\"{}\",label=<\n{}    >];\n",
+                    "    N{} [shape=plaintext, style=filled, fillcolor=\"{}\", label=<",
                     node_index.index(),
-                    self.config.fillcolor,
-                    data.render_node(8)
+                    self.config.fillcolor
                 ));
+                dot.push_str(
+                    "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\">\n",
+                );
+
+                // First row: table of ports.
+                dot.push_str("        <TR>\n");
+                dot.push_str("            <TD>\n");
+                dot.push_str("                <TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\">\n");
+                dot.push_str("                    <TR>\n");
+                dot.push_str(&port_str);
+                dot.push_str("                    </TR>\n");
+                dot.push_str("                </TABLE>\n");
+                dot.push_str("            </TD>\n");
+                dot.push_str("        </TR>\n");
+
+                // Second row: actual node content.
+                dot.push_str("        <TR>\n");
+                dot.push_str("            <TD>\n");
+                // Indent node content by 8 spaces (or however you like to pass in).
+                dot.push_str(&format!("{}", data.render_node(16)));
+                dot.push_str("            </TD>\n");
+                dot.push_str("        </TR>\n");
+
+                dot.push_str("    </TABLE>");
+                dot.push_str(">];\n");
             }
         }
 
-        // Render edges between nodes.
+        // Render each edge.
         for edge in graph.edge_references() {
             let source = edge.source();
             let target = edge.target();
 
-            // Resolve both source and target nodes to ensure they exist.
+            // Only render if both source and target are resolvable.
             if resolver.resolve(source).is_some() && resolver.resolve(target).is_some() {
+                // Determine the port index by finding this edge among the target's incoming edges.
+                let port = graph
+                    .edges_directed(target, petgraph::Direction::Incoming)
+                    .position(|e| e.source() == source)
+                    .unwrap();
+
+                // Connect source -> target:port.
                 dot.push_str(&format!(
-                    "    N{} -> N{};\n",
+                    "    N{} -> N{}:{};\n",
                     source.index(),
-                    target.index()
+                    target.index(),
+                    port
                 ));
             }
         }
 
-        // Close the graph definition.
+        //
+        // 4. Close the graph definition
+        //
         dot.push_str("}\n");
 
         dot
@@ -275,10 +339,10 @@ mod tests {
         // Verify the output.
         assert!(dot_output.contains("digraph CFG {"));
         assert!(dot_output.contains("graph [rankdir=TB"));
-        assert!(dot_output.contains("N0 [shape=plaintext,style=filled,fillcolor=\"#555555\""));
+        assert!(dot_output.contains("N0 [shape=plaintext, style=filled, fillcolor=\"#555555\""));
         assert!(dot_output.contains("Node A"));
         assert!(dot_output.contains("Node B"));
-        assert!(dot_output.contains("N0 -> N1;"));
+        assert!(dot_output.contains("N0 -> N1"));
     }
 
     #[test]
@@ -322,9 +386,9 @@ mod tests {
         let dot_output = cfg_dot.render(&graph, &resolver);
 
         // Verify the custom settings in the output.
-        assert!(dot_output.contains("graph [rankdir=LR, splines=ortho, bgcolor=\"#000000\""));
+        assert!(dot_output.contains("graph [rankdir=LR, bgcolor=\"#000000\""));
         assert!(dot_output.contains("node [shape=\"none\", fontname=\"Arial\", fontsize=\"14\"]"));
-        assert!(dot_output.contains("N0 [shape=plaintext,style=filled,fillcolor=\"#222222\""));
+        assert!(dot_output.contains("N0 [shape=plaintext, style=filled, fillcolor=\"#222222\""));
         assert!(dot_output.contains("edge [color=\"#FF0000\", arrowhead=\"normal\"]"));
     }
 
@@ -391,9 +455,9 @@ mod tests {
 
         // Verify the output.
         println!("{}", dot_output);
-        assert!(dot_output.contains("N0 -> N1;"));
-        assert!(dot_output.contains("N1 -> N2;"));
-        assert!(dot_output.contains("N0 -> N2;"));
+        assert!(dot_output.contains("N0 -> N1"));
+        assert!(dot_output.contains("N1 -> N2"));
+        assert!(dot_output.contains("N0 -> N2"));
     }
 
     // case where resolver returns None for a node
@@ -422,7 +486,7 @@ mod tests {
         let dot_output = cfg_dot.render(&graph, &resolver);
 
         // Verify the output.
-        assert!(dot_output.contains("N0 [shape=plaintext,style=filled,fillcolor=\"#555555\""));
+        assert!(dot_output.contains("N0 [shape=plaintext, style=filled, fillcolor=\"#555555\""));
         assert!(!dot_output.contains("N1")); // Node B should not be rendered.
     }
 }
