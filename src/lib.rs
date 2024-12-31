@@ -5,6 +5,8 @@
 
 use bytecode_loader::{BytecodeLoaderBuilder, BytecodeLoaderError};
 
+/// Abstract Syntax Tree (AST) node definitions.
+pub mod ast;
 /// This module contains basic block definitions and operations.
 pub mod basic_block;
 /// This module reads bytecode from a reader and disassembles it.
