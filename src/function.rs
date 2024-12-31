@@ -686,9 +686,67 @@ mod tests {
     }
 
     #[test]
+    fn test_get_block_not_found() {
+        let id = FunctionId::new(0, None, 0);
+        let function = Function::new(id.clone());
+        let result =
+            function.get_basic_block_by_id(BasicBlockId::new(1234, BasicBlockType::Normal, 0));
+
+        assert!(result.is_err());
+
+        // test mut version
+        let mut function = Function::new(id.clone());
+        let result =
+            function.get_basic_block_by_id_mut(BasicBlockId::new(1234, BasicBlockType::Normal, 0));
+
+        assert!(result.is_err());
+
+        // get by start address
+        let result = function.get_basic_block_by_start_address(0x100);
+        assert!(result.is_err());
+
+        // get by start address mut
+        let result = function.get_basic_block_by_start_address_mut(0x100);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_block_by_address() {
+        let id = FunctionId::new(0, None, 0);
+        let mut function = Function::new(id.clone());
+        let block_id = function
+            .create_block(BasicBlockType::Normal, 0x100)
+            .unwrap();
+        let block = function.get_basic_block_by_start_address(0x100).unwrap();
+
+        assert_eq!(block.id, block_id);
+
+        // test mut version
+        let block = function
+            .get_basic_block_by_start_address_mut(0x100)
+            .unwrap();
+        block.id = BasicBlockId::new(0, BasicBlockType::Exit, 0x100);
+        assert_eq!(block.id, BasicBlockId::new(0, BasicBlockType::Exit, 0x100));
+    }
+
+    #[test]
     fn test_display_function_id() {
         let id = FunctionId::new(0, None, 0);
         assert_eq!(id.to_string(), "Unnamed Function (Entry)");
+
+        let id = FunctionId::new(0, Some("test".to_string()), 0);
+        assert_eq!(id.to_string(), "test");
+    }
+
+    #[test]
+    fn test_into_iter_mut() {
+        let id = FunctionId::new(0, None, 0);
+        let mut function = Function::new(id.clone());
+        let block_id = function.create_block(BasicBlockType::Normal, 32).unwrap();
+        let block = function.get_basic_block_by_id_mut(block_id).unwrap();
+
+        block.id = BasicBlockId::new(0, BasicBlockType::Exit, 32);
+        assert_eq!(block.id, BasicBlockId::new(0, BasicBlockType::Exit, 32));
     }
 
     #[test]
@@ -736,6 +794,22 @@ mod tests {
         let succs = function.get_successors(block1).unwrap();
         assert_eq!(succs.len(), 1);
         assert_eq!(succs[0], block2);
+
+        // test source not found
+        let result = function.add_edge(BasicBlockId::new(1234, BasicBlockType::Normal, 0), block2);
+        assert!(result.is_err());
+
+        // test target not found
+        let result = function.add_edge(block1, BasicBlockId::new(1234, BasicBlockType::Normal, 0));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_basic_block_is_empty() {
+        // will always be false since we always create an entry block
+        let id = FunctionId::new(0, None, 0);
+        let function = Function::new(id.clone());
+        assert!(!function.is_empty());
     }
 
     #[test]
@@ -750,6 +824,10 @@ mod tests {
 
         assert_eq!(preds.len(), 1);
         assert_eq!(preds[0], block1);
+
+        // test error where block not found
+        let result = function.get_predecessors(BasicBlockId::new(1234, BasicBlockType::Normal, 0));
+        assert!(result.is_err());
     }
 
     #[test]
@@ -764,5 +842,9 @@ mod tests {
 
         assert_eq!(succs.len(), 1);
         assert_eq!(succs[0], block2);
+
+        // test error where block not found
+        let result = function.get_successors(BasicBlockId::new(1234, BasicBlockType::Normal, 0));
+        assert!(result.is_err());
     }
 }
