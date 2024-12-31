@@ -31,8 +31,6 @@ pub struct CfgDotConfig {
     pub rankdir: String,
     /// The color of the edges.
     pub edge_color: String,
-    /// The arrowhead style of the edges.
-    pub arrowhead: String,
     /// The shape of the nodes.
     pub node_shape: String,
     /// The font name of the nodes.
@@ -50,8 +48,7 @@ impl Default for CfgDotConfig {
         Self {
             rankdir: "TB".to_string(),
             edge_color: "#ffffff".to_string(),
-            arrowhead: "normal".to_string(),
-            node_shape: "none".to_string(),
+            node_shape: "plaintext".to_string(),
             fontname: "Courier".to_string(),
             fontsize: "12".to_string(),
             bgcolor: "#1c1c1c".to_string(),
@@ -82,12 +79,6 @@ impl CfgDotBuilder {
     /// Sets the color of the edges.
     pub fn edge_color(mut self, edge_color: &str) -> Self {
         self.config.edge_color = edge_color.to_string();
-        self
-    }
-
-    /// Sets the arrowhead style of the edges.
-    pub fn arrowhead(mut self, arrowhead: &str) -> Self {
-        self.config.arrowhead = arrowhead.to_string();
         self
     }
 
@@ -175,8 +166,8 @@ impl CfgDot {
             self.config.rankdir, self.config.bgcolor
         ));
         dot.push_str(&format!(
-            "    edge [color=\"{}\", arrowhead=\"{}\"]; \n",
-            self.config.edge_color, self.config.arrowhead
+            "    edge [color=\"{}\"]; \n",
+            self.config.edge_color
         ));
         dot.push_str(&format!(
             "    node [shape=\"{}\", fontname=\"{}\", fontsize=\"{}\"]; \n",
@@ -209,7 +200,7 @@ impl CfgDot {
 
                 // Start building up the node's DOT string line-by-line.
                 dot.push_str(&format!(
-                    "    N{} [shape=plaintext, style=filled, fillcolor=\"{}\", label=<",
+                    "    N{} [style=filled, fillcolor=\"{}\", label=<",
                     node_index.index(),
                     self.config.fillcolor
                 ));
@@ -345,7 +336,7 @@ mod tests {
         // Verify the output.
         assert!(dot_output.contains("digraph CFG {"));
         assert!(dot_output.contains("graph [rankdir=TB"));
-        assert!(dot_output.contains("N0 [shape=plaintext, style=filled, fillcolor=\"#555555\""));
+        assert!(dot_output.contains("N0 [style=filled, fillcolor=\"#555555\""));
         assert!(dot_output.contains("Node A"));
         assert!(dot_output.contains("Node B"));
         assert!(dot_output.contains("N0 -> N1"));
@@ -382,20 +373,66 @@ mod tests {
         // Render the graph with a custom configuration.
         let cfg_dot = CfgDotBuilder::new()
             .rankdir("LR")
-            .bgcolor("#000000")
-            .fillcolor("#222222")
-            .edge_color("#FF0000")
-            .fontsize("14")
+            .edge_color("#ff0000")
+            .node_shape("record")
             .fontname("Arial")
+            .fontsize("14")
+            .bgcolor("#ffffff")
+            .fillcolor("#ff0000")
             .build();
-
         let dot_output = cfg_dot.render(&graph, &resolver);
 
-        // Verify the custom settings in the output.
-        assert!(dot_output.contains("graph [rankdir=LR, bgcolor=\"#000000\""));
-        assert!(dot_output.contains("node [shape=\"none\", fontname=\"Arial\", fontsize=\"14\"]"));
-        assert!(dot_output.contains("N0 [shape=plaintext, style=filled, fillcolor=\"#222222\""));
-        assert!(dot_output.contains("edge [color=\"#FF0000\", arrowhead=\"normal\"]"));
+        // Verify the output.
+        assert!(dot_output.contains("digraph CFG {"));
+        assert!(dot_output.contains("graph [rankdir=LR"));
+        assert!(dot_output.contains("edge [color=\"#ff0000\"]"));
+        assert!(dot_output.contains("node [shape=\"record\", fontname=\"Arial\", fontsize=\"14\"]"));
+        assert!(dot_output.contains("bgcolor=\"#ffffff\""));
+        assert!(dot_output.contains("N0 [style=filled, fillcolor=\"#ff0000\""));
+        assert!(dot_output.contains("Node A"));
+        assert!(dot_output.contains("Node B"));
+        assert!(dot_output.contains("N0 -> N1"));
+    }
+
+    #[test]
+    fn test_cfgdot_default_config() {
+        // Create a simple graph.
+        let mut graph = DiGraph::new();
+        let a = graph.add_node(());
+        let b = graph.add_node(());
+        graph.add_edge(a, b, ());
+
+        // Create a resolver with mock nodes.
+        let resolver = MockResolver {
+            nodes: vec![
+                (
+                    a,
+                    MockNode {
+                        label: "Node A".to_string(),
+                    },
+                ),
+                (
+                    b,
+                    MockNode {
+                        label: "Node B".to_string(),
+                    },
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        };
+
+        // Render the graph with the default configuration.
+        let cfg_dot = CfgDotBuilder::new().build();
+        let dot_output = cfg_dot.render(&graph, &resolver);
+
+        // Verify the output.
+        assert!(dot_output.contains("digraph CFG {"));
+        assert!(dot_output.contains("graph [rankdir=TB"));
+        assert!(dot_output.contains("N0 [style=filled, fillcolor=\"#555555\""));
+        assert!(dot_output.contains("Node A"));
+        assert!(dot_output.contains("Node B"));
+        assert!(dot_output.contains("N0 -> N1"));
     }
 
     #[test]
@@ -492,7 +529,7 @@ mod tests {
         let dot_output = cfg_dot.render(&graph, &resolver);
 
         // Verify the output.
-        assert!(dot_output.contains("N0 [shape=plaintext, style=filled, fillcolor=\"#555555\""));
+        assert!(dot_output.contains("N0 [style=filled, fillcolor=\"#555555\""));
         assert!(!dot_output.contains("N1")); // Node B should not be rendered.
     }
 }
