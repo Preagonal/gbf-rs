@@ -743,9 +743,14 @@ mod tests {
         let id = FunctionId::new(0, None, 0);
         let mut function = Function::new(id.clone());
         let block_id = function.create_block(BasicBlockType::Normal, 32).unwrap();
-        let block = function.get_basic_block_by_id_mut(block_id).unwrap();
 
-        block.id = BasicBlockId::new(0, BasicBlockType::Exit, 32);
+        for block in &mut function {
+            if block.id == block_id {
+                block.id = BasicBlockId::new(0, BasicBlockType::Exit, 32);
+            }
+        }
+
+        let block = function.get_basic_block_by_id(block_id).unwrap();
         assert_eq!(block.id, BasicBlockId::new(0, BasicBlockType::Exit, 32));
     }
 
