@@ -165,7 +165,7 @@ impl CfgDot {
         // Start graph definition.
         dot.push_str("digraph CFG {\n");
         dot.push_str(&format!(
-            "    graph [rankdir={}, bgcolor=\"{}\"];\n",
+            "    graph [rankdir={}, bgcolor=\"{}\", splines=\"ortho\"];\n",
             self.config.rankdir, self.config.bgcolor
         ));
         dot.push_str(&format!(
@@ -181,57 +181,13 @@ impl CfgDot {
         for (node_index, _node_data) in graph.node_references() {
             // Attempt to resolve the node data. If it's `None`, skip it.
             if let Some(data) = resolver.resolve(node_index) {
-                // Count the number of incoming edges (for ports).
-                let incoming_edges = graph
-                    .edges_directed(node_index, petgraph::Direction::Incoming)
-                    .count();
-
-                // Build the <TD> tags, each with a unique PORT attribute.
-                let mut port_str = String::new();
-                if incoming_edges == 0 {
-                    // If there are no incoming edges, we add one empty cell for spacing.
-                    port_str.push_str("                        <TD></TD>\n");
-                } else {
-                    // Create a <TD> for each incoming edge port.
-                    for i in 0..incoming_edges {
-                        port_str.push_str(&format!(
-                            "                        <TD PORT=\"{}\"></TD>\n",
-                            i
-                        ));
-                    }
-                }
-
                 // Start building up the node's DOT string line-by-line.
                 dot.push_str(&format!(
-                    "    N{} [style=filled, fillcolor=\"{}\", label=<",
+                    "    N{} [style=filled, fillcolor=\"{}\", label=<\n{}\n    >];\n",
                     node_index.index(),
-                    self.config.fillcolor
+                    self.config.fillcolor,
+                    data.render_node(8)
                 ));
-                dot.push_str(
-                    "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\">\n",
-                );
-
-                // First row: table of ports.
-                dot.push_str("        <TR>\n");
-                dot.push_str("            <TD>\n");
-                dot.push_str("                <TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\">\n");
-                dot.push_str("                    <TR>\n");
-                dot.push_str(&port_str);
-                dot.push_str("                    </TR>\n");
-                dot.push_str("                </TABLE>\n");
-                dot.push_str("            </TD>\n");
-                dot.push_str("        </TR>\n");
-
-                // Second row: actual node content.
-                dot.push_str("        <TR>\n");
-                dot.push_str("            <TD>\n");
-                // Indent node content by 8 spaces (or however you like to pass in).
-                dot.push_str(&data.render_node(16).to_string());
-                dot.push_str("            </TD>\n");
-                dot.push_str("        </TR>\n");
-
-                dot.push_str("    </TABLE>");
-                dot.push_str(">];\n");
             }
         }
 
@@ -242,20 +198,13 @@ impl CfgDot {
 
             // Only render if both source and target are resolvable.
             if resolver.resolve(source).is_some() && resolver.resolve(target).is_some() {
-                // Determine the port index by finding this edge among the target's incoming edges.
-                let port = graph
-                    .edges_directed(target, petgraph::Direction::Incoming)
-                    .position(|e| e.source() == source)
-                    .unwrap();
-
                 let edge_color = resolver.resolve_edge_color(source, target);
 
                 // Connect source -> target:port with the specified edge color.
                 dot.push_str(&format!(
-                    "    N{} -> N{}:{}:n [color=\"{}\"]; \n",
+                    "    N{} -> N{} [color=\"{}\"]; \n",
                     source.index(),
                     target.index(),
-                    port,
                     edge_color
                 ));
             }
