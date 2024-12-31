@@ -382,7 +382,7 @@ mod tests {
         };
 
         // Render the graph with the default configuration.
-        let cfg_dot = CfgDotBuilder::new().build();
+        let cfg_dot = CfgDotBuilder::default().build();
         let dot_output = cfg_dot.render(&graph, &resolver);
 
         // Verify the output.
