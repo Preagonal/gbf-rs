@@ -1,14 +1,18 @@
 #![deny(missing_docs)]
 
 use std::{
-    fmt,
+    fmt::{self, Write},
     ops::{Deref, Index},
     vec,
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::{instruction::Instruction, utils::Gs2BytecodeAddress};
+use crate::{
+    cfg_dot::RenderableNode,
+    instruction::Instruction,
+    utils::{Gs2BytecodeAddress, OPERAND_TRUNCATE_LENGTH},
+};
 
 /// Represents the type of a basic block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
@@ -267,6 +271,67 @@ impl<'a> IntoIterator for &'a mut BasicBlock {
     /// - A mutable iterator over the instructions in the block.
     fn into_iter(self) -> Self::IntoIter {
         self.instructions.iter_mut().collect::<Vec<_>>().into_iter()
+    }
+}
+
+impl RenderableNode for BasicBlock {
+    /// Render the block's node representation for Graphviz with customizable padding.
+    ///
+    /// # Arguments
+    ///
+    /// * `padding` - The number of spaces to use for indentation.
+    fn render_node(&self, padding: usize) -> String {
+        let mut label = String::new();
+        let indent = " ".repeat(padding);
+
+        // Start the HTML-like table for Graphviz.
+        writeln!(
+            &mut label,
+            r#"{indent}<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">"#,
+            indent = indent
+        )
+        .unwrap();
+
+        // Render each instruction as a table row with indentation.
+        for inst in &self.instructions {
+            // Get the string of an operand, if it exists, or a space.
+            // If the resulting operand exceeds OPERAND_TRUNCATE_LENGTH,
+            // truncate it and append an ellipsis.
+
+            let operand = inst
+                .operand
+                .as_ref()
+                .map(|op| {
+                    let mut op_str = op.to_string();
+                    if op_str.len() > OPERAND_TRUNCATE_LENGTH {
+                        op_str.truncate(OPERAND_TRUNCATE_LENGTH);
+                        op_str.push_str("...");
+                    }
+                    op_str
+                })
+                .unwrap_or_else(|| " ".to_string());
+
+            writeln!(
+                &mut label,
+                r##"{indent}    <TR>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="#bbff00">{:04X}</FONT></TD>
+{indent}        <TD ALIGN="LEFT">  </TD>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="#ffbb00">{}</FONT></TD>
+{indent}        <TD ALIGN="LEFT">  </TD>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="#00bbff">{}</FONT></TD>
+{indent}    </TR>"##,
+                inst.address,
+                inst.opcode,
+                operand,
+                indent = indent
+            )
+            .unwrap();
+        }
+
+        // Close the HTML-like table.
+        writeln!(&mut label, "{indent}</TABLE>", indent = indent).unwrap();
+
+        label
     }
 }
 

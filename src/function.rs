@@ -1,16 +1,16 @@
 #![deny(missing_docs)]
 
+use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::Direction;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::hash::Hash;
 use std::ops::{Deref, Index};
-
-use petgraph::graph::{DiGraph, NodeIndex};
-use petgraph::Direction;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
+use crate::cfg_dot::{CfgDotBuilder, DotRenderableGraph, NodeResolver};
 use crate::utils::Gs2BytecodeAddress;
 
 /// Represents an error that can occur when working with functions.
@@ -266,7 +266,7 @@ impl Function {
         &self,
         address: Gs2BytecodeAddress,
     ) -> Result<&BasicBlock, FunctionError> {
-        let id = self.get_basic_block_id_by_address(address)?;
+        let id = self.get_basic_block_id_by_start_address(address)?;
         self.get_basic_block_by_id(id)
     }
 
@@ -295,7 +295,7 @@ impl Function {
         &mut self,
         address: Gs2BytecodeAddress,
     ) -> Result<&mut BasicBlock, FunctionError> {
-        let id = self.get_basic_block_id_by_address(address)?;
+        let id = self.get_basic_block_id_by_start_address(address)?;
         self.get_basic_block_by_id_mut(id)
     }
 
@@ -524,7 +524,7 @@ impl Function {
     ///
     /// # Errors
     /// - `FunctionError::BasicBlockNotFoundByAddress` if the block does not exist.
-    pub fn get_basic_block_id_by_address(
+    pub fn get_basic_block_id_by_start_address(
         &self,
         address: Gs2BytecodeAddress,
     ) -> Result<BasicBlockId, FunctionError> {
@@ -610,6 +610,69 @@ impl<'a> IntoIterator for &'a mut Function {
     }
 }
 
+impl NodeResolver for Function {
+    type NodeData = BasicBlock;
+
+    fn resolve(&self, node_index: NodeIndex) -> Option<&Self::NodeData> {
+        self.graph_node_to_block
+            .get(&node_index)
+            .and_then(|block_id| {
+                self.block_map
+                    .get(block_id)
+                    .and_then(|index| self.blocks.get(*index))
+            })
+    }
+
+    fn resolve_edge_color(&self, source: NodeIndex, target: NodeIndex) -> String {
+        // Get the last instruction of the source block
+        let source_block_id = self
+            .graph_node_to_block
+            .get(&source)
+            .expect("Source block not found");
+        let source_block = self
+            .get_basic_block_by_id(*source_block_id)
+            .expect("Source block not found");
+        let source_last_instruction = source_block.last().unwrap();
+
+        let target_block_id = self
+            .graph_node_to_block
+            .get(&target)
+            .expect("Target block not found");
+        let target_block = self
+            .get_basic_block_by_id(*target_block_id)
+            .expect("Target block not found");
+
+        // Figure out if the edge represents a branch by seeing if the target
+        // block address is NOT the next address after the source instruction.
+        let source_last_address = source_last_instruction.address;
+        let target_address = target_block.id.address;
+        if source_last_address + 1 != target_address {
+            // This represents a branch. Color the edge green.
+            return "#bbff00".to_string();
+        }
+
+        // If the opcode of the last instruction is a fall through, color the edge red since
+        // the target block's address is the next address
+        if source_last_instruction.opcode.has_fall_through() {
+            return "#bb0000".to_string();
+        }
+
+        // Otherwise, color the edge green (e.g. normal control flow)
+        "#00bbff".to_string()
+    }
+}
+
+impl DotRenderableGraph for Function {
+    /// Convert the Graph to `dot` format.
+    ///
+    /// # Returns
+    /// - A `String` containing the `dot` representation of the graph.
+    fn render_dot(&self) -> String {
+        let dot_bulder = CfgDotBuilder::new().build();
+        dot_bulder.render(&self.cfg, self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -663,9 +726,72 @@ mod tests {
     }
 
     #[test]
+    fn test_get_block_not_found() {
+        let id = FunctionId::new(0, None, 0);
+        let function = Function::new(id.clone());
+        let result =
+            function.get_basic_block_by_id(BasicBlockId::new(1234, BasicBlockType::Normal, 0));
+
+        assert!(result.is_err());
+
+        // test mut version
+        let mut function = Function::new(id.clone());
+        let result =
+            function.get_basic_block_by_id_mut(BasicBlockId::new(1234, BasicBlockType::Normal, 0));
+
+        assert!(result.is_err());
+
+        // get by start address
+        let result = function.get_basic_block_by_start_address(0x100);
+        assert!(result.is_err());
+
+        // get by start address mut
+        let result = function.get_basic_block_by_start_address_mut(0x100);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_block_by_address() {
+        let id = FunctionId::new(0, None, 0);
+        let mut function = Function::new(id.clone());
+        let block_id = function
+            .create_block(BasicBlockType::Normal, 0x100)
+            .unwrap();
+        let block = function.get_basic_block_by_start_address(0x100).unwrap();
+
+        assert_eq!(block.id, block_id);
+
+        // test mut version
+        let block = function
+            .get_basic_block_by_start_address_mut(0x100)
+            .unwrap();
+        block.id = BasicBlockId::new(0, BasicBlockType::Exit, 0x100);
+        assert_eq!(block.id, BasicBlockId::new(0, BasicBlockType::Exit, 0x100));
+    }
+
+    #[test]
     fn test_display_function_id() {
         let id = FunctionId::new(0, None, 0);
         assert_eq!(id.to_string(), "Unnamed Function (Entry)");
+
+        let id = FunctionId::new(0, Some("test".to_string()), 0);
+        assert_eq!(id.to_string(), "test");
+    }
+
+    #[test]
+    fn test_into_iter_mut() {
+        let id = FunctionId::new(0, None, 0);
+        let mut function = Function::new(id.clone());
+        let block_id = function.create_block(BasicBlockType::Normal, 32).unwrap();
+
+        for block in &mut function {
+            if block.id == block_id {
+                block.id = BasicBlockId::new(0, BasicBlockType::Exit, 32);
+            }
+        }
+
+        let block = function.get_basic_block_by_id(block_id).unwrap();
+        assert_eq!(block.id, BasicBlockId::new(0, BasicBlockType::Exit, 32));
     }
 
     #[test]
@@ -713,6 +839,22 @@ mod tests {
         let succs = function.get_successors(block1).unwrap();
         assert_eq!(succs.len(), 1);
         assert_eq!(succs[0], block2);
+
+        // test source not found
+        let result = function.add_edge(BasicBlockId::new(1234, BasicBlockType::Normal, 0), block2);
+        assert!(result.is_err());
+
+        // test target not found
+        let result = function.add_edge(block1, BasicBlockId::new(1234, BasicBlockType::Normal, 0));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_basic_block_is_empty() {
+        // will always be false since we always create an entry block
+        let id = FunctionId::new(0, None, 0);
+        let function = Function::new(id.clone());
+        assert!(!function.is_empty());
     }
 
     #[test]
@@ -727,6 +869,10 @@ mod tests {
 
         assert_eq!(preds.len(), 1);
         assert_eq!(preds[0], block1);
+
+        // test error where block not found
+        let result = function.get_predecessors(BasicBlockId::new(1234, BasicBlockType::Normal, 0));
+        assert!(result.is_err());
     }
 
     #[test]
@@ -741,5 +887,9 @@ mod tests {
 
         assert_eq!(succs.len(), 1);
         assert_eq!(succs[0], block2);
+
+        // test error where block not found
+        let result = function.get_successors(BasicBlockId::new(1234, BasicBlockType::Normal, 0));
+        assert!(result.is_err());
     }
 }

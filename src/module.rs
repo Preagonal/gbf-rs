@@ -399,15 +399,23 @@ impl Module {
 
         // Iterate through each instruction in the bytecode
         for (offset, instruction) in loaded_bytecode.instructions.iter().enumerate() {
+            // Check if instruction is even reachable. If it's not, we can skip it
+            if !loaded_bytecode.is_instruction_reachable(offset) {
+                continue;
+            }
             let function_name = loaded_bytecode.get_function_name_for_address(offset);
+            // The precondition above guarantees that this will always be true
+            debug_assert!(function_name.is_ok());
+            let function_name = function_name.unwrap().clone();
 
             if let Some(function_name) = function_name.clone() {
                 if !self.has_function(function_name.clone()) {
+                    let function_name_clone = function_name.clone();
                     let offset = loaded_bytecode
                         .function_map
-                        .get(&function_name)
+                        .get(&Some(function_name_clone))
                         .expect("Function must exist in the function map");
-                    self.create_function(function_name.clone(), *offset)?;
+                    self.create_function(function_name, *offset)?;
                 }
             }
 
@@ -428,14 +436,13 @@ impl Module {
                 // We won't run into this error because we are not making an entry block here
                 function
                     .create_block(BasicBlockType::Normal, start_address)
-                    .unwrap();
+                    .expect("Block collisions are not possible");
             }
 
             // Get the basic block reference
-            let block_id = function
-                .get_basic_block_id_by_address(start_address)
+            let block = function
+                .get_basic_block_by_start_address_mut(start_address)
                 .unwrap();
-            let block = function.get_basic_block_by_id_mut(block_id).unwrap();
 
             // Add the instruction to the basic block
             block.add_instruction(instruction.clone());
@@ -476,24 +483,23 @@ impl Module {
             let terminator_opcode = terminator.opcode;
             let terminator_operand = terminator.operand;
             let terminator_address = terminator.address;
-
-            if terminator_opcode.has_fall_through() {
-                let next_block_address = terminator_address + 1 as Gs2BytecodeAddress;
-                let next_block_id = function
-                    .get_basic_block_id_by_address(next_block_address)
-                    .expect("Block must exist");
-                function.add_edge(id, next_block_id).unwrap();
-            }
-
             if terminator_opcode.has_jump_target() {
                 if let Some(branch_address) =
                     terminator_operand.and_then(|o| o.get_number_value().ok())
                 {
                     let branch_block_id = function
-                        .get_basic_block_id_by_address(branch_address as Gs2BytecodeAddress)
-                        .unwrap();
+                        .get_basic_block_id_by_start_address(branch_address as Gs2BytecodeAddress)
+                        .expect("Block must exist");
                     function.add_edge(id, branch_block_id).unwrap();
                 }
+            }
+
+            // If appropriate, connect the next block
+            if terminator_opcode.connects_to_next_block() {
+                let next_block_id = function
+                    .get_basic_block_id_by_start_address(terminator_address + 1)
+                    .expect("Block must exist");
+                function.add_edge(id, next_block_id).unwrap();
             }
         }
     }

@@ -9,6 +9,8 @@ use bytecode_loader::{BytecodeLoaderBuilder, BytecodeLoaderError};
 pub mod basic_block;
 /// This module reads bytecode from a reader and disassembles it.
 pub mod bytecode_loader;
+/// This module contains the logic to visualize the control flow graph of a module.
+pub mod cfg_dot;
 /// This module contains the definition of a function.
 pub mod function;
 /// This module contains the definition of Graal IO.
@@ -92,8 +94,8 @@ mod tests {
 
         assert_eq!(
             result,
-            "00000000: Jmp 1\n\
-            00000001: PushNumber 1\n\
+            "00000000: Jmp 0x1\n\
+            00000001: PushNumber 0x1\n\
             00000002: PushString abc\n\
             00000003: PushPi\n\
             00000004: Ret\n"

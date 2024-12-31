@@ -184,6 +184,27 @@ macro_rules! define_opcodes {
                 };
             }
 
+            /// If this CFG or non-CFG related opcode should connect to the next block if it is a terminal
+            /// opcode.
+            ///
+            /// # Returns
+            /// - `true` if the opcode has a fall-through path.
+            /// - `false` otherwise.
+            ///
+            /// # Example
+            /// ```
+            /// use gbf_rs::opcode::Opcode;
+            ///
+            /// let opcode = Opcode::Jmp;
+            /// assert!(!opcode.connects_to_next_block());
+            ///
+            /// let opcode2 = Opcode::Ret;
+            /// assert!(!opcode2.connects_to_next_block());
+            /// ```
+            pub fn connects_to_next_block(self) -> bool {
+                !self.is_unconditional_jump() && !matches!(self, Opcode::Ret)
+            }
+
             /// If this CFG-related opcode has a corresponding jump target as an operand.
             ///
             /// # Returns
