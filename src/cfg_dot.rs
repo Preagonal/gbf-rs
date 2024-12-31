@@ -18,6 +18,12 @@ pub trait NodeResolver {
     fn resolve(&self, node_index: NodeIndex) -> Option<&Self::NodeData>;
 }
 
+/// Trait to print the graph in DOT format. The must also implement `NodeResolver`.
+pub trait DotRenderableGraph: NodeResolver {
+    /// Renders the graph in DOT format.
+    fn render_dot(&self) -> String;
+}
+
 /// Configuration options for rendering a DOT graph.
 #[derive(Debug)]
 pub struct CfgDotConfig {
@@ -226,7 +232,7 @@ impl CfgDot {
                 dot.push_str("        <TR>\n");
                 dot.push_str("            <TD>\n");
                 // Indent node content by 8 spaces (or however you like to pass in).
-                dot.push_str(&format!("{}", data.render_node(16)));
+                dot.push_str(&data.render_node(16).to_string());
                 dot.push_str("            </TD>\n");
                 dot.push_str("        </TR>\n");
 

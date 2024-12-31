@@ -10,7 +10,7 @@ use std::ops::{Deref, Index};
 use thiserror::Error;
 
 use crate::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
-use crate::cfg_dot::{CfgDotBuilder, NodeResolver};
+use crate::cfg_dot::{CfgDotBuilder, DotRenderableGraph, NodeResolver};
 use crate::utils::Gs2BytecodeAddress;
 
 /// Represents an error that can occur when working with functions.
@@ -142,15 +142,6 @@ impl Function {
             block_to_graph_node,
             address_to_id,
         }
-    }
-
-    /// Convert the Graph to `dot` format.
-    ///
-    /// # Returns
-    /// - A `String` containing the `dot` representation of the graph.
-    pub fn to_dot(&self) -> String {
-        let dot_bulder = CfgDotBuilder::new().build();
-        dot_bulder.render(&self.cfg, self)
     }
 
     /// Create a new `BasicBlock` and add it to the function.
@@ -630,6 +621,17 @@ impl NodeResolver for Function {
                     .get(block_id)
                     .and_then(|index| self.blocks.get(*index))
             })
+    }
+}
+
+impl DotRenderableGraph for Function {
+    /// Convert the Graph to `dot` format.
+    ///
+    /// # Returns
+    /// - A `String` containing the `dot` representation of the graph.
+    fn render_dot(&self) -> String {
+        let dot_bulder = CfgDotBuilder::new().build();
+        dot_bulder.render(&self.cfg, self)
     }
 }
 
