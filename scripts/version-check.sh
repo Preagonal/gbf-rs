@@ -43,10 +43,10 @@ check_major_version() {
     fi
 }
 
-# Ensure the minor version is incremented
-check_minor_version() {
-    if [ "$CURRENT_MINOR" -le "$MAIN_MINOR" ]; then
-        error "Minor version must be greater than the current main branch version ($MAIN_MINOR). Found: $CURRENT_MINOR"
+# Ensure the patch version is incremented
+check_patch_version() {
+    if [ "$CURRENT_PATCH" -le "$MAIN_PATCH" ]; then
+        error "Patch version must be greater than the current main branch version ($MAIN_PATCH). Found: $CURRENT_PATCH"
     fi
 }
 
@@ -69,11 +69,11 @@ echo "Current branch version: $CURRENT_VERSION"
 echo "Parsing versions..."
 parse_version "$MAIN_VERSION"
 MAIN_MAJOR="$MAJOR"
-MAIN_MINOR="$MINOR"
+MAIN_PATCH="$PATCH"
 
 parse_version "$CURRENT_VERSION"
 CURRENT_MAJOR="$MAJOR"
-CURRENT_MINOR="$MINOR"
+CURRENT_PATCH="$PATCH"
 
 echo "Fetching README version..."
 README_VERSION=$(get_readme_version)
@@ -82,8 +82,8 @@ echo "README version: $README_VERSION"
 echo "Checking major version..."
 check_major_version
 
-echo "Checking minor version..."
-check_minor_version
+echo "Checking patch version..."
+check_patch_version
 
 echo "Checking README version..."
 check_readme_version
