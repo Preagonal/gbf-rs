@@ -37,6 +37,10 @@ pub enum BytecodeLoaderError {
     #[error("No previous instruction to set operand")]
     NoPreviousInstruction,
 
+    /// Unreachable block error.
+    #[error("Block at address {0} is unreachable")]
+    UnreachableBlock(Gs2BytecodeAddress),
+
     /// Error for when an I/O error occurs.
     #[error("GraalIo error: {0}")]
     GraalIo(#[from] GraalIoError),
@@ -137,7 +141,7 @@ pub struct BytecodeLoader<R: Read> {
     strings: Vec<String>,
 
     /// A map of function names to their addresses.
-    pub function_map: HashMap<String, Gs2BytecodeAddress>,
+    pub function_map: HashMap<Option<String>, Gs2BytecodeAddress>,
 
     /// The instructions in the module.
     pub instructions: Vec<Instruction>,
@@ -152,7 +156,7 @@ pub struct BytecodeLoader<R: Read> {
     raw_block_address_to_node: HashMap<Gs2BytecodeAddress, NodeIndex>,
 
     /// A map of block start addresses to their corresponding function name.
-    pub block_address_to_function: HashMap<Gs2BytecodeAddress, String>,
+    pub block_address_to_function: HashMap<Gs2BytecodeAddress, Option<String>>,
 }
 
 impl<R: Read> BytecodeLoader<R> {
@@ -215,6 +219,9 @@ impl<R: Read> BytecodeLoader<R> {
     fn read_functions(&mut self) -> Result<(), BytecodeLoaderError> {
         let section_length = self.reader.read_u32().map_err(BytecodeLoaderError::from)?;
 
+        // Insert the entry point function
+        self.function_map.insert(None, 0);
+
         // For each function, use self.reader.read_u32() to get the location of the function,
         // and then use self.reader.read_string() to get the name of the function. We should
         // only read up to section_length bytes.
@@ -227,7 +234,7 @@ impl<R: Read> BytecodeLoader<R> {
                 .read_string()
                 .map_err(BytecodeLoaderError::from)?;
             self.function_map
-                .insert(function_name.clone(), function_location);
+                .insert(Some(function_name.clone()), function_location);
             bytes_read += 4 + function_name.len() as u32;
             bytes_read += 1; // Null terminator
 
@@ -446,6 +453,10 @@ impl<R: Read> BytecodeLoader<R> {
         for instruction in self.instructions.iter() {
             let current_instruction_address = instruction.address as Gs2BytecodeAddress;
             let current_block_address = self.find_block_start_address(current_instruction_address);
+            // if the instruction is the last instruction in the block
+            let is_block_end = self
+                .block_breaks
+                .contains(&(current_instruction_address + 1));
 
             // If the current instruction is a jump, then we need to add an edge to the target block start
             if instruction.opcode.has_jump_target() {
@@ -470,7 +481,7 @@ impl<R: Read> BytecodeLoader<R> {
             }
 
             // If the current opcode has a fallthrough, then we need to add an edge to the next block start
-            if instruction.opcode.has_fall_through() {
+            if is_block_end && instruction.opcode.connects_to_next_block() {
                 let source_node = self
                     .raw_block_address_to_node
                     .get(&current_block_address)
@@ -495,17 +506,45 @@ impl<R: Read> BytecodeLoader<R> {
 
         // Iterate through each function
         for (function_name, function_address) in self.function_map.iter() {
-            // Do a depth-first search to find all of the blocks that are reachable from the function address
-            let function_node = self
-                .raw_block_address_to_node
-                .get(function_address)
-                .unwrap();
+            debug_assert_eq!(
+                self.raw_block_graph.node_count(),
+                self.raw_block_address_to_node.len(),
+                "Graph node count and block address map size do not match!"
+            );
+            for (&block_address, &node) in &self.raw_block_address_to_node {
+                debug_assert!(
+                    self.raw_block_graph.node_indices().any(|n| n == node),
+                    "Node {:?} for block address {} is missing in the graph.",
+                    node,
+                    block_address
+                );
+            }
 
-            let mut dfs = petgraph::visit::Dfs::new(&self.raw_block_graph, *function_node);
-            while let Some(node) = dfs.next(&self.raw_block_graph) {
-                let block_address = *self.raw_block_graph.node_weight(node).unwrap();
-                self.block_address_to_function
-                    .insert(block_address, function_name.clone());
+            if let Some(function_node) = self.raw_block_address_to_node.get(function_address) {
+                let mut dfs = petgraph::visit::Dfs::new(&self.raw_block_graph, *function_node);
+
+                while let Some(node) = dfs.next(&self.raw_block_graph) {
+                    // Map node back to block address.
+                    if let Some(block_address) =
+                        self.raw_block_address_to_node.iter().find_map(|(k, v)| {
+                            if *v == node {
+                                Some(*k)
+                            } else {
+                                None
+                            }
+                        })
+                    {
+                        self.block_address_to_function
+                            .insert(block_address, function_name.clone());
+                    } else {
+                        warn!("Node {:?} has no matching block address.", node);
+                    }
+                }
+            } else {
+                warn!(
+                    "Function '{:?}' at address {} has no corresponding node in raw_block_address_to_node.",
+                    function_name, function_address
+                );
             }
         }
 
@@ -519,9 +558,33 @@ impl<R: Read> BytecodeLoader<R> {
     ///
     /// # Returns
     /// - The function name, if it exists.
-    pub fn get_function_name_for_address(&self, address: Gs2BytecodeAddress) -> Option<String> {
+    ///
+    /// # Errors
+    /// - `BytecodeLoaderError::UnreachableBlock` if the block is unreachable, and therefore,
+    ///   the function name cannot be determined.
+    pub fn get_function_name_for_address(
+        &self,
+        address: Gs2BytecodeAddress,
+    ) -> Result<Option<String>, BytecodeLoaderError> {
         let block_start = self.find_block_start_address(address);
-        self.block_address_to_function.get(&block_start).cloned()
+        Ok(self
+            .block_address_to_function
+            .get(&block_start)
+            // return error if the block is unreachable
+            .ok_or(BytecodeLoaderError::UnreachableBlock(block_start))?
+            .clone())
+    }
+
+    /// Checks if an instruction is reachable.
+    ///
+    /// # Arguments
+    /// - `address`: The address to check.
+    ///
+    /// # Returns
+    /// - `true` if the instruction is reachable, `false` otherwise.
+    pub fn is_instruction_reachable(&self, address: Gs2BytecodeAddress) -> bool {
+        let blk = self.find_block_start_address(address);
+        self.block_address_to_function.contains_key(&blk)
     }
 
     /// Helper function to figure out what block the address is in. This basically looks
@@ -558,7 +621,7 @@ impl<R: Read> BytecodeLoader<R> {
 
 #[cfg(test)]
 mod tests {
-    use crate::bytecode_loader::BytecodeLoaderBuilder;
+    use crate::{bytecode_loader::BytecodeLoaderBuilder, utils::Gs2BytecodeAddress};
 
     #[test]
     fn test_load() {
@@ -590,8 +653,8 @@ mod tests {
         ]);
         let loader = BytecodeLoaderBuilder::new(reader).build().unwrap();
 
-        assert_eq!(loader.function_map.len(), 1);
-        assert_eq!(loader.function_map.get("main"), Some(&0));
+        assert_eq!(loader.function_map.len(), 2);
+        assert_eq!(loader.function_map.get(&Some("main".to_string())), Some(&0));
         assert_eq!(loader.strings.len(), 1);
         assert_eq!(loader.strings.first(), Some(&"abc".to_string()));
         assert_eq!(loader.instructions.len(), 5);
@@ -614,6 +677,223 @@ mod tests {
         );
         assert_eq!(loader.instructions[3].opcode, crate::opcode::Opcode::PushPi);
         assert_eq!(loader.instructions[4].opcode, crate::opcode::Opcode::Ret);
+    }
+
+    #[test]
+    fn test_complex_load() {
+        let reader = std::io::Cursor::new(vec![
+            0x00, 0x00, 0x00, 0x01, // Section type: Gs1Flags
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x00, 0x00, 0x00, 0x00, // Flags: 0
+            0x00, 0x00, 0x00, 0x02, // Section type: Functions
+            0x00, 0x00, 0x00, 0x09, // Length: 9
+            0x00, 0x00, 0x00, 0x01, // Function location: 1
+            0x6d, 0x61, 0x69, 0x6e, // Function name: "main"
+            0x00, // Null terminator
+            0x00, 0x00, 0x00, 0x03, // Section type: Strings
+            0x00, 0x00, 0x00, 0x04, // Length: 4
+            0x61, 0x62, 0x63, 0x00, // String: "abc"
+            0x00, 0x00, 0x00, 0x04, // Section type: Instructions
+            0x00, 0x00, 0x00, 0x47, // Length: 71
+            // Instructions
+            0x01, 0xF3, 0x19, // Jmp 0x19
+            0x14, 0xF3, 0x00, // PushNumber 0
+            0x01, 0xF3, 0x0c, // Jmp 0x0c
+            0x14, 0xF3, 0x00, // PushNumber 0
+            0x01, 0xF3, 0x17, // Jmp 0x17
+            0x14, 0xF3, 0x00, // PushNumber 0
+            0x01, 0xF3, 0x17, // Jmp 0x17
+            0x14, 0xF3, 0x00, // PushNumber 0
+            0x01, 0xF3, 0x17, // Jmp 0x17
+            0x14, 0xF3, 0x00, // PushNumber 0 (unreachable)
+            0x01, 0xF3, 0x17, // Jmp 0x17
+            0x01, 0xF3, 0x17, // Jmp 0x17
+            0x14, 0xF3, 0x00, // PushNumber 0
+            0x02, 0xF3, 0x03, // Jeq 0x03
+            0x14, 0xF3, 0x00, // PushNumber 0
+            0x02, 0xF3, 0x03, // Jeq 0x03
+            0x14, 0xF3, 0x00, // PushNumber 0
+            0x02, 0xF3, 0x03, // Jeq 0x03
+            0x14, 0xF3, 0x00, // PushNumber 0
+            0x02, 0xF3, 0x05, // Jeq 0x05
+            0x14, 0xF3, 0x00, // PushNumber 0
+            0x02, 0xF3, 0x07, // Jeq 0x07
+            0x01, 0xF3, 0x0b, // Jmp 0x0b
+            0x20, // Pop
+            0x07, // Ret
+        ]);
+        let loader = BytecodeLoaderBuilder::new(reader).build().unwrap();
+
+        assert_eq!(loader.function_map.len(), 2);
+
+        // get all of the block start addresses
+        // There is a block that is unreachable. It will still appear in the block starts.
+        let block_starts: Vec<Gs2BytecodeAddress> = loader.block_breaks.iter().copied().collect();
+
+        // Ensure that the block at address 0 connects to the block at address 0x19
+        let block_0 = loader.find_block_start_address(0);
+        let block_0x19 = loader.find_block_start_address(0x19);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0],
+            loader.raw_block_address_to_node[&block_0x19]
+        ));
+
+        // Ensure that the block at address 1 connects to the block at address 0x0c
+        let block_1 = loader.find_block_start_address(1);
+        let block_0x0c = loader.find_block_start_address(0x0c);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_1],
+            loader.raw_block_address_to_node[&block_0x0c]
+        ));
+
+        // Ensure that the block at address 0x03 connects to the block at address 0x17
+        let block_0x03 = loader.find_block_start_address(0x03);
+        let block_0x17 = loader.find_block_start_address(0x17);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x03],
+            loader.raw_block_address_to_node[&block_0x17]
+        ));
+
+        // 0x05 -> 0x17
+        let block_0x05 = loader.find_block_start_address(0x05);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x05],
+            loader.raw_block_address_to_node[&block_0x17]
+        ));
+        // 0x07 -> 0x17
+        let block_0x07 = loader.find_block_start_address(0x07);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x07],
+            loader.raw_block_address_to_node[&block_0x17]
+        ));
+
+        // 0x0b -> 0x17
+        let block_0x0b = loader.find_block_start_address(0x0b);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x0b],
+            loader.raw_block_address_to_node[&block_0x17]
+        ));
+
+        // 0x0c > 0x3
+        let block_0x0c = loader.find_block_start_address(0x0c);
+        let block_0x03 = loader.find_block_start_address(0x03);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x0c],
+            loader.raw_block_address_to_node[&block_0x03]
+        ));
+
+        // 0x0c -> 0x0e
+        let block_0x0e = loader.find_block_start_address(0x0e);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x0c],
+            loader.raw_block_address_to_node[&block_0x0e]
+        ));
+
+        // 0x0e -> 0x3
+        let block_0x0e = loader.find_block_start_address(0x0e);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x0e],
+            loader.raw_block_address_to_node[&block_0x03]
+        ));
+
+        // 0x0e -> 0x10
+        let block_0x10 = loader.find_block_start_address(0x10);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x0e],
+            loader.raw_block_address_to_node[&block_0x10]
+        ));
+
+        // 0x10 -> 0x3
+        let block_0x10 = loader.find_block_start_address(0x10);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x10],
+            loader.raw_block_address_to_node[&block_0x03]
+        ));
+
+        // 0x10 -> 0x12
+        let block_0x12 = loader.find_block_start_address(0x12);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x10],
+            loader.raw_block_address_to_node[&block_0x12]
+        ));
+
+        // 0x12 -> 0x5
+        let block_0x12 = loader.find_block_start_address(0x12);
+        let block_0x05 = loader.find_block_start_address(0x05);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x12],
+            loader.raw_block_address_to_node[&block_0x05]
+        ));
+
+        // 0x12 -> 0x14
+        let block_0x14 = loader.find_block_start_address(0x14);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x12],
+            loader.raw_block_address_to_node[&block_0x14]
+        ));
+
+        // 0x14 -> 0x7
+        let block_0x14 = loader.find_block_start_address(0x14);
+        let block_0x07 = loader.find_block_start_address(0x07);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x14],
+            loader.raw_block_address_to_node[&block_0x07]
+        ));
+
+        // 0x14 -> 0x16
+        let block_0x16 = loader.find_block_start_address(0x16);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x14],
+            loader.raw_block_address_to_node[&block_0x16]
+        ));
+
+        // 0x16 -> 0xb
+        let block_0x16 = loader.find_block_start_address(0x16);
+        let block_0x0b = loader.find_block_start_address(0x0b);
+        assert!(loader.raw_block_graph.contains_edge(
+            loader.raw_block_address_to_node[&block_0x16],
+            loader.raw_block_address_to_node[&block_0x0b]
+        ));
+
+        // Compare every block start address to the expected values
+        let expected_block_starts = vec![
+            0x0, 0x1, 0x3, 0x5, 0x7, 0x9, 0xb, 0xc, 0xe, 0x10, 0x12, 0x14, 0x16, 0x17, 0x19,
+        ];
+        assert_eq!(block_starts, expected_block_starts);
+
+        // The block at address 0x09 is unreachable, so it should not have any incoming edges
+        let block_0x09 = loader.find_block_start_address(0x09);
+        assert_eq!(
+            loader
+                .raw_block_graph
+                .neighbors_directed(
+                    loader.raw_block_address_to_node[&block_0x09],
+                    petgraph::Direction::Incoming
+                )
+                .count(),
+            0
+        );
+
+        assert_eq!(block_starts.len(), 15);
+
+        // Ensure that the function map is correct
+        assert_eq!(loader.function_map.len(), 2);
+
+        // For each address, ensure that the function name is correct
+        for address in expected_block_starts.iter() {
+            match address {
+                // Start of the module
+                0 => assert_eq!(loader.get_function_name_for_address(0).unwrap(), None),
+                // Unreachable node
+                0x09 => assert!(loader.get_function_name_for_address(9).is_err()),
+                // End of the module
+                0x19 => assert_eq!(loader.get_function_name_for_address(0x19).unwrap(), None),
+                _ => assert_eq!(
+                    loader.get_function_name_for_address(*address).unwrap(),
+                    Some("main".to_string())
+                ),
+            }
+        }
     }
 
     #[test]
@@ -789,8 +1069,8 @@ mod tests {
         ]);
         let loader = BytecodeLoaderBuilder::new(reader).build().unwrap();
 
-        assert_eq!(loader.function_map.len(), 1);
-        assert_eq!(loader.function_map.get("main"), Some(&0));
+        assert_eq!(loader.function_map.len(), 2);
+        assert_eq!(loader.function_map.get(&Some("main".to_string())), Some(&0));
         assert_eq!(loader.strings.len(), 1);
         assert_eq!(loader.strings.first(), Some(&"abc".to_string()));
         assert_eq!(loader.instructions.len(), 9);

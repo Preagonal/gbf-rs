@@ -145,7 +145,7 @@ impl fmt::Display for Operand {
         match self {
             Operand::String(value) => value.clone(),
             Operand::Float(value) => value.clone(),
-            Operand::Number(value) => value.to_string(),
+            Operand::Number(value) => format!("{:#x}", value),
         }
         .fmt(f)
     }
@@ -188,13 +188,13 @@ mod tests {
     fn int_operand() {
         let operand = Operand::new_number(42);
         assert_eq!(operand.get_number_value().unwrap(), 42);
-        assert_eq!(operand.to_string(), "42");
+        assert_eq!(operand.to_string(), "0x2a");
     }
 
     #[test]
     fn display_trait() {
         let operand = Operand::new_number(123);
-        assert_eq!(operand.to_string(), "123");
-        assert_eq!(format!("{}", operand), "123");
+        assert_eq!(operand.to_string(), "0x7b");
+        assert_eq!(format!("{}", operand), "0x7b");
     }
 }

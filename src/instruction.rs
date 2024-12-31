@@ -87,7 +87,7 @@ impl std::fmt::Display for Instruction {
     ///
     /// let instruction = Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42));
     /// let string = instruction.to_string();
-    /// assert_eq!(string, "PushNumber 42");
+    /// assert_eq!(string, "PushNumber 0x2a");
     /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &self.operand {
@@ -109,7 +109,7 @@ mod tests {
 
         let instruction =
             Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42));
-        assert_eq!(instruction.to_string(), "PushNumber 42");
+        assert_eq!(instruction.to_string(), "PushNumber 0x2a");
 
         let instruction = Instruction::new_with_operand(
             Opcode::PushString,

@@ -1,16 +1,16 @@
 #![deny(missing_docs)]
 
+use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::Direction;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::hash::Hash;
 use std::ops::{Deref, Index};
-
-use petgraph::graph::{DiGraph, NodeIndex};
-use petgraph::Direction;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
+use crate::cfg_dot::{CfgDotBuilder, NodeResolver};
 use crate::utils::Gs2BytecodeAddress;
 
 /// Represents an error that can occur when working with functions.
@@ -144,6 +144,15 @@ impl Function {
         }
     }
 
+    /// Convert the Graph to `dot` format.
+    ///
+    /// # Returns
+    /// - A `String` containing the `dot` representation of the graph.
+    pub fn to_dot(&self) -> String {
+        let dot_bulder = CfgDotBuilder::new().build();
+        dot_bulder.render(&self.cfg, self)
+    }
+
     /// Create a new `BasicBlock` and add it to the function.
     ///
     /// # Arguments
@@ -266,7 +275,7 @@ impl Function {
         &self,
         address: Gs2BytecodeAddress,
     ) -> Result<&BasicBlock, FunctionError> {
-        let id = self.get_basic_block_id_by_address(address)?;
+        let id = self.get_basic_block_id_by_start_address(address)?;
         self.get_basic_block_by_id(id)
     }
 
@@ -295,7 +304,7 @@ impl Function {
         &mut self,
         address: Gs2BytecodeAddress,
     ) -> Result<&mut BasicBlock, FunctionError> {
-        let id = self.get_basic_block_id_by_address(address)?;
+        let id = self.get_basic_block_id_by_start_address(address)?;
         self.get_basic_block_by_id_mut(id)
     }
 
@@ -524,7 +533,7 @@ impl Function {
     ///
     /// # Errors
     /// - `FunctionError::BasicBlockNotFoundByAddress` if the block does not exist.
-    pub fn get_basic_block_id_by_address(
+    pub fn get_basic_block_id_by_start_address(
         &self,
         address: Gs2BytecodeAddress,
     ) -> Result<BasicBlockId, FunctionError> {
@@ -607,6 +616,20 @@ impl<'a> IntoIterator for &'a mut Function {
 
     fn into_iter(self) -> Self::IntoIter {
         self.blocks.iter_mut()
+    }
+}
+
+impl NodeResolver for Function {
+    type NodeData = BasicBlock;
+
+    fn resolve(&self, node_index: NodeIndex) -> Option<&Self::NodeData> {
+        self.graph_node_to_block
+            .get(&node_index)
+            .and_then(|block_id| {
+                self.block_map
+                    .get(block_id)
+                    .and_then(|index| self.blocks.get(*index))
+            })
     }
 }
 

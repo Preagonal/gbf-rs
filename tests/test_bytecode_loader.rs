@@ -35,12 +35,7 @@ fn load_simple_gs2() {
 
     // We have a ModuleEnd block at the end of the module
     assert_eq!(basic_blocks, 2);
-
-    // Find the number of instructions in the Basic Block. In this case, it should be 3
-    let basic_block_id = function
-        .get_basic_block_id_by_address(function.id.address)
-        .unwrap();
-    let basic_block = function.get_basic_block_by_id(basic_block_id).unwrap();
+    let basic_block = &function[0];
     let instructions = basic_block.len();
     assert_eq!(instructions, 32);
 
@@ -84,7 +79,7 @@ fn load_multiple_functions() {
     let basic_blocks = function.len();
 
     // We have a ModuleEnd block at the end of the module
-    assert_eq!(basic_blocks, 8);
+    assert_eq!(basic_blocks, 2);
 
     // Function 1: onCreated
     let function = module
@@ -95,7 +90,7 @@ fn load_multiple_functions() {
 
     // first instruction PushArray, last instruction Ret
     let basic_block = function
-        .get_basic_block_id_by_address(function.id.address)
+        .get_basic_block_id_by_start_address(function.id.address)
         .unwrap();
     let basic_block = function.get_basic_block_by_id(basic_block).unwrap();
     let instructions = basic_block.len();
@@ -116,7 +111,7 @@ fn load_multiple_functions() {
 
     // first instruction PushArray, last instruction Ret
     let basic_block = function
-        .get_basic_block_id_by_address(function.id.address)
+        .get_basic_block_id_by_start_address(function.id.address)
         .unwrap();
     let basic_block = function.get_basic_block_by_id(basic_block).unwrap();
     let instructions = basic_block.len();
@@ -127,7 +122,7 @@ fn load_multiple_functions() {
     let basic_blocks = function.len();
     assert_eq!(basic_blocks, 1);
     let basic_block = function
-        .get_basic_block_id_by_address(function.id.address)
+        .get_basic_block_id_by_start_address(function.id.address)
         .unwrap();
     let basic_block = function.get_basic_block_by_id(basic_block).unwrap();
     let instructions = basic_block.len();
@@ -138,7 +133,7 @@ fn load_multiple_functions() {
     let basic_blocks = function.len();
     assert_eq!(basic_blocks, 1);
     let basic_block = function
-        .get_basic_block_id_by_address(function.id.address)
+        .get_basic_block_id_by_start_address(function.id.address)
         .unwrap();
     let basic_block = function.get_basic_block_by_id(basic_block).unwrap();
     let instructions = basic_block.len();
@@ -173,4 +168,8 @@ fn load_multiple_functions() {
         assert_eq!(instruction.address, address);
         address += 1;
     }
+
+    // For the first function output the dot representation
+    let function = module[5].to_dot();
+    assert!(function.contains("digraph CFG {"));
 }
