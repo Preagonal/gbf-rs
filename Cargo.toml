@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 log = "0.4.22"
-petgraph = { version = "0.6.5", features = ["serde-1"] }
+petgraph = { version = "0.7.0", features = ["serde-1"] }
 serde = {version = "1.0.216", features = ["derive"]}
 thiserror = "2.0.8"
 
