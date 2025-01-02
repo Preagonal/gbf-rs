@@ -36,13 +36,13 @@ impl MetaNode {
         comment: Option<String>,
         source_location: Option<Gs2BytecodeAddress>,
         properties: HashMap<String, String>,
-    ) -> Self {
-        Self {
+    ) -> Box<Self> {
+        Box::new(Self {
             node: Box::new(node),
             comment,
             source_location,
             properties,
-        }
+        })
     }
 
     /// Returns the inner node.

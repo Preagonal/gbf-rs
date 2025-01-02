@@ -18,6 +18,23 @@ pub enum LiteralNode {
     Float(String),
 }
 
+impl LiteralNode {
+    /// Creates a new `LiteralNode` from a string.
+    pub fn new_string(s: String) -> Box<Self> {
+        Box::new(Self::String(s))
+    }
+
+    /// Creates a new `LiteralNode` from a number.
+    pub fn new_number(n: i32) -> Box<Self> {
+        Box::new(Self::Number(n))
+    }
+
+    /// Creates a new `LiteralNode` from a float.
+    pub fn new_float(f: String) -> Box<Self> {
+        Box::new(Self::Float(f))
+    }
+}
+
 // == Other implementations for literal ==
 
 impl AstNodeTrait for LiteralNode {

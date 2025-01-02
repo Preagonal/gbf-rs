@@ -9,12 +9,22 @@ use super::{
 
 /// Represents a type of literal.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct IdentifierNode(String);
+// Identifiers are usually short so we don't need to box them.
+pub struct IdentifierNode {
+    id: String,
+}
+
+impl IdentifierNode {
+    /// Creates a new `IdentifierNode` from a string.
+    pub fn new(s: String) -> Box<Self> {
+        Box::new(Self { id: s })
+    }
+}
 
 // == Other implementations for literal ==
 
 impl AstNodeTrait for IdentifierNode {
     fn emit(&self, _: &EmitContext) -> Result<String, EmitError> {
-        Ok(self.0.clone())
+        Ok(self.id.clone())
     }
 }

@@ -39,6 +39,8 @@ pub struct EmitContext {
     pub verbosity: EmitVerbosity,
     /// The style of indentation to use.
     pub indent_style: IndentStyle,
+    /// The root of the expression tree.
+    pub expr_root: bool,
 }
 
 impl EmitContext {
@@ -82,6 +84,27 @@ impl EmitContext {
         new_context
     }
 
+    /// Returns a new EmitContext with expr_root set to the given value.
+    ///
+    /// # Arguments
+    /// - `expr_root` - The value to set expr_root to.
+    ///
+    /// # Returns
+    /// A new EmitContext with expr_root set to the given value.
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::ast::emit::EmitContext;
+    ///
+    /// let mut context = EmitContext::default();
+    /// let body_context = context.with_expr_root(true);
+    /// ```
+    pub fn with_expr_root(&self, expr_root: bool) -> EmitContext {
+        let mut new_context = *self;
+        new_context.expr_root = expr_root;
+        new_context
+    }
+
     /// Creates a builder for `EmitContext`.
     ///
     /// # Returns
@@ -99,6 +122,7 @@ pub struct EmitContextBuilder {
     format_number_hex: bool,
     verbosity: EmitVerbosity,
     indent_style: IndentStyle,
+    expr_root: bool,
 }
 
 impl EmitContextBuilder {
@@ -132,6 +156,12 @@ impl EmitContextBuilder {
         self
     }
 
+    /// Sets the `expr_root` flag.
+    pub fn expr_root(mut self, expr_root: bool) -> Self {
+        self.expr_root = expr_root;
+        self
+    }
+
     /// Builds the `EmitContext` with the specified parameters.
     pub fn build(self) -> EmitContext {
         EmitContext {
@@ -140,6 +170,7 @@ impl EmitContextBuilder {
             format_number_hex: self.format_number_hex,
             verbosity: self.verbosity,
             indent_style: self.indent_style,
+            expr_root: self.expr_root,
         }
     }
 }
@@ -154,6 +185,7 @@ impl Default for EmitContextBuilder {
             format_number_hex: false,
             verbosity: EmitVerbosity::Pretty,
             indent_style: IndentStyle::Allman,
+            expr_root: false,
         }
     }
 }

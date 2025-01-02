@@ -30,14 +30,11 @@ impl MemberAccessNode {
     ///
     /// # Errors
     /// Returns an `AstNodeError` if `lhs` or `rhs` is of an unsupported type.
-    pub fn new(lhs: ExprNode, rhs: ExprNode) -> Result<Self, AstNodeError> {
+    pub fn new(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> Result<Box<Self>, AstNodeError> {
         Self::validate_operand(&lhs)?;
         Self::validate_operand(&rhs)?;
 
-        Ok(Self {
-            lhs: Box::new(lhs),
-            rhs: Box::new(rhs),
-        })
+        Ok(Box::new(Self { lhs, rhs }))
     }
 
     fn validate_operand(expr: &ExprNode) -> Result<(), AstNodeError> {
@@ -84,20 +81,20 @@ impl PartialEq for MemberAccessNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{expr::ExprNode, literal::LiteralNode};
+    use crate::ast::{expr::ExprNode, identifier::IdentifierNode, literal::LiteralNode};
 
     #[test]
     fn test_member_access_node_eq() {
-        let lhs1 = ExprNode::Identifier("object".to_string());
-        let rhs1 = ExprNode::Identifier("property".to_string());
-        let lhs2 = ExprNode::Identifier("object".to_string());
-        let rhs2 = ExprNode::Identifier("property".to_string());
-        let lhs3 = ExprNode::Identifier("object".to_string());
-        let rhs3 = ExprNode::Identifier("different_property".to_string());
+        let lhs1 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
+        let rhs1 = ExprNode::Identifier(IdentifierNode::new("property".to_string()));
+        let lhs2 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
+        let rhs2 = ExprNode::Identifier(IdentifierNode::new("property".to_string()));
+        let lhs3 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
+        let rhs3 = ExprNode::Identifier(IdentifierNode::new("different_property".to_string()));
 
-        let node1 = MemberAccessNode::new(lhs1.clone(), rhs1.clone()).unwrap();
-        let node2 = MemberAccessNode::new(lhs2.clone(), rhs2.clone()).unwrap();
-        let node3 = MemberAccessNode::new(lhs3.clone(), rhs3.clone()).unwrap();
+        let node1 = MemberAccessNode::new(Box::new(lhs1), Box::new(rhs1)).unwrap();
+        let node2 = MemberAccessNode::new(Box::new(lhs2), Box::new(rhs2)).unwrap();
+        let node3 = MemberAccessNode::new(Box::new(lhs3), Box::new(rhs3)).unwrap();
 
         assert_eq!(node1, node2);
         assert_ne!(node1, node3);
@@ -105,24 +102,24 @@ mod tests {
 
     #[test]
     fn test_member_access_node_emit() {
-        let lhs = ExprNode::Identifier("temp".to_string());
-        let rhs = ExprNode::Identifier("foo".to_string());
-        let node = MemberAccessNode::new(lhs.clone(), rhs.clone()).unwrap();
+        let lhs = ExprNode::Identifier(IdentifierNode::new("temp".to_string()));
+        let rhs = ExprNode::Identifier(IdentifierNode::new("foo".to_string()));
+        let node = MemberAccessNode::new(Box::new(lhs), Box::new(rhs)).unwrap();
 
         let ctx = EmitContext::default();
         let emitted = node.emit(&ctx).unwrap();
         assert_eq!(emitted, "temp.foo");
 
         // now test case where left is temp and right is another member access
-        let lhs = ExprNode::Identifier("temp".to_string());
+        let lhs = ExprNode::Identifier(IdentifierNode::new("temp".to_string()));
         let rhs = ExprNode::MemberAccess(
             MemberAccessNode::new(
-                ExprNode::Identifier("foo".to_string()),
-                ExprNode::Identifier("bar".to_string()),
+                Box::new(ExprNode::Identifier(IdentifierNode::new("foo".to_string()))),
+                Box::new(ExprNode::Identifier(IdentifierNode::new("bar".to_string()))),
             )
             .unwrap(),
         );
-        let node = MemberAccessNode::new(lhs.clone(), rhs.clone()).unwrap();
+        let node = MemberAccessNode::new(Box::new(lhs), Box::new(rhs)).unwrap();
 
         let ctx = EmitContext::default();
         let emitted = node.emit(&ctx).unwrap();
@@ -131,9 +128,9 @@ mod tests {
 
     #[test]
     fn test_member_access_node_stack_values_to_pop() {
-        let lhs = ExprNode::Identifier("object".to_string());
-        let rhs = ExprNode::Identifier("property".to_string());
-        let node = MemberAccessNode::new(lhs.clone(), rhs.clone()).unwrap();
+        let lhs = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
+        let rhs = ExprNode::Identifier(IdentifierNode::new("property".to_string()));
+        let node = MemberAccessNode::new(Box::new(lhs), Box::new(rhs)).unwrap();
 
         assert_eq!(node.stack_values_to_pop(), 2);
     }
@@ -144,21 +141,21 @@ mod tests {
         let lhs = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
         let rhs = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
 
-        let result = MemberAccessNode::new(lhs, rhs);
+        let result = MemberAccessNode::new(Box::new(lhs), Box::new(rhs));
         assert!(result.is_err());
 
         // test left side with invalid operand number
         let lhs = ExprNode::Literal(LiteralNode::Number(42));
-        let rhs = ExprNode::Identifier("property".to_string());
+        let rhs = ExprNode::Identifier(IdentifierNode::new("property".to_string()));
 
-        let result = MemberAccessNode::new(lhs, rhs);
+        let result = MemberAccessNode::new(Box::new(lhs), Box::new(rhs));
         assert!(result.is_err());
 
         // test right side with invalid operand number
-        let lhs = ExprNode::Identifier("object".to_string());
+        let lhs = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
         let rhs = ExprNode::Literal(LiteralNode::Number(42));
 
-        let result = MemberAccessNode::new(lhs, rhs);
+        let result = MemberAccessNode::new(Box::new(lhs), Box::new(rhs));
         assert!(result.is_err());
     }
 }
