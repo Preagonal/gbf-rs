@@ -176,4 +176,25 @@ mod tests {
         assert_eq!(node.properties.get("key2"), Some(&"value2".to_string()));
         assert!(!node.properties.contains_key("key3"));
     }
+
+    #[test]
+    fn test_getters() {
+        let node = create_test_node();
+
+        assert_eq!(
+            node.node(),
+            &AstNode::Expression(ExprNode::Literal(LiteralNode::String(
+                "inner_node".to_string()
+            )))
+        );
+        assert_eq!(node.comment(), Some(&"This is a comment".to_string()));
+        assert_eq!(node.source_location(), Some(0x1234 as Gs2BytecodeAddress));
+        assert_eq!(
+            node.properties(),
+            &HashMap::from([
+                ("key1".to_string(), "value1".to_string()),
+                ("key2".to_string(), "value2".to_string()),
+            ])
+        );
+    }
 }

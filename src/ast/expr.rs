@@ -42,3 +42,95 @@ impl PartialEq for ExprNode {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_expr_node_eq() {
+        let expr1 = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
+        let expr2 = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
+        let expr3 = ExprNode::Literal(LiteralNode::String("Goodbye, world!".to_string()));
+
+        assert_eq!(expr1, expr2);
+        assert_ne!(expr1, expr3);
+
+        // test member access
+        let expr1 = ExprNode::MemberAccess(
+            MemberAccessNode::new(
+                ExprNode::Identifier("object".to_string()),
+                ExprNode::Identifier("field".to_string()),
+            )
+            .unwrap(),
+        );
+        let expr2 = ExprNode::MemberAccess(
+            MemberAccessNode::new(
+                ExprNode::Identifier("object".to_string()),
+                ExprNode::Identifier("field".to_string()),
+            )
+            .unwrap(),
+        );
+        let expr3 = ExprNode::MemberAccess(
+            MemberAccessNode::new(
+                ExprNode::Identifier("object".to_string()),
+                ExprNode::Identifier("field2".to_string()),
+            )
+            .unwrap(),
+        );
+        assert_eq!(expr1, expr2);
+        assert_ne!(expr1, expr3);
+
+        // test identifier
+        let expr1 = ExprNode::Identifier("object".to_string());
+        let expr2 = ExprNode::Identifier("object".to_string());
+        let expr3 = ExprNode::Identifier("object2".to_string());
+        assert_eq!(expr1, expr2);
+        assert_ne!(expr1, expr3);
+    }
+
+    #[test]
+    fn test_expr_node_ne_different_types() {
+        let expr1 = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
+        let expr2 = ExprNode::MemberAccess(
+            MemberAccessNode::new(
+                ExprNode::Identifier("object".to_string()),
+                ExprNode::Identifier("field".to_string()),
+            )
+            .unwrap(),
+        );
+
+        assert_ne!(expr1, expr2);
+
+        let expr1 = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
+        let expr2 = ExprNode::Identifier("object".to_string());
+
+        assert_ne!(expr1, expr2);
+
+        let expr1 = ExprNode::Identifier("object".to_string());
+        let expr2 = ExprNode::Literal(LiteralNode::String("object".to_string()));
+
+        assert_ne!(expr1, expr2);
+    }
+
+    #[test]
+    fn test_expr_node_emit() {
+        let expr = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
+        let ctx = EmitContext::default();
+        assert_eq!(expr.emit(&ctx).unwrap(), "\"Hello, world!\"");
+
+        let expr = ExprNode::MemberAccess(
+            MemberAccessNode::new(
+                ExprNode::Identifier("temp".to_string()),
+                ExprNode::Identifier("field".to_string()),
+            )
+            .unwrap(),
+        );
+        let ctx = EmitContext::default();
+        assert_eq!(expr.emit(&ctx).unwrap(), "temp.field");
+
+        let expr = ExprNode::Identifier("temp".to_string());
+        let ctx = EmitContext::default();
+        assert_eq!(expr.emit(&ctx).unwrap(), "temp");
+    }
+}

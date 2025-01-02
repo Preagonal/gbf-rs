@@ -123,4 +123,12 @@ mod tests {
 
         assert_eq!(node.stack_values_to_pop(), 2);
     }
+
+    #[test]
+    fn test_assignment_node_invalid_lhs() {
+        let lhs = ExprNode::Literal(crate::ast::literal::LiteralNode::Number(42));
+        let rhs = ExprNode::Identifier("value".to_string());
+        let node = StatementNode::new(lhs, rhs);
+        assert!(node.is_err());
+    }
 }

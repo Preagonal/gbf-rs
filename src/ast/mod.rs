@@ -161,16 +161,14 @@ mod tests {
         let val2 = ast_stack.pop().unwrap();
 
         // create expression node from the popped values and feed them into statement node
-        let expr1 = if let AstNode::Expression(expr) = val1 {
-            expr
-        } else {
-            panic!("Expected an expression node");
+        let expr1 = match val1 {
+            AstNode::Expression(expr) => expr,
+            _ => unreachable!("Expected an expression node"),
         };
 
-        let expr2 = if let AstNode::Expression(expr) = val2 {
-            expr
-        } else {
-            panic!("Expected an expression node");
+        let expr2 = match val2 {
+            AstNode::Expression(expr) => expr,
+            _ => unreachable!("Expected an expression node"),
         };
 
         let stmt = StatementNode::new(expr2, expr1).unwrap();
@@ -201,14 +199,40 @@ mod tests {
         let val1 = ast_stack.pop().unwrap();
         let val2 = ast_stack.pop().unwrap();
 
-        // create expression node from the popped values and feed them into statement node. Because
-        // meta nodes are not expressions, this should fail.
-        if let AstNode::Expression(expr) = val1 {
-            expr
-        } else {
-            panic!("Expected an expression node");
+        // This is fine; we know the last value is an expression node
+        let expr1 = match val1 {
+            AstNode::Expression(expr) => expr,
+            _ => unreachable!("Expected an expression node"),
         };
 
+        // Assert that expr1 is a literal
+        assert!(
+            matches!(expr1, ExprNode::Literal(_)),
+            "Expected a literal node"
+        );
+
+        // The second node is a meta node, not an expression node
         assert!(matches!(val2, AstNode::Meta(_)), "Expected a meta node");
+    }
+
+    #[test]
+    fn test_display() {
+        let expr = create_number(42);
+        let ast_node = AstNode::Expression(expr);
+        assert_eq!(format!("{}", ast_node), "42");
+
+        let expr = create_identifier("variable");
+        let ast_node = AstNode::Expression(expr);
+        assert_eq!(format!("{}", ast_node), "variable");
+
+        let lhs = create_identifier("variable");
+        let rhs = create_number(42);
+        let stmt = StatementNode::new(lhs, rhs).unwrap();
+        let ast_node = AstNode::Statement(stmt);
+        assert_eq!(format!("{}", ast_node), "variable = 42;");
+
+        // add meta comment
+        let node = create_comment("Hello", ast_node);
+        assert_eq!(format!("{}", node), "// Hello\nvariable = 42;");
     }
 }

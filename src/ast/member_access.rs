@@ -84,7 +84,7 @@ impl PartialEq for MemberAccessNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::expr::ExprNode;
+    use crate::ast::{expr::ExprNode, literal::LiteralNode};
 
     #[test]
     fn test_member_access_node_eq() {
@@ -136,5 +136,29 @@ mod tests {
         let node = MemberAccessNode::new(lhs.clone(), rhs.clone()).unwrap();
 
         assert_eq!(node.stack_values_to_pop(), 2);
+    }
+
+    #[test]
+    fn test_member_access_node_new_invalid_operand() {
+        // literals are not allowed; 1.temp or temp.1 is invalid
+        let lhs = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
+        let rhs = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
+
+        let result = MemberAccessNode::new(lhs, rhs);
+        assert!(result.is_err());
+
+        // test left side with invalid operand number
+        let lhs = ExprNode::Literal(LiteralNode::Number(42));
+        let rhs = ExprNode::Identifier("property".to_string());
+
+        let result = MemberAccessNode::new(lhs, rhs);
+        assert!(result.is_err());
+
+        // test right side with invalid operand number
+        let lhs = ExprNode::Identifier("object".to_string());
+        let rhs = ExprNode::Literal(LiteralNode::Number(42));
+
+        let result = MemberAccessNode::new(lhs, rhs);
+        assert!(result.is_err());
     }
 }
