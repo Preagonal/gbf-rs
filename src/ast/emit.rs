@@ -1,5 +1,11 @@
 #![deny(missing_docs)]
 
+use thiserror::Error;
+
+/// Represents an error that occurred while converting an AST node.
+#[derive(Debug, Error)]
+pub enum EmitError {}
+
 /// Represents the verbosity mode in which the AST should be emitted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EmitVerbosity {

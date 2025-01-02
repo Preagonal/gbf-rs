@@ -7,23 +7,68 @@ use serde::{Deserialize, Serialize};
 use crate::utils::Gs2BytecodeAddress;
 
 use super::{
-    emit::{EmitContext, EmitVerbosity},
+    emit::{EmitContext, EmitError, EmitVerbosity},
     AstNode, AstNodeTrait,
 };
 
 /// Represents a metadata node in the AST
 #[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub struct MetaNode {
-    /// The child node of the metadata node.
     node: Box<AstNode>,
     comment: Option<String>,
     source_location: Option<Gs2BytecodeAddress>,
     properties: HashMap<String, String>,
 }
 
+impl MetaNode {
+    /// Creates a new `MetaNode` with the given `node`, `comment`, `source_location`, and `properties`.
+    ///
+    /// # Arguments
+    /// - `node` - The inner node.
+    /// - `comment` - The comment for the node.
+    /// - `source_location` - The source location of the node.
+    /// - `properties` - The properties of the node.
+    ///
+    /// # Returns
+    /// A new `MetaNode`.
+    pub fn new(
+        node: AstNode,
+        comment: Option<String>,
+        source_location: Option<Gs2BytecodeAddress>,
+        properties: HashMap<String, String>,
+    ) -> Self {
+        Self {
+            node: Box::new(node),
+            comment,
+            source_location,
+            properties,
+        }
+    }
+
+    /// Returns the inner node.
+    pub fn node(&self) -> &AstNode {
+        &self.node
+    }
+
+    /// Returns the comment.
+    pub fn comment(&self) -> Option<&String> {
+        self.comment.as_ref()
+    }
+
+    /// Returns the source location.
+    pub fn source_location(&self) -> Option<Gs2BytecodeAddress> {
+        self.source_location
+    }
+
+    /// Returns the properties.
+    pub fn properties(&self) -> &HashMap<String, String> {
+        &self.properties
+    }
+}
+
 // == Other implementations for literal ==
 impl AstNodeTrait for MetaNode {
-    fn emit(&self, ctx: &EmitContext) -> String {
+    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
         if ctx.verbosity == EmitVerbosity::Minified {
             return self.node.emit(ctx);
         }
@@ -32,8 +77,8 @@ impl AstNodeTrait for MetaNode {
         if let Some(comment) = &self.comment {
             result.push_str(&format!("// {}\n", comment));
         }
-        result.push_str(&self.node.emit(ctx));
-        result
+        result.push_str(&self.node.emit(ctx)?);
+        Ok(result)
     }
 }
 
@@ -50,14 +95,14 @@ impl PartialEq for MetaNode {
 mod tests {
     use super::*;
     use crate::{
-        ast::literal::{LiteralNode, LiteralType},
+        ast::{expr::ExprNode, literal::LiteralNode},
         utils::Gs2BytecodeAddress,
     };
 
     fn create_test_node() -> MetaNode {
-        let node: AstNode = AstNode::Literal(LiteralNode {
-            value: LiteralType::String("inner_node".to_string()),
-        });
+        let node: AstNode = AstNode::Expression(ExprNode::Literal(LiteralNode::String(
+            "inner_node".to_string(),
+        )));
         MetaNode {
             node: Box::new(node),
             comment: Some("This is a comment".to_string()),
@@ -76,7 +121,7 @@ mod tests {
             .build();
         let node = create_test_node();
 
-        let output = node.emit(&context);
+        let output = node.emit(&context).unwrap();
         assert_eq!(output, "// This is a comment\n\"inner_node\"");
     }
 
@@ -87,7 +132,7 @@ mod tests {
             .build();
         let node = create_test_node();
 
-        let output = node.emit(&context);
+        let output = node.emit(&context).unwrap();
         assert_eq!(output, "\"inner_node\"");
     }
 
