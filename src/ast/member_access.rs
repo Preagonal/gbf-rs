@@ -44,14 +44,6 @@ impl MemberAccessNode {
             )),
         }
     }
-
-    /// Returns the number of stack values to pop for the member access node.
-    ///
-    /// # Returns
-    /// `2`, as member access always involves `lhs` and `rhs`.
-    pub fn stack_values_to_pop(&self) -> usize {
-        2
-    }
 }
 
 impl AstNodeTrait for MemberAccessNode {
@@ -87,15 +79,6 @@ mod tests {
 
         assert_eq!(node1, node2);
         assert_ne!(node1, node3);
-    }
-
-    #[test]
-    fn test_member_access_node_stack_values_to_pop() {
-        let lhs = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
-        let rhs = ExprNode::Identifier(IdentifierNode::new("property".to_string()));
-        let node = MemberAccessNode::new(Box::new(lhs), Box::new(rhs)).unwrap();
-
-        assert_eq!(node.stack_values_to_pop(), 2);
     }
 
     #[test]

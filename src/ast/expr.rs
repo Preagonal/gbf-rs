@@ -88,6 +88,61 @@ mod tests {
 
         assert_eq!(expr1, expr2);
         assert_ne!(expr1, expr3);
+
+        // test binary operation
+        let expr1 = ExprNode::BinOp(
+            BinaryOperationNode::new(
+                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                ExprNode::Literal(LiteralNode::Number(1)).clone_box(),
+                crate::ast::bin_op::BinOpType::Add,
+            )
+            .unwrap(),
+        );
+        let expr2 = ExprNode::BinOp(
+            BinaryOperationNode::new(
+                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                ExprNode::Literal(LiteralNode::Number(1)).clone_box(),
+                crate::ast::bin_op::BinOpType::Add,
+            )
+            .unwrap(),
+        );
+        let expr3 = ExprNode::BinOp(
+            BinaryOperationNode::new(
+                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                ExprNode::Literal(LiteralNode::Number(2)).clone_box(),
+                crate::ast::bin_op::BinOpType::Add,
+            )
+            .unwrap(),
+        );
+
+        assert_eq!(expr1, expr2);
+        assert_ne!(expr1, expr3);
+
+        // test unary operation
+        let expr1 = ExprNode::UnaryOp(
+            UnaryOperationNode::new(
+                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                crate::ast::unary_op::UnaryOpType::Negate,
+            )
+            .unwrap(),
+        );
+        let expr2 = ExprNode::UnaryOp(
+            UnaryOperationNode::new(
+                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                crate::ast::unary_op::UnaryOpType::Negate,
+            )
+            .unwrap(),
+        );
+        let expr3 = ExprNode::UnaryOp(
+            UnaryOperationNode::new(
+                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                crate::ast::unary_op::UnaryOpType::LogicalNot,
+            )
+            .unwrap(),
+        );
+
+        assert_eq!(expr1, expr2);
+        assert_ne!(expr1, expr3);
     }
 
     #[test]

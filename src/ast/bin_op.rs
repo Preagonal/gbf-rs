@@ -97,14 +97,6 @@ impl BinaryOperationNode {
         }
         Ok(())
     }
-
-    /// Returns the number of stack values to pop for the binary operation node.
-    ///
-    /// # Returns
-    /// `2`, as binary operations always involve `lhs` and `rhs`.
-    pub fn stack_values_to_pop(&self) -> usize {
-        2
-    }
 }
 
 // == Other implementations for binary operations ==
@@ -138,16 +130,6 @@ mod tests {
 
         assert_eq!(node1, node2);
         assert_ne!(node1, node3);
-    }
-
-    #[test]
-    fn test_binary_operation_node_stack_values_to_pop() {
-        let lhs = ExprNode::Identifier(IdentifierNode::new("x".to_string()));
-        let rhs = ExprNode::Identifier(IdentifierNode::new("y".to_string()));
-        let node =
-            BinaryOperationNode::new(lhs.clone_box(), rhs.clone_box(), BinOpType::Div).unwrap();
-
-        assert_eq!(node.stack_values_to_pop(), 2);
     }
 
     #[test]

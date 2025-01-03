@@ -43,14 +43,6 @@ impl StatementNode {
             )),
         }
     }
-
-    /// Returns the number of stack values to pop for the statement node.
-    ///
-    /// # Returns
-    /// `1`, as statement pops the last two expressions from the stack.
-    pub fn stack_values_to_pop(&self) -> usize {
-        2
-    }
 }
 
 impl AstNodeTrait for StatementNode {
@@ -70,6 +62,7 @@ impl PartialEq for StatementNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::literal::LiteralNode;
     use crate::ast::{expr::ExprNode, identifier::IdentifierNode};
 
     #[test]
@@ -99,5 +92,13 @@ mod tests {
 
         assert_eq!(node1, node2);
         assert_ne!(node1, node3);
+    }
+
+    #[test]
+    fn test_invalid_lhs() {
+        let lhs = Box::new(ExprNode::Literal(LiteralNode::Number(1)));
+        let rhs = Box::new(ExprNode::Literal(LiteralNode::Number(2)));
+        let result = StatementNode::new(lhs, rhs);
+        assert!(result.is_err());
     }
 }

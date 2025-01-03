@@ -55,14 +55,6 @@ impl UnaryOperationNode {
         }
         Ok(())
     }
-
-    /// Returns the number of stack values to pop for the unary operation node.
-    ///
-    /// # Returns
-    /// `1`, as unary operations involve only one operand.
-    pub fn stack_values_to_pop(&self) -> usize {
-        1
-    }
 }
 
 impl AstNodeTrait for UnaryOperationNode {
@@ -92,14 +84,6 @@ mod tests {
 
         assert_eq!(node1, node2);
         assert_ne!(node1, node3);
-    }
-
-    #[test]
-    fn test_unary_operation_node_stack_values_to_pop() {
-        let operand = ExprNode::Identifier(IdentifierNode::new("x".to_string()));
-        let node = UnaryOperationNode::new(operand.clone_box(), UnaryOpType::BitwiseNot).unwrap();
-
-        assert_eq!(node.stack_values_to_pop(), 1);
     }
 
     #[test]

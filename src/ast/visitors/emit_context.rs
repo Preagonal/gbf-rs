@@ -233,6 +233,7 @@ mod tests {
             .format_number_hex(true)
             .verbosity(EmitVerbosity::Debug)
             .indent_style(IndentStyle::KAndR)
+            .expr_root(true)
             .build();
         assert_eq!(context.indent, 2);
         assert_eq!(context.indent_step, 8);

@@ -461,4 +461,74 @@ mod tests {
         statement_node.accept(&mut visitor);
         assert_eq!(visitor.output(), "i = -42;");
     }
+
+    #[test]
+    fn test_all_bin_op_types() {
+        use crate::ast::bin_op::BinOpType;
+        use crate::ast::expr::ExprNode;
+        use crate::ast::literal::LiteralNode;
+
+        let lhs = Box::new(ExprNode::Literal(LiteralNode::Number(1)));
+        let rhs = Box::new(ExprNode::Literal(LiteralNode::Number(2)));
+
+        let op_variants = vec![
+            (BinOpType::Add, "1 + 2"),
+            (BinOpType::Sub, "1 - 2"),
+            (BinOpType::Mul, "1 * 2"),
+            (BinOpType::Div, "1 / 2"),
+            (BinOpType::Mod, "1 % 2"),
+            (BinOpType::And, "1 & 2"),
+            (BinOpType::Or, "1 | 2"),
+            (BinOpType::Xor, "1 xor 2"),
+            (BinOpType::LogicalAnd, "1 && 2"),
+            (BinOpType::LogicalOr, "1 || 2"),
+            (BinOpType::Greater, "1 > 2"),
+            (BinOpType::Less, "1 < 2"),
+            (BinOpType::GreaterOrEqual, "1 >= 2"),
+            (BinOpType::LessOrEqual, "1 <= 2"),
+            (BinOpType::ShiftLeft, "1 << 2"),
+            (BinOpType::ShiftRight, "1 >> 2"),
+            (BinOpType::Equal, "1 == 2"),
+            (BinOpType::NotEqual, "1 != 2"),
+            (BinOpType::In, "1 in 2"),
+            (BinOpType::Join, "1 @ 2"),
+        ];
+
+        for (op, expected_output) in op_variants {
+            let bin_op_node =
+                crate::ast::bin_op::BinaryOperationNode::new(lhs.clone(), rhs.clone(), op).unwrap();
+
+            let context = EmitContextBuilder::default().build();
+            let mut visitor = Gs2Emitter::new(context);
+
+            bin_op_node.accept(&mut visitor);
+            assert_eq!(visitor.output(), expected_output);
+        }
+    }
+
+    #[test]
+    fn test_all_unary_op_types() {
+        use crate::ast::expr::ExprNode;
+        use crate::ast::literal::LiteralNode;
+        use crate::ast::unary_op::UnaryOpType;
+
+        let operand = Box::new(ExprNode::Literal(LiteralNode::Number(1)));
+
+        let op_variants = vec![
+            (UnaryOpType::Negate, "-1"),
+            (UnaryOpType::LogicalNot, "!1"),
+            (UnaryOpType::BitwiseNot, "~1"),
+        ];
+
+        for (op, expected_output) in op_variants {
+            let unary_op_node =
+                crate::ast::unary_op::UnaryOperationNode::new(operand.clone(), op).unwrap();
+
+            let context = EmitContextBuilder::default().build();
+            let mut visitor = Gs2Emitter::new(context);
+
+            unary_op_node.accept(&mut visitor);
+            assert_eq!(visitor.output(), expected_output);
+        }
+    }
 }
