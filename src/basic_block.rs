@@ -14,7 +14,7 @@ use crate::{
     utils::{Gs2BytecodeAddress, OPERAND_TRUNCATE_LENGTH},
 };
 
-/// Represents the type of a basic block.
+/// Represents the type of basic block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum BasicBlockType {
     /// Used for blocks that are entry blocks of a function.

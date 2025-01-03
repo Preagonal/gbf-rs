@@ -1,37 +1,77 @@
+#![deny(missing_docs)]
+
+use crate::cfg_dot::RenderableNode;
+use crate::decompiler::ast::visitors::emit_context::{EmitContextBuilder, EmitVerbosity};
+use crate::decompiler::ast::visitors::emitter::Gs2Emitter;
+use crate::decompiler::ast::visitors::AstVisitor;
 use crate::decompiler::ast::AstNode;
+use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 use std::slice::Iter;
 
 /// Represents the type of control-flow region.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RegionType {
+    /// Simply moves on to the next region without control flow
     Linear,
-    Condition,
+    /// Control flow construct (e.g. for, while, if, switch, etc.)
+    ControlFlow,
+    /// A tail (e.g, return)
     Tail,
+}
+
+/// Describes a region
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct RegionId {
+    /// The index of the region
+    pub index: usize,
+    /// The region type
+    pub region_type: RegionType,
+}
+
+impl RegionId {
+    /// Create a new `BasicBlockId`.
+    ///
+    /// # Arguments
+    /// - `index`: The index of the basic block in the function.
+    ///
+    /// # Returns
+    /// - A new `BasicBlockId` instance.
+    ///
+    /// Example
+    /// ```
+    /// use gbf_rs::decompiler::region::RegionId;
+    /// use gbf_rs::decompiler::region::RegionType;
+    ///
+    /// let block = RegionId::new(0, RegionType::Linear);
+    /// ```
+    pub fn new(index: usize, region_type: RegionType) -> Self {
+        Self { index, region_type }
+    }
 }
 
 /// Represents a region in the control-flow graph.
 #[derive(Debug, Clone)]
 pub struct Region {
-    region_type: RegionType,
-    statements: Vec<AstNode>,
+    id: RegionId,
+    nodes: Vec<AstNode>,
 }
 
 impl Region {
     /// Creates a new region with the specified type and initializes with no statements.
     ///
     /// # Arguments
-    ///
-    /// * `region_type` - The type of the region.
-    pub fn new(region_type: RegionType) -> Self {
+    /// * `id` - The id of the region.
+    pub fn new(id: RegionId) -> Self {
         Self {
-            region_type,
-            statements: Vec::new(),
+            id,
+            nodes: Vec::new(),
         }
     }
 
     /// Returns the type of the region.
     pub fn region_type(&self) -> &RegionType {
-        &self.region_type
+        &self.id.region_type
     }
 
     /// Adds a statement to the region.
@@ -40,16 +80,16 @@ impl Region {
     ///
     /// * `node` - The AST node to add.
     pub fn push_instruction(&mut self, node: AstNode) {
-        self.statements.push(node);
+        self.nodes.push(node);
     }
 
     /// Returns an iterator over the statements in the region.
     pub fn iter_statements(&self) -> Iter<AstNode> {
-        self.statements.iter()
+        self.nodes.iter()
     }
 }
 
-// === Implementations ===
+// === Other Implementations ===
 
 /// Allows iterating over the statements in a region.
 impl<'a> IntoIterator for &'a Region {
@@ -57,7 +97,7 @@ impl<'a> IntoIterator for &'a Region {
     type IntoIter = Iter<'a, AstNode>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.statements.iter()
+        self.nodes.iter()
     }
 }
 
@@ -67,7 +107,55 @@ impl<'a> IntoIterator for &'a mut Region {
     type IntoIter = std::slice::IterMut<'a, AstNode>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.statements.iter_mut()
+        self.nodes.iter_mut()
+    }
+}
+
+impl RenderableNode for Region {
+    /// Render the region's node representation for Graphviz with customizable padding.
+    ///
+    /// # Arguments
+    /// * `padding` - The number of spaces to use for indentation.
+    ///
+    /// # Return
+    /// The rendered node
+    fn render_node(&self, padding: usize) -> String {
+        let mut label = String::new();
+        let indent = " ".repeat(padding);
+
+        // Start the HTML-like table for Graphviz.
+        writeln!(
+            &mut label,
+            r#"{indent}<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">"#,
+            indent = indent
+        )
+        .unwrap();
+
+        // Render each statement as a table row with indentation.
+        for node in &self.nodes {
+            // Build a new EmitContext with debug
+            let context = EmitContextBuilder::default()
+                .verbosity(EmitVerbosity::Debug)
+                .build();
+            let mut emitter = Gs2Emitter::new(context);
+            emitter.visit_node(node);
+            let result = emitter.output();
+
+            writeln!(
+                &mut label,
+                r##"{indent}    <TR>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="#ffbb00">{}</FONT></TD>
+{indent}    </TR>"##,
+                result,
+                indent = indent
+            )
+            .unwrap();
+        }
+
+        // Close the HTML-like table.
+        writeln!(&mut label, "{indent}</TABLE>", indent = indent).unwrap();
+
+        label
     }
 }
 
@@ -106,7 +194,8 @@ mod tests {
 
     #[test]
     fn test_region_creation_and_instruction_addition() {
-        let mut region = Region::new(RegionType::Linear);
+        let region_id = RegionId::new(0, RegionType::Linear);
+        let mut region = Region::new(region_id);
 
         assert_eq!(region.region_type(), &RegionType::Linear);
         assert_eq!(region.iter_statements().count(), 0);
@@ -127,5 +216,13 @@ mod tests {
         let mut iter = region.iter_statements();
         assert_eq!(iter.next(), Some(&AstNode::Statement(ast_node1)));
         assert_eq!(iter.next(), Some(&AstNode::Statement(ast_node2)));
+    }
+
+    #[test]
+    fn test_region_into_iter() {
+        let region_id = RegionId::new(0, RegionType::Linear);
+        let region = Region::new(region_id);
+        let mut iter = region.into_iter();
+        assert_eq!(iter.next(), None);
     }
 }

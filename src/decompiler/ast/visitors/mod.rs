@@ -3,7 +3,7 @@
 use super::{
     bin_op::BinaryOperationNode, expr::ExprNode, identifier::IdentifierNode, literal::LiteralNode,
     member_access::MemberAccessNode, meta::MetaNode, statement::StatementNode,
-    unary_op::UnaryOperationNode,
+    unary_op::UnaryOperationNode, AstNode,
 };
 
 /// Represents a visitor for the AST.
@@ -13,6 +13,8 @@ pub mod emitter;
 
 /// Represents a visitor for the AST.
 pub trait AstVisitor {
+    /// Visits an AstNode
+    fn visit_node(&mut self, node: &AstNode);
     /// Visits a statement node.
     fn visit_statement(&mut self, node: &StatementNode);
     /// Visits an expression node.

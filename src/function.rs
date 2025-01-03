@@ -1,6 +1,7 @@
 #![deny(missing_docs)]
 
 use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::visit::{DfsPostOrder, Walker};
 use petgraph::Direction;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -510,6 +511,35 @@ impl Function {
             .filter_map(|succ| self.node_id_to_block_id(succ))
             .collect())
     }
+
+    /// Get the blocks in reverse post order
+    ///
+    /// # Arguments
+    /// - `id`: The `BasicBlockId` of the starting block
+    ///
+    /// # Returns
+    /// - A vector of `BasicBlockId`s that sort the graph in reverse post order
+    ///
+    /// # Errors
+    /// - `FunctionError::BasicBlockNodeIndexNotFound` if the block does not exist.
+    /// - `FunctionError::GraphError` if the successors could not be retrieved from the graph.
+    pub fn get_reverse_post_order(
+        &self,
+        id: BasicBlockId,
+    ) -> Result<Vec<BasicBlockId>, FunctionError> {
+        let node_id = self
+            .block_id_to_node_id(id)
+            .ok_or(FunctionError::BasicBlockNodeIndexNotFound(id))?;
+
+        let dfs = DfsPostOrder::new(&self.cfg, node_id)
+            .iter(&self.cfg)
+            .collect::<Vec<_>>();
+
+        Ok(dfs
+            .into_iter()
+            .filter_map(|node_id| self.node_id_to_block_id(node_id))
+            .collect())
+    }
 }
 
 /// Internal API for `Function`.
@@ -657,7 +687,7 @@ impl NodeResolver for Function {
             return "#bb0000".to_string();
         }
 
-        // Otherwise, color the edge green (e.g. normal control flow)
+        // Otherwise, color the edge cyan (e.g. normal control flow)
         "#00bbff".to_string()
     }
 }

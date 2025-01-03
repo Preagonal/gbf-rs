@@ -12,7 +12,7 @@ use crate::decompiler::ast::member_access::MemberAccessNode;
 use crate::decompiler::ast::meta::MetaNode;
 use crate::decompiler::ast::statement::StatementNode;
 use crate::decompiler::ast::unary_op::{UnaryOpType, UnaryOperationNode};
-use crate::decompiler::ast::AstNodeTrait;
+use crate::decompiler::ast::{AstNode, AstNodeTrait};
 
 /// An emitter for the AST.
 pub struct Gs2Emitter {
@@ -38,6 +38,13 @@ impl Gs2Emitter {
 }
 
 impl AstVisitor for Gs2Emitter {
+    fn visit_node(&mut self, node: &AstNode) {
+        match node {
+            AstNode::Expression(expr) => expr.accept(self),
+            AstNode::Meta(meta) => meta.accept(self),
+            AstNode::Statement(stmt) => stmt.accept(self),
+        }
+    }
     fn visit_statement(&mut self, node: &StatementNode) {
         // Step 1: Visit and emit the LHS
         node.lhs.accept(self);
