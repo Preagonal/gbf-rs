@@ -7,6 +7,7 @@ use super::{
     emit::{EmitContext, EmitError},
     expr::ExprNode,
     literal::LiteralNode,
+    visitors::AstVisitor,
     AstNodeError,
 };
 use crate::ast::AstNodeTrait;
@@ -50,6 +51,16 @@ impl StatementNode {
         }
     }
 
+    /// Returns the number of stack values to pop for the statement node.
+    ///
+    /// # Returns
+    /// `1`, as statement pops the last two expressions from the stack.
+    pub fn stack_values_to_pop(&self) -> usize {
+        2
+    }
+}
+
+impl AstNodeTrait for StatementNode {
     /// Emits the statement as a string.
     ///
     /// # Arguments
@@ -57,7 +68,7 @@ impl StatementNode {
     ///
     /// # Returns
     /// The emitted string representation of the statement.
-    pub fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
+    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
         let lhs_str = self.lhs.emit(ctx)?;
 
         // Check if the RHS is a binary operation
@@ -102,12 +113,9 @@ impl StatementNode {
         Ok(format!("{} = {};", lhs_str, self.rhs.emit(ctx)?))
     }
 
-    /// Returns the number of stack values to pop for the statement node.
-    ///
-    /// # Returns
-    /// `1`, as statement pops the last two expressions from the stack.
-    pub fn stack_values_to_pop(&self) -> usize {
-        2
+    /// Accepts the visitor and calls the appropriate visit method.
+    fn accept(&self, visitor: &mut dyn AstVisitor) {
+        visitor.visit_statement(self);
     }
 }
 

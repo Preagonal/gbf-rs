@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     emit::{EmitContext, EmitError},
+    visitors::AstVisitor,
     AstNodeTrait,
 };
 
@@ -26,5 +27,9 @@ impl IdentifierNode {
 impl AstNodeTrait for IdentifierNode {
     fn emit(&self, _: &EmitContext) -> Result<String, EmitError> {
         Ok(self.id.clone())
+    }
+
+    fn accept(&self, visitor: &mut dyn AstVisitor) {
+        visitor.visit_identifier(self);
     }
 }

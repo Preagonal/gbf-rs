@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     emit::{EmitContext, EmitError},
     expr::ExprNode,
+    visitors::AstVisitor,
     AstNodeError,
 };
 use crate::ast::AstNodeTrait;
@@ -49,6 +50,16 @@ impl MemberAccessNode {
         }
     }
 
+    /// Returns the number of stack values to pop for the member access node.
+    ///
+    /// # Returns
+    /// `2`, as member access always involves `lhs` and `rhs`.
+    pub fn stack_values_to_pop(&self) -> usize {
+        2
+    }
+}
+
+impl AstNodeTrait for MemberAccessNode {
     /// Emits the member access node as a string.
     ///
     /// # Arguments
@@ -56,18 +67,14 @@ impl MemberAccessNode {
     ///
     /// # Returns
     /// The emitted string representation of the member access.
-    pub fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
+    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
         let lhs_str = self.lhs.emit(ctx)?;
         let rhs_str = self.rhs.emit(ctx)?;
         Ok(format!("{}.{}", lhs_str, rhs_str))
     }
 
-    /// Returns the number of stack values to pop for the member access node.
-    ///
-    /// # Returns
-    /// `2`, as member access always involves `lhs` and `rhs`.
-    pub fn stack_values_to_pop(&self) -> usize {
-        2
+    fn accept(&self, visitor: &mut dyn AstVisitor) {
+        visitor.visit_member_access(self);
     }
 }
 

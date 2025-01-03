@@ -2,6 +2,7 @@
 
 use std::fmt::Display;
 
+use crate::ast::visitors::AstVisitor;
 use emit::{EmitContext, EmitError};
 use expr::ExprNode;
 use meta::MetaNode;
@@ -27,6 +28,8 @@ pub mod meta;
 pub mod statement;
 /// Represents unary operations in the AST.
 pub mod unary_op;
+/// Represents the visitor pattern for the AST.
+pub mod visitors;
 
 /// Represents an error that occurred while converting an AST node.
 #[derive(Debug, Error)]
@@ -58,6 +61,9 @@ pub trait AstNodeTrait: Clone {
     {
         Box::new(self.clone())
     }
+
+    /// Accepts a visitor for the AST node.
+    fn accept(&self, visitor: &mut dyn AstVisitor);
 }
 
 /// Represents an AST node.
@@ -87,6 +93,14 @@ impl AstNodeTrait for AstNode {
             AstNode::Expression(expr) => expr.emit(ctx),
             AstNode::Meta(meta) => meta.emit(ctx),
             AstNode::Statement(stmt) => stmt.emit(ctx),
+        }
+    }
+
+    fn accept(&self, visitor: &mut dyn AstVisitor) {
+        match self {
+            AstNode::Expression(expr) => expr.accept(visitor),
+            AstNode::Meta(meta) => meta.accept(visitor),
+            AstNode::Statement(stmt) => stmt.accept(visitor),
         }
     }
 }

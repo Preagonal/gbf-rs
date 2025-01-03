@@ -102,6 +102,23 @@ impl BinaryOperationNode {
         Ok(())
     }
 
+    /// Returns the number of stack values to pop for the binary operation node.
+    ///
+    /// # Returns
+    /// `2`, as binary operations always involve `lhs` and `rhs`.
+    pub fn stack_values_to_pop(&self) -> usize {
+        2
+    }
+}
+
+// == Other implementations for binary operations ==
+impl PartialEq for BinaryOperationNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.lhs == other.lhs && self.rhs == other.rhs && self.op_type == other.op_type
+    }
+}
+
+impl AstNodeTrait for BinaryOperationNode {
     /// Emits the binary operation node as a string.
     ///
     /// # Arguments
@@ -109,7 +126,7 @@ impl BinaryOperationNode {
     ///
     /// # Returns
     /// The emitted string representation of the binary operation.
-    pub fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
+    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
         let lhs_str = self.lhs.emit(ctx)?;
         let rhs_str = self.rhs.emit(ctx)?;
         let op_str = match self.op_type {
@@ -138,19 +155,8 @@ impl BinaryOperationNode {
         Ok(format!("{} {} {}", lhs_str, op_str, rhs_str))
     }
 
-    /// Returns the number of stack values to pop for the binary operation node.
-    ///
-    /// # Returns
-    /// `2`, as binary operations always involve `lhs` and `rhs`.
-    pub fn stack_values_to_pop(&self) -> usize {
-        2
-    }
-}
-
-// == Other implementations for binary operations ==
-impl PartialEq for BinaryOperationNode {
-    fn eq(&self, other: &Self) -> bool {
-        self.lhs == other.lhs && self.rhs == other.rhs && self.op_type == other.op_type
+    fn accept(&self, visitor: &mut dyn super::visitors::AstVisitor) {
+        visitor.visit_bin_op(self);
     }
 }
 

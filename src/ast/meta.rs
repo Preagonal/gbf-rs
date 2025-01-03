@@ -80,6 +80,10 @@ impl AstNodeTrait for MetaNode {
         result.push_str(&self.node.emit(ctx)?);
         Ok(result)
     }
+
+    fn accept(&self, visitor: &mut dyn super::visitors::AstVisitor) {
+        self.node.accept(visitor);
+    }
 }
 
 impl PartialEq for MetaNode {

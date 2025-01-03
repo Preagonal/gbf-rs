@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     emit::{EmitContext, EmitError},
     expr::ExprNode,
+    visitors::AstVisitor,
     AstNodeError,
 };
 use crate::ast::AstNodeTrait;
@@ -60,6 +61,16 @@ impl UnaryOperationNode {
         Ok(())
     }
 
+    /// Returns the number of stack values to pop for the unary operation node.
+    ///
+    /// # Returns
+    /// `1`, as unary operations involve only one operand.
+    pub fn stack_values_to_pop(&self) -> usize {
+        1
+    }
+}
+
+impl AstNodeTrait for UnaryOperationNode {
     /// Emits the unary operation node as a string.
     ///
     /// # Arguments
@@ -67,7 +78,7 @@ impl UnaryOperationNode {
     ///
     /// # Returns
     /// The emitted string representation of the unary operation.
-    pub fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
+    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
         let mut operand_str = self.operand.emit(ctx)?;
         if let ExprNode::BinOp(_) = *self.operand {
             operand_str = format!("({})", operand_str);
@@ -81,12 +92,8 @@ impl UnaryOperationNode {
         Ok(format!("{}{}", op_str, operand_str))
     }
 
-    /// Returns the number of stack values to pop for the unary operation node.
-    ///
-    /// # Returns
-    /// `1`, as unary operations involve only one operand.
-    pub fn stack_values_to_pop(&self) -> usize {
-        1
+    fn accept(&self, visitor: &mut dyn AstVisitor) {
+        visitor.visit_unary_op(self);
     }
 }
 

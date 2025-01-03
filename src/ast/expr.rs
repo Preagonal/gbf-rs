@@ -9,6 +9,7 @@ use super::{
     literal::LiteralNode,
     member_access::MemberAccessNode,
     unary_op::UnaryOperationNode,
+    visitors::AstVisitor,
     AstNodeTrait,
 };
 
@@ -52,6 +53,10 @@ impl AstNodeTrait for ExprNode {
                 }
             }
         })
+    }
+
+    fn accept(&self, visitor: &mut dyn AstVisitor) {
+        visitor.visit_expr(self);
     }
 }
 

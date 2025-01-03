@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     emit::{EmitContext, EmitError},
+    visitors::AstVisitor,
     AstNodeTrait,
 };
 
@@ -50,6 +51,10 @@ impl AstNodeTrait for LiteralNode {
             }
             LiteralNode::Float(f) => f.clone(),
         })
+    }
+
+    fn accept(&self, visitor: &mut dyn AstVisitor) {
+        visitor.visit_literal(self);
     }
 }
 
