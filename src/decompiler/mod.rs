@@ -2,3 +2,4 @@
 
 /// This provides the AST for the decompiler.
 pub mod ast;
+mod region;

@@ -375,7 +375,7 @@ mod tests {
         let lhs = create_identifier("variable");
         let rhs = create_integer_literal(42);
         let statement_node = create_statement(lhs, rhs);
-        let ast_node = Box::new(AstNode::Statement(*statement_node));
+        let ast_node = Box::new(AstNode::Statement(statement_node));
 
         let context = EmitContextBuilder::default().build();
         let mut visitor = Gs2Emitter::new(context);

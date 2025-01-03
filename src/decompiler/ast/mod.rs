@@ -56,17 +56,17 @@ pub trait AstNodeTrait: Clone {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AstNode {
     /// Represents a statement node in the AST, such as `variable = value;`.
-    Statement(StatementNode),
+    Statement(Box<StatementNode>),
     // ControlFlow(ControlFlowNode),
     /// Represents a literal node in the AST.
-    Expression(ExprNode),
+    Expression(Box<ExprNode>),
     // FunctionCall(FunctionCallNode),
     // Allocation(AllocationNode),
     // Array(ArrayNode),
     // Return(ReturnNode),
     // Phi(PhiNode),
     /// Represents a metadata node in the AST.
-    Meta(MetaNode), // Covers comments or annotations
+    Meta(Box<MetaNode>), // Covers comments or annotations
 }
 
 impl AstNodeTrait for AstNode {
