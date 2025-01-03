@@ -531,4 +531,38 @@ mod tests {
             assert_eq!(visitor.output(), expected_output);
         }
     }
+
+    #[test]
+    fn test_hex_output() {
+        let context = EmitContextBuilder::default()
+            .format_number_hex(true)
+            .build();
+        let mut visitor = Gs2Emitter::new(context);
+
+        let literal = LiteralNode::Number(42);
+        let expr = ExprNode::Literal(literal);
+        expr.accept(&mut visitor);
+        assert_eq!(visitor.output(), "0x2A");
+
+        let context = EmitContextBuilder::default()
+            .format_number_hex(false)
+            .build();
+        let mut visitor = Gs2Emitter::new(context);
+
+        let literal = LiteralNode::Number(42);
+        let expr = ExprNode::Literal(literal);
+        expr.accept(&mut visitor);
+        assert_eq!(visitor.output(), "42");
+    }
+
+    #[test]
+    fn test_float_output() {
+        let context = EmitContextBuilder::default().build();
+        let mut visitor = Gs2Emitter::new(context);
+
+        let literal = LiteralNode::Float("3.14".to_string());
+        let expr = ExprNode::Literal(literal);
+        expr.accept(&mut visitor);
+        assert_eq!(visitor.output(), "3.14");
+    }
 }
