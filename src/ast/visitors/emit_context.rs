@@ -54,7 +54,7 @@ impl EmitContext {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::ast::emit::EmitContext;
+    /// use gbf_rs::ast::visitors::emit_context::EmitContext;
     ///
     /// let mut context = EmitContext::default();
     /// let body_context = context.scoped(|ctx| ctx.with_indent());
@@ -73,7 +73,7 @@ impl EmitContext {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::ast::emit::EmitContext;
+    /// use gbf_rs::ast::visitors::emit_context::EmitContext;
     ///
     /// let mut context = EmitContext::default();
     /// let body_context = context.with_indent();
@@ -94,7 +94,7 @@ impl EmitContext {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::ast::emit::EmitContext;
+    /// use gbf_rs::ast::visitors::emit_context::EmitContext;
     ///
     /// let mut context = EmitContext::default();
     /// let body_context = context.with_expr_root(true);

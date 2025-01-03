@@ -2,12 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{
-    emit::{EmitContext, EmitError},
-    expr::ExprNode,
-    visitors::AstVisitor,
-    AstNodeError,
-};
+use super::{expr::ExprNode, visitors::AstVisitor, AstNodeError};
 use crate::ast::AstNodeTrait;
 
 /// Represents a unary operation type in the AST.
@@ -71,27 +66,6 @@ impl UnaryOperationNode {
 }
 
 impl AstNodeTrait for UnaryOperationNode {
-    /// Emits the unary operation node as a string.
-    ///
-    /// # Arguments
-    /// - `ctx` - The emitting context.
-    ///
-    /// # Returns
-    /// The emitted string representation of the unary operation.
-    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
-        let mut operand_str = self.operand.emit(ctx)?;
-        if let ExprNode::BinOp(_) = *self.operand {
-            operand_str = format!("({})", operand_str);
-        }
-        let op_str = match self.op_type {
-            UnaryOpType::Negate => "-",
-            UnaryOpType::LogicalNot => "!",
-            UnaryOpType::BitwiseNot => "~",
-        };
-
-        Ok(format!("{}{}", op_str, operand_str))
-    }
-
     fn accept(&self, visitor: &mut dyn AstVisitor) {
         visitor.visit_unary_op(self);
     }
@@ -118,16 +92,6 @@ mod tests {
 
         assert_eq!(node1, node2);
         assert_ne!(node1, node3);
-    }
-
-    #[test]
-    fn test_unary_operation_node_emit() {
-        let operand = ExprNode::Identifier(IdentifierNode::new("b".to_string()));
-        let node = UnaryOperationNode::new(operand.clone_box(), UnaryOpType::LogicalNot).unwrap();
-
-        let ctx = EmitContext::default();
-        let emitted = node.emit(&ctx).unwrap();
-        assert_eq!(emitted, "!b");
     }
 
     #[test]

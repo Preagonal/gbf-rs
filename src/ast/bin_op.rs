@@ -2,11 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{
-    emit::{EmitContext, EmitError},
-    expr::ExprNode,
-    AstNodeError,
-};
+use super::{expr::ExprNode, AstNodeError};
 use crate::ast::AstNodeTrait;
 
 /// Represents a binary operation type in the AST.
@@ -119,42 +115,6 @@ impl PartialEq for BinaryOperationNode {
 }
 
 impl AstNodeTrait for BinaryOperationNode {
-    /// Emits the binary operation node as a string.
-    ///
-    /// # Arguments
-    /// - `ctx` - The emitting context.
-    ///
-    /// # Returns
-    /// The emitted string representation of the binary operation.
-    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
-        let lhs_str = self.lhs.emit(ctx)?;
-        let rhs_str = self.rhs.emit(ctx)?;
-        let op_str = match self.op_type {
-            BinOpType::Add => "+",
-            BinOpType::Sub => "-",
-            BinOpType::Mul => "*",
-            BinOpType::Div => "/",
-            BinOpType::Mod => "%",
-            BinOpType::And => "&",
-            BinOpType::Or => "|",
-            BinOpType::Xor => "xor",
-            BinOpType::LogicalAnd => "&&",
-            BinOpType::LogicalOr => "||",
-            BinOpType::Greater => ">",
-            BinOpType::Less => "<",
-            BinOpType::GreaterOrEqual => ">=",
-            BinOpType::LessOrEqual => "<=",
-            BinOpType::ShiftLeft => "<<",
-            BinOpType::ShiftRight => ">>",
-            BinOpType::Equal => "==",
-            BinOpType::NotEqual => "!=",
-            BinOpType::In => "in",
-            BinOpType::Join => "@",
-        };
-
-        Ok(format!("{} {} {}", lhs_str, op_str, rhs_str))
-    }
-
     fn accept(&self, visitor: &mut dyn super::visitors::AstVisitor) {
         visitor.visit_bin_op(self);
     }
@@ -178,18 +138,6 @@ mod tests {
 
         assert_eq!(node1, node2);
         assert_ne!(node1, node3);
-    }
-
-    #[test]
-    fn test_binary_operation_node_emit() {
-        let lhs = ExprNode::Identifier(IdentifierNode::new("a".to_string()));
-        let rhs = ExprNode::Identifier(IdentifierNode::new("b".to_string()));
-        let node =
-            BinaryOperationNode::new(lhs.clone_box(), rhs.clone_box(), BinOpType::Mul).unwrap();
-
-        let ctx = EmitContext::default();
-        let emitted = node.emit(&ctx).unwrap();
-        assert_eq!(emitted, "a * b");
     }
 
     #[test]

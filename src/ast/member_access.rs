@@ -2,12 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{
-    emit::{EmitContext, EmitError},
-    expr::ExprNode,
-    visitors::AstVisitor,
-    AstNodeError,
-};
+use super::{expr::ExprNode, visitors::AstVisitor, AstNodeError};
 use crate::ast::AstNodeTrait;
 
 /// Represents a member access node in the AST, such as `object.field`.
@@ -60,19 +55,6 @@ impl MemberAccessNode {
 }
 
 impl AstNodeTrait for MemberAccessNode {
-    /// Emits the member access node as a string.
-    ///
-    /// # Arguments
-    /// - `ctx` - The emitting context.
-    ///
-    /// # Returns
-    /// The emitted string representation of the member access.
-    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
-        let lhs_str = self.lhs.emit(ctx)?;
-        let rhs_str = self.rhs.emit(ctx)?;
-        Ok(format!("{}.{}", lhs_str, rhs_str))
-    }
-
     fn accept(&self, visitor: &mut dyn AstVisitor) {
         visitor.visit_member_access(self);
     }
@@ -105,32 +87,6 @@ mod tests {
 
         assert_eq!(node1, node2);
         assert_ne!(node1, node3);
-    }
-
-    #[test]
-    fn test_member_access_node_emit() {
-        let lhs = ExprNode::Identifier(IdentifierNode::new("temp".to_string()));
-        let rhs = ExprNode::Identifier(IdentifierNode::new("foo".to_string()));
-        let node = MemberAccessNode::new(Box::new(lhs), Box::new(rhs)).unwrap();
-
-        let ctx = EmitContext::default();
-        let emitted = node.emit(&ctx).unwrap();
-        assert_eq!(emitted, "temp.foo");
-
-        // now test case where left is temp and right is another member access
-        let lhs = ExprNode::Identifier(IdentifierNode::new("temp".to_string()));
-        let rhs = ExprNode::MemberAccess(
-            MemberAccessNode::new(
-                Box::new(ExprNode::Identifier(IdentifierNode::new("foo".to_string()))),
-                Box::new(ExprNode::Identifier(IdentifierNode::new("bar".to_string()))),
-            )
-            .unwrap(),
-        );
-        let node = MemberAccessNode::new(Box::new(lhs), Box::new(rhs)).unwrap();
-
-        let ctx = EmitContext::default();
-        let emitted = node.emit(&ctx).unwrap();
-        assert_eq!(emitted, "temp.foo.bar");
     }
 
     #[test]

@@ -6,10 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::Gs2BytecodeAddress;
 
-use super::{
-    emit::{EmitContext, EmitError, EmitVerbosity},
-    AstNode, AstNodeTrait,
-};
+use super::{AstNode, AstNodeTrait};
 
 /// Represents a metadata node in the AST
 #[derive(Debug, Clone, Serialize, Deserialize, Eq)]
@@ -32,13 +29,13 @@ impl MetaNode {
     /// # Returns
     /// A new `MetaNode`.
     pub fn new(
-        node: AstNode,
+        node: Box<AstNode>,
         comment: Option<String>,
         source_location: Option<Gs2BytecodeAddress>,
         properties: HashMap<String, String>,
     ) -> Box<Self> {
         Box::new(Self {
-            node: Box::new(node),
+            node,
             comment,
             source_location,
             properties,
@@ -68,21 +65,8 @@ impl MetaNode {
 
 // == Other implementations for literal ==
 impl AstNodeTrait for MetaNode {
-    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
-        if ctx.verbosity == EmitVerbosity::Minified {
-            return self.node.emit(ctx);
-        }
-
-        let mut result = String::new();
-        if let Some(comment) = &self.comment {
-            result.push_str(&format!("// {}\n", comment));
-        }
-        result.push_str(&self.node.emit(ctx)?);
-        Ok(result)
-    }
-
     fn accept(&self, visitor: &mut dyn super::visitors::AstVisitor) {
-        self.node.accept(visitor);
+        visitor.visit_meta(self);
     }
 }
 
@@ -116,28 +100,6 @@ mod tests {
                 ("key2".to_string(), "value2".to_string()),
             ]),
         }
-    }
-
-    #[test]
-    fn test_emit_with_pretty_verbosity() {
-        let context = EmitContext::builder()
-            .verbosity(EmitVerbosity::Pretty)
-            .build();
-        let node = create_test_node();
-
-        let output = node.emit(&context).unwrap();
-        assert_eq!(output, "// This is a comment\n\"inner_node\"");
-    }
-
-    #[test]
-    fn test_emit_with_minified_verbosity() {
-        let context = EmitContext::builder()
-            .verbosity(EmitVerbosity::Minified)
-            .build();
-        let node = create_test_node();
-
-        let output = node.emit(&context).unwrap();
-        assert_eq!(output, "\"inner_node\"");
     }
 
     #[test]

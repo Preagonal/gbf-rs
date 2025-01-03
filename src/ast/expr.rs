@@ -3,13 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::{
-    bin_op::BinaryOperationNode,
-    emit::{EmitContext, EmitError},
-    identifier::IdentifierNode,
-    literal::LiteralNode,
-    member_access::MemberAccessNode,
-    unary_op::UnaryOperationNode,
-    visitors::AstVisitor,
+    bin_op::BinaryOperationNode, identifier::IdentifierNode, literal::LiteralNode,
+    member_access::MemberAccessNode, unary_op::UnaryOperationNode, visitors::AstVisitor,
     AstNodeTrait,
 };
 
@@ -29,32 +24,6 @@ pub enum ExprNode {
 }
 
 impl AstNodeTrait for ExprNode {
-    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
-        let expr_root = ctx.expr_root;
-        let ctx = &ctx.with_expr_root(false);
-        Ok(match self {
-            ExprNode::Literal(literal) => literal.emit(ctx)?,
-            ExprNode::MemberAccess(mem) => mem.emit(ctx)?,
-            ExprNode::Identifier(s) => s.emit(ctx)?,
-            ExprNode::BinOp(bin_op) => {
-                let emitted = bin_op.emit(ctx)?;
-                if !expr_root {
-                    format!("({})", emitted)
-                } else {
-                    emitted
-                }
-            }
-            ExprNode::UnaryOp(unary_op) => {
-                let emitted = unary_op.emit(ctx)?;
-                if !expr_root {
-                    format!("({})", emitted)
-                } else {
-                    emitted
-                }
-            }
-        })
-    }
-
     fn accept(&self, visitor: &mut dyn AstVisitor) {
         visitor.visit_expr(self);
     }
@@ -143,24 +112,5 @@ mod tests {
         let expr2 = ExprNode::Literal(LiteralNode::String("object".to_string()));
 
         assert_ne!(expr1, expr2);
-    }
-
-    #[test]
-    fn test_expr_node_emit() {
-        let expr = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
-        let ctx = EmitContext::default();
-        assert_eq!(expr.emit(&ctx).unwrap(), "\"Hello, world!\"");
-
-        let expr = ExprNode::MemberAccess(
-            MemberAccessNode::new(
-                ExprNode::Identifier(IdentifierNode::new("temp".to_string())).clone_box(),
-                ExprNode::Identifier(IdentifierNode::new("field".to_string())).clone_box(),
-            )
-            .unwrap(),
-        );
-        assert_eq!(expr.emit(&ctx).unwrap(), "temp.field");
-
-        let expr = ExprNode::Identifier(IdentifierNode::new("temp".to_string()).clone_box());
-        assert_eq!(expr.emit(&ctx).unwrap(), "temp");
     }
 }

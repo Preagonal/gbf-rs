@@ -2,11 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{
-    emit::{EmitContext, EmitError},
-    visitors::AstVisitor,
-    AstNodeTrait,
-};
+use super::{visitors::AstVisitor, AstNodeTrait};
 
 /// Represents a type of literal.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -39,20 +35,6 @@ impl LiteralNode {
 // == Other implementations for literal ==
 
 impl AstNodeTrait for LiteralNode {
-    fn emit(&self, ctx: &EmitContext) -> Result<String, EmitError> {
-        Ok(match self {
-            LiteralNode::String(s) => format!("\"{}\"", s),
-            LiteralNode::Number(n) => {
-                if ctx.format_number_hex {
-                    format!("0x{:X}", n)
-                } else {
-                    n.to_string()
-                }
-            }
-            LiteralNode::Float(f) => f.clone(),
-        })
-    }
-
     fn accept(&self, visitor: &mut dyn AstVisitor) {
         visitor.visit_literal(self);
     }
@@ -102,32 +84,5 @@ mod tests {
         let literal2 = LiteralNode::String("42.0".to_string());
 
         assert_ne!(literal1, literal2);
-    }
-
-    #[test]
-    fn test_number_emit() {
-        let literal = LiteralNode::Number(42);
-        let ctx = EmitContext::default();
-        assert_eq!(literal.emit(&ctx).unwrap(), "42");
-
-        let ctx = EmitContext {
-            format_number_hex: true,
-            ..Default::default()
-        };
-        assert_eq!(literal.emit(&ctx).unwrap(), "0x2A");
-    }
-
-    #[test]
-    fn test_string_emit() {
-        let literal = LiteralNode::String("Hello, world!".to_string());
-        let ctx = EmitContext::default();
-        assert_eq!(literal.emit(&ctx).unwrap(), "\"Hello, world!\"");
-    }
-
-    #[test]
-    fn test_float_emit() {
-        let literal = LiteralNode::Float("42.0".to_string());
-        let ctx = EmitContext::default();
-        assert_eq!(literal.emit(&ctx).unwrap(), "42.0");
     }
 }

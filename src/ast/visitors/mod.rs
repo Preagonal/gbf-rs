@@ -6,6 +6,8 @@ use super::{
     unary_op::UnaryOperationNode,
 };
 
+/// Represents a visitor for the AST.
+pub mod emit_context;
 /// An emitter for the AST.
 pub mod emitter;
 
