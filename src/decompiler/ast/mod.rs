@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 
-use crate::ast::visitors::AstVisitor;
+use crate::decompiler::ast::visitors::AstVisitor;
 use expr::ExprNode;
 use meta::MetaNode;
 use serde::{Deserialize, Serialize};

@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{expr::ExprNode, visitors::AstVisitor, AstNodeError};
-use crate::ast::AstNodeTrait;
+use crate::decompiler::ast::AstNodeTrait;
 
 /// Represents a statement node in the AST, such as `variable = value`.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq)]
@@ -62,8 +62,8 @@ impl PartialEq for StatementNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::literal::LiteralNode;
-    use crate::ast::{expr::ExprNode, identifier::IdentifierNode};
+    use crate::decompiler::ast::literal::LiteralNode;
+    use crate::decompiler::ast::{expr::ExprNode, identifier::IdentifierNode};
 
     #[test]
     fn test_assignment_node_eq() {

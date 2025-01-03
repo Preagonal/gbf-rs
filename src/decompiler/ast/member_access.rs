@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{expr::ExprNode, visitors::AstVisitor, AstNodeError};
-use crate::ast::AstNodeTrait;
+use crate::decompiler::ast::AstNodeTrait;
 
 /// Represents a member access node in the AST, such as `object.field`.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq)]
@@ -62,7 +62,9 @@ impl PartialEq for MemberAccessNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{expr::ExprNode, identifier::IdentifierNode, literal::LiteralNode};
+    use crate::decompiler::ast::{
+        expr::ExprNode, identifier::IdentifierNode, literal::LiteralNode,
+    };
 
     #[test]
     fn test_member_access_node_eq() {

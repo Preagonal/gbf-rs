@@ -47,6 +47,8 @@ impl PartialEq for ExprNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::decompiler::ast::bin_op::BinOpType;
+    use crate::decompiler::ast::unary_op::UnaryOpType;
 
     #[test]
     fn test_expr_node_eq() {
@@ -94,7 +96,7 @@ mod tests {
             BinaryOperationNode::new(
                 ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
                 ExprNode::Literal(LiteralNode::Number(1)).clone_box(),
-                crate::ast::bin_op::BinOpType::Add,
+                BinOpType::Add,
             )
             .unwrap(),
         );
@@ -102,7 +104,7 @@ mod tests {
             BinaryOperationNode::new(
                 ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
                 ExprNode::Literal(LiteralNode::Number(1)).clone_box(),
-                crate::ast::bin_op::BinOpType::Add,
+                BinOpType::Add,
             )
             .unwrap(),
         );
@@ -110,7 +112,7 @@ mod tests {
             BinaryOperationNode::new(
                 ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
                 ExprNode::Literal(LiteralNode::Number(2)).clone_box(),
-                crate::ast::bin_op::BinOpType::Add,
+                BinOpType::Add,
             )
             .unwrap(),
         );
@@ -122,21 +124,21 @@ mod tests {
         let expr1 = ExprNode::UnaryOp(
             UnaryOperationNode::new(
                 ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
-                crate::ast::unary_op::UnaryOpType::Negate,
+                UnaryOpType::Negate,
             )
             .unwrap(),
         );
         let expr2 = ExprNode::UnaryOp(
             UnaryOperationNode::new(
                 ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
-                crate::ast::unary_op::UnaryOpType::Negate,
+                UnaryOpType::Negate,
             )
             .unwrap(),
         );
         let expr3 = ExprNode::UnaryOp(
             UnaryOperationNode::new(
                 ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
-                crate::ast::unary_op::UnaryOpType::LogicalNot,
+                UnaryOpType::LogicalNot,
             )
             .unwrap(),
         );

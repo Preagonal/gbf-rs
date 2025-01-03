@@ -2,8 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{expr::ExprNode, visitors::AstVisitor, AstNodeError};
-use crate::ast::AstNodeTrait;
+use super::{expr::ExprNode, visitors::AstVisitor, AstNodeError, AstNodeTrait};
 
 /// Represents a unary operation type in the AST.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -45,7 +44,7 @@ impl UnaryOperationNode {
 
     fn validate_operand(expr: &ExprNode) -> Result<(), AstNodeError> {
         // Most expressions are ok except for string literals.
-        if let ExprNode::Literal(crate::ast::literal::LiteralNode::String(_)) = expr {
+        if let ExprNode::Literal(crate::decompiler::ast::literal::LiteralNode::String(_)) = expr {
             return Err(AstNodeError::InvalidOperand(
                 "BinaryOperationNode".to_string(),
                 "Unsupported operand type".to_string(),
@@ -73,7 +72,8 @@ impl PartialEq for UnaryOperationNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{expr::ExprNode, identifier::IdentifierNode};
+    use crate::decompiler::ast::literal::LiteralNode;
+    use crate::decompiler::ast::{expr::ExprNode, identifier::IdentifierNode};
 
     #[test]
     fn test_unary_operation_node_eq() {
@@ -88,10 +88,7 @@ mod tests {
 
     #[test]
     fn test_unary_operation_node_new_invalid_operand() {
-        let operand = ExprNode::Literal(crate::ast::literal::LiteralNode::String(
-            "string".to_string(),
-        ))
-        .clone_box();
+        let operand = ExprNode::Literal(LiteralNode::String("string".to_string())).clone_box();
         let result = UnaryOperationNode::new(operand, UnaryOpType::Negate);
         assert!(result.is_err());
     }

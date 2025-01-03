@@ -82,10 +82,8 @@ impl PartialEq for MetaNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        ast::{expr::ExprNode, literal::LiteralNode},
-        utils::Gs2BytecodeAddress,
-    };
+    use crate::decompiler::ast::expr::ExprNode;
+    use crate::decompiler::ast::literal::LiteralNode;
 
     fn create_test_node() -> MetaNode {
         let node: AstNode = AstNode::Expression(ExprNode::Literal(LiteralNode::String(

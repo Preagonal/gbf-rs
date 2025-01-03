@@ -1,11 +1,18 @@
 #![deny(missing_docs)]
 
-use crate::ast::AstNodeTrait;
-
 use super::{
     emit_context::{EmitContext, EmitVerbosity},
     AstVisitor,
 };
+use crate::decompiler::ast::bin_op::{BinOpType, BinaryOperationNode};
+use crate::decompiler::ast::expr::ExprNode;
+use crate::decompiler::ast::identifier::IdentifierNode;
+use crate::decompiler::ast::literal::LiteralNode;
+use crate::decompiler::ast::member_access::MemberAccessNode;
+use crate::decompiler::ast::meta::MetaNode;
+use crate::decompiler::ast::statement::StatementNode;
+use crate::decompiler::ast::unary_op::{UnaryOpType, UnaryOperationNode};
+use crate::decompiler::ast::AstNodeTrait;
 
 /// An emitter for the AST.
 pub struct Gs2Emitter {
@@ -31,24 +38,23 @@ impl Gs2Emitter {
 }
 
 impl AstVisitor for Gs2Emitter {
-    fn visit_statement(&mut self, node: &crate::ast::statement::StatementNode) {
+    fn visit_statement(&mut self, node: &StatementNode) {
         // Step 1: Visit and emit the LHS
         node.lhs.accept(self);
         let lhs_str = self.output.clone(); // Retrieve the emitted LHS
         self.output.clear();
 
         // Step 2: Handle RHS
-        if let crate::ast::expr::ExprNode::BinOp(bin_op_node) = node.rhs.as_ref() {
+        if let ExprNode::BinOp(bin_op_node) = node.rhs.as_ref() {
             // Check if the binary operation directly involves the LHS
             let lhs_in_rhs = bin_op_node.lhs.as_ref() == node.lhs.as_ref();
 
             if lhs_in_rhs {
                 match bin_op_node.op_type {
-                    crate::ast::bin_op::BinOpType::Add => {
+                    BinOpType::Add => {
                         // Handle increment (++), compound assignment (+=), or fall back to addition
-                        if let crate::ast::expr::ExprNode::Literal(
-                            crate::ast::literal::LiteralNode::Number(num),
-                        ) = bin_op_node.rhs.as_ref()
+                        if let ExprNode::Literal(LiteralNode::Number(num)) =
+                            bin_op_node.rhs.as_ref()
                         {
                             if *num == 1 {
                                 // Emit increment (++)
@@ -61,11 +67,10 @@ impl AstVisitor for Gs2Emitter {
                             }
                         }
                     }
-                    crate::ast::bin_op::BinOpType::Sub => {
+                    BinOpType::Sub => {
                         // Handle decrement (--), compound assignment (-=), or fall back to subtraction
-                        if let crate::ast::expr::ExprNode::Literal(
-                            crate::ast::literal::LiteralNode::Number(num),
-                        ) = bin_op_node.rhs.as_ref()
+                        if let ExprNode::Literal(LiteralNode::Number(num)) =
+                            bin_op_node.rhs.as_ref()
                         {
                             if *num == 1 {
                                 // Emit decrement (--)
@@ -95,17 +100,17 @@ impl AstVisitor for Gs2Emitter {
         self.output.push_str(&format!("{} = {};", lhs_str, rhs_str));
     }
 
-    fn visit_expr(&mut self, node: &crate::ast::expr::ExprNode) {
+    fn visit_expr(&mut self, node: &ExprNode) {
         match node {
-            crate::ast::expr::ExprNode::Literal(literal) => literal.accept(self),
-            crate::ast::expr::ExprNode::MemberAccess(member_access) => member_access.accept(self),
-            crate::ast::expr::ExprNode::Identifier(identifier) => identifier.accept(self),
-            crate::ast::expr::ExprNode::BinOp(bin_op) => bin_op.accept(self),
-            crate::ast::expr::ExprNode::UnaryOp(unary_op) => unary_op.accept(self),
+            ExprNode::Literal(literal) => literal.accept(self),
+            ExprNode::MemberAccess(member_access) => member_access.accept(self),
+            ExprNode::Identifier(identifier) => identifier.accept(self),
+            ExprNode::BinOp(bin_op) => bin_op.accept(self),
+            ExprNode::UnaryOp(unary_op) => unary_op.accept(self),
         }
     }
 
-    fn visit_bin_op(&mut self, node: &crate::ast::bin_op::BinaryOperationNode) {
+    fn visit_bin_op(&mut self, node: &BinaryOperationNode) {
         // Save the current context and set expr_root to false for nested operations
         let prev_context = self.context;
         self.context = self.context.with_expr_root(false);
@@ -125,26 +130,26 @@ impl AstVisitor for Gs2Emitter {
 
         // Determine the operator string
         let op_str = match node.op_type {
-            crate::ast::bin_op::BinOpType::Add => "+",
-            crate::ast::bin_op::BinOpType::Sub => "-",
-            crate::ast::bin_op::BinOpType::Mul => "*",
-            crate::ast::bin_op::BinOpType::Div => "/",
-            crate::ast::bin_op::BinOpType::Mod => "%",
-            crate::ast::bin_op::BinOpType::And => "&",
-            crate::ast::bin_op::BinOpType::Or => "|",
-            crate::ast::bin_op::BinOpType::Xor => "xor",
-            crate::ast::bin_op::BinOpType::LogicalAnd => "&&",
-            crate::ast::bin_op::BinOpType::LogicalOr => "||",
-            crate::ast::bin_op::BinOpType::Greater => ">",
-            crate::ast::bin_op::BinOpType::Less => "<",
-            crate::ast::bin_op::BinOpType::GreaterOrEqual => ">=",
-            crate::ast::bin_op::BinOpType::LessOrEqual => "<=",
-            crate::ast::bin_op::BinOpType::ShiftLeft => "<<",
-            crate::ast::bin_op::BinOpType::ShiftRight => ">>",
-            crate::ast::bin_op::BinOpType::Equal => "==",
-            crate::ast::bin_op::BinOpType::NotEqual => "!=",
-            crate::ast::bin_op::BinOpType::In => "in",
-            crate::ast::bin_op::BinOpType::Join => "@",
+            BinOpType::Add => "+",
+            BinOpType::Sub => "-",
+            BinOpType::Mul => "*",
+            BinOpType::Div => "/",
+            BinOpType::Mod => "%",
+            BinOpType::And => "&",
+            BinOpType::Or => "|",
+            BinOpType::Xor => "xor",
+            BinOpType::LogicalAnd => "&&",
+            BinOpType::LogicalOr => "||",
+            BinOpType::Greater => ">",
+            BinOpType::Less => "<",
+            BinOpType::GreaterOrEqual => ">=",
+            BinOpType::LessOrEqual => "<=",
+            BinOpType::ShiftLeft => "<<",
+            BinOpType::ShiftRight => ">>",
+            BinOpType::Equal => "==",
+            BinOpType::NotEqual => "!=",
+            BinOpType::In => "in",
+            BinOpType::Join => "@",
         };
 
         // Combine the emitted parts into the final binary operation string
@@ -159,7 +164,7 @@ impl AstVisitor for Gs2Emitter {
         }
     }
 
-    fn visit_unary_op(&mut self, node: &crate::ast::unary_op::UnaryOperationNode) {
+    fn visit_unary_op(&mut self, node: &UnaryOperationNode) {
         // Save the current context and set expr_root to false for the operand
         let prev_context = self.context;
         self.context = self.context.with_expr_root(false);
@@ -174,9 +179,9 @@ impl AstVisitor for Gs2Emitter {
 
         // Determine the operator string
         let op_str = match node.op_type {
-            crate::ast::unary_op::UnaryOpType::Negate => "-",
-            crate::ast::unary_op::UnaryOpType::LogicalNot => "!",
-            crate::ast::unary_op::UnaryOpType::BitwiseNot => "~",
+            UnaryOpType::Negate => "-",
+            UnaryOpType::LogicalNot => "!",
+            UnaryOpType::BitwiseNot => "~",
         };
 
         // Combine the emitted parts into the final unary operation string
@@ -188,28 +193,28 @@ impl AstVisitor for Gs2Emitter {
         self.output.push_str(&format!("{}{}", op_str, operand_str));
     }
 
-    fn visit_identifier(&mut self, node: &crate::ast::identifier::IdentifierNode) {
+    fn visit_identifier(&mut self, node: &IdentifierNode) {
         // Append the identifier's ID directly to the output
         self.output.push_str(node.id());
     }
 
-    fn visit_literal(&mut self, node: &crate::ast::literal::LiteralNode) {
+    fn visit_literal(&mut self, node: &LiteralNode) {
         let emitted_literal = match node {
-            crate::ast::literal::LiteralNode::String(s) => format!("\"{}\"", s),
-            crate::ast::literal::LiteralNode::Number(n) => {
+            LiteralNode::String(s) => format!("\"{}\"", s),
+            LiteralNode::Number(n) => {
                 if self.context.format_number_hex {
                     format!("0x{:X}", n)
                 } else {
                     n.to_string()
                 }
             }
-            crate::ast::literal::LiteralNode::Float(f) => f.clone(),
+            LiteralNode::Float(f) => f.clone(),
         };
 
         self.output.push_str(&emitted_literal);
     }
 
-    fn visit_member_access(&mut self, node: &crate::ast::member_access::MemberAccessNode) {
+    fn visit_member_access(&mut self, node: &MemberAccessNode) {
         // Visit and emit the LHS
         node.lhs.accept(self);
         let lhs_str = self.output.clone(); // Capture emitted LHS
@@ -224,7 +229,7 @@ impl AstVisitor for Gs2Emitter {
         self.output.push_str(&format!("{}.{}", lhs_str, rhs_str));
     }
 
-    fn visit_meta(&mut self, node: &crate::ast::meta::MetaNode) {
+    fn visit_meta(&mut self, node: &MetaNode) {
         // Handle minified verbosity
         if self.context.verbosity == EmitVerbosity::Minified {
             node.node().accept(self);
@@ -250,15 +255,17 @@ impl AstVisitor for Gs2Emitter {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::unary_op::UnaryOpType;
-    use crate::ast::{
-        expr::ExprNode,
-        identifier::IdentifierNode,
-        literal::LiteralNode,
-        statement::StatementNode,
-        visitors::{emit_context::EmitContextBuilder, emitter::Gs2Emitter},
-        AstNode, AstNodeTrait,
-    };
+    use crate::decompiler::ast::bin_op::{BinOpType, BinaryOperationNode};
+    use crate::decompiler::ast::expr::ExprNode;
+    use crate::decompiler::ast::identifier::IdentifierNode;
+    use crate::decompiler::ast::literal::LiteralNode;
+    use crate::decompiler::ast::member_access::MemberAccessNode;
+    use crate::decompiler::ast::meta::MetaNode;
+    use crate::decompiler::ast::statement::StatementNode;
+    use crate::decompiler::ast::unary_op::{UnaryOpType, UnaryOperationNode};
+    use crate::decompiler::ast::visitors::emit_context::EmitContextBuilder;
+    use crate::decompiler::ast::visitors::emitter::Gs2Emitter;
+    use crate::decompiler::ast::{AstNode, AstNodeTrait};
 
     fn create_identifier(id: &str) -> Box<ExprNode> {
         Box::new(ExprNode::Identifier(IdentifierNode::new(id.to_string())))
@@ -274,29 +281,19 @@ mod tests {
 
     fn create_addition(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> Box<ExprNode> {
         Box::new(ExprNode::BinOp(
-            crate::ast::bin_op::BinaryOperationNode::new(
-                lhs,
-                rhs,
-                crate::ast::bin_op::BinOpType::Add,
-            )
-            .unwrap(),
+            BinaryOperationNode::new(lhs, rhs, BinOpType::Add).unwrap(),
         ))
     }
 
     fn create_unary_op(operand: Box<ExprNode>, op: UnaryOpType) -> Box<ExprNode> {
         Box::new(ExprNode::UnaryOp(
-            crate::ast::unary_op::UnaryOperationNode::new(operand, op).unwrap(),
+            UnaryOperationNode::new(operand, op).unwrap(),
         ))
     }
 
     fn create_subtraction(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> Box<ExprNode> {
         Box::new(ExprNode::BinOp(
-            crate::ast::bin_op::BinaryOperationNode::new(
-                lhs,
-                rhs,
-                crate::ast::bin_op::BinOpType::Sub,
-            )
-            .unwrap(),
+            BinaryOperationNode::new(lhs, rhs, BinOpType::Sub).unwrap(),
         ))
     }
 
@@ -383,7 +380,7 @@ mod tests {
         let context = EmitContextBuilder::default().build();
         let mut visitor = Gs2Emitter::new(context);
 
-        let meta_node = crate::ast::meta::MetaNode::new(
+        let meta_node = MetaNode::new(
             ast_node,
             Some("This is a comment".to_string()),
             None,
@@ -397,8 +394,7 @@ mod tests {
     fn test_member_access() {
         let lhs = create_identifier("temp");
         let rhs = create_identifier("property");
-        let member_access_node =
-            crate::ast::member_access::MemberAccessNode::new(lhs, rhs).unwrap();
+        let member_access_node = MemberAccessNode::new(lhs, rhs).unwrap();
 
         let context = EmitContextBuilder::default().build();
         let mut visitor = Gs2Emitter::new(context);
@@ -408,12 +404,10 @@ mod tests {
         // test three-level member access
         let lhs = create_identifier("temp");
         let rhs = create_identifier("property");
-        let member_access_node =
-            crate::ast::member_access::MemberAccessNode::new(lhs, rhs).unwrap();
+        let member_access_node = MemberAccessNode::new(lhs, rhs).unwrap();
         let lhs = Box::new(ExprNode::MemberAccess(member_access_node));
         let rhs = create_identifier("property2");
-        let member_access_node =
-            crate::ast::member_access::MemberAccessNode::new(lhs, rhs).unwrap();
+        let member_access_node = MemberAccessNode::new(lhs, rhs).unwrap();
 
         let mut visitor = Gs2Emitter::new(context);
         member_access_node.accept(&mut visitor);
@@ -425,8 +419,7 @@ mod tests {
         // temp.asdf = "Hello, world!";
         let lhs = create_identifier("temp");
         let rhs = create_identifier("asdf");
-        let member_access_node =
-            crate::ast::member_access::MemberAccessNode::new(lhs, rhs).unwrap();
+        let member_access_node = MemberAccessNode::new(lhs, rhs).unwrap();
         let hello = create_string_literal("Hello, world!");
         let statement_node =
             create_statement(Box::new(ExprNode::MemberAccess(member_access_node)), hello);
@@ -464,9 +457,9 @@ mod tests {
 
     #[test]
     fn test_all_bin_op_types() {
-        use crate::ast::bin_op::BinOpType;
-        use crate::ast::expr::ExprNode;
-        use crate::ast::literal::LiteralNode;
+        use BinOpType;
+        use ExprNode;
+        use LiteralNode;
 
         let lhs = Box::new(ExprNode::Literal(LiteralNode::Number(1)));
         let rhs = Box::new(ExprNode::Literal(LiteralNode::Number(2)));
@@ -495,8 +488,7 @@ mod tests {
         ];
 
         for (op, expected_output) in op_variants {
-            let bin_op_node =
-                crate::ast::bin_op::BinaryOperationNode::new(lhs.clone(), rhs.clone(), op).unwrap();
+            let bin_op_node = BinaryOperationNode::new(lhs.clone(), rhs.clone(), op).unwrap();
 
             let context = EmitContextBuilder::default().build();
             let mut visitor = Gs2Emitter::new(context);
@@ -508,9 +500,9 @@ mod tests {
 
     #[test]
     fn test_all_unary_op_types() {
-        use crate::ast::expr::ExprNode;
-        use crate::ast::literal::LiteralNode;
-        use crate::ast::unary_op::UnaryOpType;
+        use ExprNode;
+        use LiteralNode;
+        use UnaryOpType;
 
         let operand = Box::new(ExprNode::Literal(LiteralNode::Number(1)));
 
@@ -521,8 +513,7 @@ mod tests {
         ];
 
         for (op, expected_output) in op_variants {
-            let unary_op_node =
-                crate::ast::unary_op::UnaryOperationNode::new(operand.clone(), op).unwrap();
+            let unary_op_node = UnaryOperationNode::new(operand.clone(), op).unwrap();
 
             let context = EmitContextBuilder::default().build();
             let mut visitor = Gs2Emitter::new(context);

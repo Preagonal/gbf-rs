@@ -5,14 +5,14 @@
 
 use bytecode_loader::{BytecodeLoaderBuilder, BytecodeLoaderError};
 
-/// Abstract Syntax Tree (AST) node definitions.
-pub mod ast;
 /// This module contains basic block definitions and operations.
 pub mod basic_block;
 /// This module reads bytecode from a reader and disassembles it.
 pub mod bytecode_loader;
 /// This module contains the logic to visualize the control flow graph of a module.
 pub mod cfg_dot;
+/// Decompiler module
+pub mod decompiler;
 /// This module contains the definition of a function.
 pub mod function;
 /// This module contains the definition of Graal IO.
