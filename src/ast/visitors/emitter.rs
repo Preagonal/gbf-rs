@@ -96,52 +96,20 @@ impl AstVisitor for Gs2Emitter {
     }
 
     fn visit_expr(&mut self, node: &crate::ast::expr::ExprNode) {
-        // Save the current context and prepare for expression traversal
-        let expr_root = self.context.expr_root;
-        self.context = self.context.with_expr_root(false);
-
         match node {
-            crate::ast::expr::ExprNode::Literal(literal) => {
-                // Visit the literal
-                literal.accept(self);
-            }
-            crate::ast::expr::ExprNode::MemberAccess(member_access) => {
-                // Visit the member access node
-                member_access.accept(self);
-            }
-            crate::ast::expr::ExprNode::Identifier(identifier) => {
-                // Visit the identifier node
-                identifier.accept(self);
-            }
-            crate::ast::expr::ExprNode::BinOp(bin_op) => {
-                // Visit the binary operation node
-                bin_op.accept(self);
-                let emitted = self.output.clone(); // Get emitted binary operation
-                self.output.clear();
-                if expr_root {
-                    self.output.push_str(&emitted);
-                } else {
-                    self.output.push_str(&format!("({})", emitted));
-                }
-            }
-            crate::ast::expr::ExprNode::UnaryOp(unary_op) => {
-                // Visit the unary operation node
-                unary_op.accept(self);
-                let emitted = self.output.clone(); // Get emitted unary operation
-                self.output.clear();
-                if expr_root {
-                    self.output.push_str(&emitted);
-                } else {
-                    self.output.push_str(&format!("({})", emitted));
-                }
-            }
+            crate::ast::expr::ExprNode::Literal(literal) => literal.accept(self),
+            crate::ast::expr::ExprNode::MemberAccess(member_access) => member_access.accept(self),
+            crate::ast::expr::ExprNode::Identifier(identifier) => identifier.accept(self),
+            crate::ast::expr::ExprNode::BinOp(bin_op) => bin_op.accept(self),
+            crate::ast::expr::ExprNode::UnaryOp(unary_op) => unary_op.accept(self),
         }
-
-        // Restore the previous context
-        self.context = self.context.with_expr_root(expr_root);
     }
 
     fn visit_bin_op(&mut self, node: &crate::ast::bin_op::BinaryOperationNode) {
+        // Save the current context and set expr_root to false for nested operations
+        let prev_context = self.context;
+        self.context = self.context.with_expr_root(false);
+
         // Visit and emit the left-hand side
         node.lhs.accept(self);
         let lhs_str = self.output.clone(); // Capture emitted LHS
@@ -151,6 +119,9 @@ impl AstVisitor for Gs2Emitter {
         node.rhs.accept(self);
         let rhs_str = self.output.clone(); // Capture emitted RHS
         self.output.clear();
+
+        // Restore the previous context
+        self.context = prev_context;
 
         // Determine the operator string
         let op_str = match node.op_type {
@@ -177,15 +148,29 @@ impl AstVisitor for Gs2Emitter {
         };
 
         // Combine the emitted parts into the final binary operation string
-        self.output
-            .push_str(&format!("{} {} {}", lhs_str, op_str, rhs_str));
+        if self.context.expr_root {
+            // Emit without parentheses for root expressions
+            self.output
+                .push_str(&format!("{} {} {}", lhs_str, op_str, rhs_str));
+        } else {
+            // Emit with parentheses for nested expressions
+            self.output
+                .push_str(&format!("({} {} {})", lhs_str, op_str, rhs_str));
+        }
     }
 
     fn visit_unary_op(&mut self, node: &crate::ast::unary_op::UnaryOperationNode) {
+        // Save the current context and set expr_root to false for the operand
+        let prev_context = self.context;
+        self.context = self.context.with_expr_root(false);
+
         // Visit and emit the operand
         node.operand.accept(self);
         let operand_str = self.output.clone(); // Capture emitted operand
         self.output.clear();
+
+        // Restore the previous context
+        self.context = prev_context;
 
         // Determine the operator string
         let op_str = match node.op_type {
@@ -195,6 +180,11 @@ impl AstVisitor for Gs2Emitter {
         };
 
         // Combine the emitted parts into the final unary operation string
+        // if self.context.expr_root {
+        //     self.output.push_str(&format!("{}{}", op_str, operand_str));
+        // } else {
+        //     self.output.push_str(&format!("{}({})", op_str, operand_str));
+        // }
         self.output.push_str(&format!("{}{}", op_str, operand_str));
     }
 
@@ -260,6 +250,7 @@ impl AstVisitor for Gs2Emitter {
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::unary_op::UnaryOpType;
     use crate::ast::{
         expr::ExprNode,
         identifier::IdentifierNode,
@@ -287,6 +278,23 @@ mod tests {
                 lhs,
                 rhs,
                 crate::ast::bin_op::BinOpType::Add,
+            )
+            .unwrap(),
+        ))
+    }
+
+    fn create_unary_op(operand: Box<ExprNode>, op: UnaryOpType) -> Box<ExprNode> {
+        Box::new(ExprNode::UnaryOp(
+            crate::ast::unary_op::UnaryOperationNode::new(operand, op).unwrap(),
+        ))
+    }
+
+    fn create_subtraction(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> Box<ExprNode> {
+        Box::new(ExprNode::BinOp(
+            crate::ast::bin_op::BinaryOperationNode::new(
+                lhs,
+                rhs,
+                crate::ast::bin_op::BinOpType::Sub,
             )
             .unwrap(),
         ))
@@ -325,6 +333,22 @@ mod tests {
         let mut visitor = Gs2Emitter::new(context);
         statement_node.accept(&mut visitor);
         assert_eq!(visitor.output(), "variable += 2;");
+
+        // test -- case
+        let lhs = create_identifier("variable");
+        let rhs = create_subtraction(lhs.clone_box(), create_integer_literal(1));
+        let statement_node = create_statement(lhs, rhs);
+        let mut visitor = Gs2Emitter::new(context);
+        statement_node.accept(&mut visitor);
+        assert_eq!(visitor.output(), "variable--;");
+
+        // test -= case
+        let lhs = create_identifier("variable");
+        let rhs = create_subtraction(lhs.clone_box(), create_integer_literal(2));
+        let statement_node = create_statement(lhs, rhs);
+        let mut visitor = Gs2Emitter::new(context);
+        statement_node.accept(&mut visitor);
+        assert_eq!(visitor.output(), "variable -= 2;");
 
         // test variable = 1 + (2 + 3)
         let lhs = create_identifier("variable");
@@ -411,5 +435,30 @@ mod tests {
         let mut visitor = Gs2Emitter::new(context);
         statement_node.accept(&mut visitor);
         assert_eq!(visitor.output(), "temp.asdf = \"Hello, world!\";");
+    }
+
+    #[test]
+    fn test_unary_operation() {
+        // i = -(42 + 1);
+        let context = EmitContextBuilder::default().build();
+        let mut visitor = Gs2Emitter::new(context);
+
+        let operand = create_addition(create_integer_literal(42), create_integer_literal(1));
+        let lhs = create_identifier("i");
+        let unary_op_node = create_unary_op(operand, UnaryOpType::Negate);
+        let statement_node = create_statement(lhs, unary_op_node);
+        statement_node.accept(&mut visitor);
+        assert_eq!(visitor.output(), "i = -(42 + 1);");
+
+        // i = -42;
+        let context = EmitContextBuilder::default().build();
+        let mut visitor = Gs2Emitter::new(context);
+
+        let operand = create_integer_literal(42);
+        let unary_op_node = create_unary_op(operand, UnaryOpType::Negate);
+        let lhs = create_identifier("i");
+        let statement_node = create_statement(lhs, unary_op_node);
+        statement_node.accept(&mut visitor);
+        assert_eq!(visitor.output(), "i = -42;");
     }
 }

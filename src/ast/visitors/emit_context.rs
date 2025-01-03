@@ -185,7 +185,7 @@ impl Default for EmitContextBuilder {
             format_number_hex: false,
             verbosity: EmitVerbosity::Pretty,
             indent_style: IndentStyle::Allman,
-            expr_root: false,
+            expr_root: true,
         }
     }
 }
