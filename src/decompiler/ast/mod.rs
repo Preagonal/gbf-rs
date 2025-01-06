@@ -68,6 +68,8 @@ pub enum AstNode {
     // Phi(PhiNode),
     /// Represents a metadata node in the AST.
     Meta(MetaNode), // Covers comments or annotations
+    /// This node does nothing. It should only be used for debugging purposes.
+    Empty,
 }
 
 impl AstNodeTrait for AstNode {
@@ -76,6 +78,7 @@ impl AstNodeTrait for AstNode {
             AstNode::Expression(expr) => expr.accept(visitor),
             AstNode::Meta(meta) => meta.accept(visitor),
             AstNode::Statement(stmt) => stmt.accept(visitor),
+            AstNode::Empty => {}
         }
     }
 }

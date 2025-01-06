@@ -3,7 +3,7 @@
 /// This provides the AST for the decompiler.
 pub mod ast;
 /// The state of execution for the decompiler
-pub mod execution_state;
+pub mod execution_frame;
 /// This assists in decompiling one function
 pub mod function_decompiler;
 /// This provides the context for the decompiler

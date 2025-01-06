@@ -12,8 +12,8 @@ use thiserror::Error;
 
 use super::ast::visitors::emit_context::EmitContext;
 use super::ast::visitors::emitter::Gs2Emitter;
-use super::ast::AstNodeTrait;
-use super::execution_state::ExecutionState;
+use super::ast::{AstNode, AstNodeTrait};
+use super::execution_frame::ExecutionFrame;
 use super::function_decompiler_context::FunctionDecompilerContext;
 
 /// An error when decompiling a function
@@ -48,12 +48,12 @@ pub enum FunctionDecompilerError {
     UnimplementedOpcode(Opcode, BasicBlockId),
 
     /// Execution state stack is empty
-    #[error("Execution state stack is empty")]
-    ExecutionStateStackEmpty,
+    #[error("Execution stack is empty")]
+    ExecutionStackEmpty,
 
     /// Unexpected execution state
     #[error("Unexpected execution state. Expected {0}, but found {1}")]
-    UnexpectedExecutionState(ExecutionState, ExecutionState),
+    UnexpectedExecutionState(ExecutionFrame, ExecutionFrame),
 }
 
 // TODO: Map instructions to a reference value (for usage with loop variables, etc.)
@@ -132,10 +132,18 @@ impl FunctionDecompiler {
 
         let mut output = String::new();
         for node in entry_stack {
-            let mut emitter = Gs2Emitter::new(emit_context);
-            node.accept(&mut emitter);
-            output.push_str(emitter.output());
-            output.push('\n');
+            // Each node should be StandaloneNode.
+            if let ExecutionFrame::StandaloneNode(node) = node {
+                let mut emitter = Gs2Emitter::new(emit_context);
+                node.accept(&mut emitter);
+                output.push_str(emitter.output());
+                output.push('\n');
+            } else {
+                return Err(FunctionDecompilerError::UnexpectedExecutionState(
+                    ExecutionFrame::StandaloneNode(AstNode::Empty),
+                    node.clone(),
+                ));
+            }
         }
 
         Ok(output)

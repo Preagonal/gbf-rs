@@ -3,7 +3,7 @@
 use crate::{
     decompiler::{
         ast::{expr::ExprNode, func_call::FunctionCallNode, identifier::IdentifierNode, AstNode},
-        execution_state::ExecutionState,
+        execution_frame::ExecutionFrame,
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
     },
@@ -32,48 +32,59 @@ impl OpcodeHandler for VariableOperandHandler {
         context: &mut FunctionDecompilerContext,
         instruction: &Instruction,
     ) -> Result<(), FunctionDecompilerError> {
+        let current_block_id = context.current_block_id.expect("Block ID should be set");
         match instruction.opcode {
             Opcode::Call => {
-                // The arguments are in the reverse order on the stack in the execution state since
-                // we're building an array of params. We also ensure to pop the last state from the
-                // stack, which prevents us from accidentally nesting the elements of the array.
-                let last_state = context
-                    .execution_state_stack
+                // Ensure the current execution state stack has a frame to pop
+                let last_frame = context
+                    .block_ast_node_stack
+                    .get_mut(&current_block_id)
+                    .ok_or(FunctionDecompilerError::CannotPopNode(current_block_id))?
                     .pop()
-                    .ok_or(FunctionDecompilerError::ExecutionStateStackEmpty)?;
+                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty)?;
 
-                // Check that last state is ExecutionState::BuildingArray
-                if let ExecutionState::BuildingArray(mut args) = last_state {
-                    // Get the function name
-                    debug_assert!(!args.is_empty());
+                // Ensure the last frame is a BuildingArray
+                if let ExecutionFrame::BuildingArray(mut args) = last_frame {
+                    // Ensure there is at least one argument (the function name)
+                    if args.is_empty() {
+                        return Err(FunctionDecompilerError::InvalidNodeType(
+                            current_block_id,
+                            "Identifier".to_string(),
+                            "Empty argument list for Call".to_string(),
+                        ));
+                    }
+
+                    // Pop the function name (last argument in the array)
                     let function_name = args.pop().unwrap();
                     let function_name = match function_name {
                         ExprNode::Identifier(ident) => Ok(ident),
                         _ => Err(FunctionDecompilerError::InvalidNodeType(
-                            context.current_block_id.unwrap(),
+                            current_block_id,
                             "Identifier".to_string(),
                             format!("{:?}", function_name),
                         )),
                     }?;
 
-                    // Get the arguments in reverse order
+                    // Reverse the remaining arguments to get the correct order
                     let args = args.into_iter().rev().collect::<Vec<_>>();
 
                     // Create the function call node
-                    let function_call_node =
-                        Self::create_function_call_node(function_name, args.into_iter().collect());
+                    let function_call_node = Self::create_function_call_node(function_name, args);
+
+                    // Push the function call node back to the execution stack
                     context.push_one_node(function_call_node)?;
                     return Ok(());
                 }
 
+                // Handle unexpected execution state
                 Err(FunctionDecompilerError::UnexpectedExecutionState(
-                    ExecutionState::BuildingArray(Vec::new()),
-                    last_state,
+                    ExecutionFrame::BuildingArray(Vec::new()),
+                    last_frame,
                 ))
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode(
                 instruction.opcode,
-                context.current_block_id.unwrap(),
+                current_block_id,
             )),
         }
     }

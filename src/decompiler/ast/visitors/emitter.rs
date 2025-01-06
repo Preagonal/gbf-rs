@@ -46,6 +46,7 @@ impl AstVisitor for Gs2Emitter {
             AstNode::Expression(expr) => expr.accept(self),
             AstNode::Meta(meta) => meta.accept(self),
             AstNode::Statement(stmt) => stmt.accept(self),
+            AstNode::Empty => {}
         }
     }
     fn visit_statement(&mut self, node: &StatementNode) {
