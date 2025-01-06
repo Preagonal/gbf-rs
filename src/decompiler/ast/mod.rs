@@ -11,6 +11,8 @@ use thiserror::Error;
 pub mod bin_op;
 /// Contains the specifications for any AstNodes that are expressions
 pub mod expr;
+/// Contains the specifications for any AstNodes that are function calls.
+pub mod func_call;
 /// Contains the specifications for any AstNodes that are identifiers.
 pub mod identifier;
 /// Contains the specifications for any AstNodes that are literals.
@@ -60,7 +62,6 @@ pub enum AstNode {
     // ControlFlow(ControlFlowNode),
     /// Represents a literal node in the AST.
     Expression(ExprNode),
-    // FunctionCall(FunctionCallNode),
     // Allocation(AllocationNode),
     // Array(ArrayNode),
     // Return(ReturnNode),

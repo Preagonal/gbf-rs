@@ -31,4 +31,6 @@ pub trait AstVisitor {
     fn visit_member_access(&mut self, node: &MemberAccessNode);
     /// Visits a meta node.
     fn visit_meta(&mut self, node: &MetaNode);
+    /// Visits a function call node.
+    fn visit_function_call(&mut self, node: &super::func_call::FunctionCallNode);
 }

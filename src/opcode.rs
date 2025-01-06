@@ -384,6 +384,7 @@ define_opcodes! {
     ObjEnds = 0x75,
     ObjTokenize = 0x76,
     GetTranslation = 0x77,
+    ObjPositions = 0x78,
     // Unknown values: 0x78 - 0x81
     ObjSize = 0x82,
     AssignArrayIndex = 0x83,

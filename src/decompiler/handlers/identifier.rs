@@ -38,7 +38,7 @@ impl OpcodeHandler for IdentifierHandler {
             // Otherwise, we can just use the opcode name (e.g. "player", "level", "this", etc.).
             opcode.to_string().to_lowercase()
         };
-        context.push_one_node(Self::create_identifier(str_operand.as_str()));
+        context.push_one_node(Self::create_identifier(str_operand.as_str()))?;
         Ok(())
     }
 }

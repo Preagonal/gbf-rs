@@ -13,6 +13,7 @@ use thiserror::Error;
 use super::ast::visitors::emit_context::EmitContext;
 use super::ast::visitors::emitter::Gs2Emitter;
 use super::ast::AstNodeTrait;
+use super::execution_state::ExecutionState;
 use super::function_decompiler_context::FunctionDecompilerContext;
 
 /// An error when decompiling a function
@@ -45,6 +46,14 @@ pub enum FunctionDecompilerError {
     /// Unimplemented Opcode
     #[error("Unimplemented Opcode {0:?} in BasicBlockId {1}")]
     UnimplementedOpcode(Opcode, BasicBlockId),
+
+    /// Execution state stack is empty
+    #[error("Execution state stack is empty")]
+    ExecutionStateStackEmpty,
+
+    /// Unexpected execution state
+    #[error("Unexpected execution state. Expected {0}, but found {1}")]
+    UnexpectedExecutionState(ExecutionState, ExecutionState),
 }
 
 // TODO: Map instructions to a reference value (for usage with loop variables, etc.)

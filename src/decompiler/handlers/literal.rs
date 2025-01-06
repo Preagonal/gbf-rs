@@ -37,10 +37,10 @@ impl OpcodeHandler for LiteralHandler {
 
         match instruction.opcode {
             Opcode::PushString => {
-                context.push_one_node(Self::create_string_literal(operand.get_string_value()?));
+                context.push_one_node(Self::create_string_literal(operand.get_string_value()?))?;
             }
             Opcode::PushNumber => {
-                context.push_one_node(Self::create_number_literal(operand.get_number_value()?));
+                context.push_one_node(Self::create_number_literal(operand.get_number_value()?))?;
             }
             _ => {
                 return Err(FunctionDecompilerError::UnimplementedOpcode(

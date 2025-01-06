@@ -450,7 +450,7 @@ impl Function {
     /// assert!(!function.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
-        // TODO: This will always be false at the moment since we always create an entry block
+        // This will always be false since we always create an entry block
         self.blocks.is_empty()
     }
 

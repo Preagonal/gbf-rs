@@ -6,6 +6,7 @@ use bin_op::BinaryOperationHandler;
 use identifier::IdentifierHandler;
 use literal::LiteralHandler;
 use nop::NopHandler;
+use variable_operand::VariableOperandHandler;
 
 use crate::{instruction::Instruction, opcode::Opcode};
 
@@ -20,10 +21,12 @@ pub mod bin_op;
 pub mod identifier;
 /// Handles literal instructions.
 pub mod literal;
-/// Handles member access instructions.
-pub mod member_access;
 /// Handles instructions that are not useful to our decompiler.
 pub mod nop;
+/// Handles member access instructions.
+pub mod special_two_operand;
+/// Handles cases with a variable number of operands.
+pub mod variable_operand;
 
 /// Represents an opcode handler for the decompiler.
 pub trait OpcodeHandler: Send + Sync {
@@ -70,18 +73,19 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
 
         // These opcodes do nothing ATM
         handlers.insert(Opcode::ConvertToFloat, Box::new(NopHandler));
-        handlers.insert(Opcode::Call, Box::new(NopHandler));
-        handlers.insert(Opcode::PushArray, Box::new(NopHandler));
 
         // Special cases
         handlers.insert(
             Opcode::AccessMember,
-            Box::new(member_access::SpecialTwoOperandHandler),
+            Box::new(special_two_operand::SpecialTwoOperandHandler),
         );
         handlers.insert(
             Opcode::Assign,
-            Box::new(member_access::SpecialTwoOperandHandler),
+            Box::new(special_two_operand::SpecialTwoOperandHandler),
         );
+
+        // Variable operand handlers
+        handlers.insert(Opcode::Call, Box::new(VariableOperandHandler));
 
         handlers
     })

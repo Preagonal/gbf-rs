@@ -45,7 +45,7 @@ impl OpcodeHandler for BinaryOperationHandler {
                     BinOpType::Add,
                     lhs,
                     rhs,
-                )?);
+                )?)?;
             }
             _ => {
                 return Err(FunctionDecompilerError::UnimplementedOpcode(

@@ -4,7 +4,6 @@ use super::{
     emit_context::{EmitContext, EmitVerbosity},
     AstVisitor,
 };
-use crate::decompiler::ast::bin_op::{BinOpType, BinaryOperationNode};
 use crate::decompiler::ast::expr::ExprNode;
 use crate::decompiler::ast::identifier::IdentifierNode;
 use crate::decompiler::ast::literal::LiteralNode;
@@ -12,6 +11,10 @@ use crate::decompiler::ast::member_access::MemberAccessNode;
 use crate::decompiler::ast::meta::MetaNode;
 use crate::decompiler::ast::statement::StatementNode;
 use crate::decompiler::ast::unary_op::{UnaryOpType, UnaryOperationNode};
+use crate::decompiler::ast::{
+    bin_op::{BinOpType, BinaryOperationNode},
+    func_call::FunctionCallNode,
+};
 use crate::decompiler::ast::{AstNode, AstNodeTrait};
 
 /// An emitter for the AST.
@@ -114,6 +117,7 @@ impl AstVisitor for Gs2Emitter {
             ExprNode::Identifier(identifier) => identifier.accept(self),
             ExprNode::BinOp(bin_op) => bin_op.accept(self),
             ExprNode::UnaryOp(unary_op) => unary_op.accept(self),
+            ExprNode::FunctionCall(func_call) => func_call.accept(self),
         }
     }
 
@@ -258,12 +262,39 @@ impl AstVisitor for Gs2Emitter {
         // Store the result in the visitor's output
         self.output.push_str(&result);
     }
+
+    fn visit_function_call(&mut self, node: &FunctionCallNode) {
+        // Visit and emit the base
+        if let Some(base) = &node.base {
+            base.accept(self);
+            let base_str = self.output.clone(); // Capture emitted base
+            self.output.clear();
+
+            // Combine the base and the function name with a dot for method calls
+            self.output
+                .push_str(&format!("{}.{}", base_str, node.name.id()));
+        } else {
+            // Emit the function name directly for function calls
+            self.output.push_str(node.name.id());
+        }
+
+        // Emit the arguments
+        self.output.push('(');
+        for (i, arg) in node.arguments.iter().enumerate() {
+            arg.accept(self);
+            if i < node.arguments.len() - 1 {
+                self.output.push_str(", ");
+            }
+        }
+        self.output.push(')');
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::decompiler::ast::bin_op::{BinOpType, BinaryOperationNode};
     use crate::decompiler::ast::expr::ExprNode;
+    use crate::decompiler::ast::func_call::FunctionCallNode;
     use crate::decompiler::ast::identifier::IdentifierNode;
     use crate::decompiler::ast::literal::LiteralNode;
     use crate::decompiler::ast::member_access::MemberAccessNode;
@@ -306,6 +337,22 @@ mod tests {
 
     fn create_statement(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> StatementNode {
         StatementNode::new(lhs, rhs).unwrap()
+    }
+
+    fn create_method_call(
+        name: &str,
+        args: Vec<ExprNode>,
+        base: Box<ExprNode>,
+    ) -> FunctionCallNode {
+        FunctionCallNode::new(IdentifierNode::new(name.to_string()), args, Some(base))
+    }
+
+    fn create_member_access(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> MemberAccessNode {
+        MemberAccessNode::new(lhs, rhs).unwrap()
+    }
+
+    fn create_function_call(name: &str, args: Vec<ExprNode>) -> FunctionCallNode {
+        FunctionCallNode::new(IdentifierNode::new(name.to_string()), args, None)
     }
 
     #[test]
@@ -562,5 +609,51 @@ mod tests {
         let expr = ExprNode::Literal(literal);
         expr.accept(&mut visitor);
         assert_eq!(visitor.output(), "3.14");
+    }
+
+    #[test]
+    fn test_function_call() {
+        let context = EmitContextBuilder::default().build();
+        let mut visitor = Gs2Emitter::new(context);
+
+        let function_call = create_function_call("print", vec![*create_string_literal("Hello")]);
+        function_call.accept(&mut visitor);
+        assert_eq!(visitor.output(), "print(\"Hello\")");
+
+        // two arguments 1, 2
+        let mut visitor = Gs2Emitter::new(context);
+        let function_call = create_function_call(
+            "print",
+            vec![*create_integer_literal(1), *create_integer_literal(2)],
+        );
+        function_call.accept(&mut visitor);
+        assert_eq!(visitor.output(), "print(1, 2)");
+
+        // method call
+        let mut visitor = Gs2Emitter::new(context);
+        let method_call = create_method_call(
+            "print",
+            vec![*create_integer_literal(1), *create_integer_literal(2)],
+            create_identifier("console"),
+        );
+        method_call.accept(&mut visitor);
+        assert_eq!(visitor.output(), "console.print(1, 2)");
+
+        // method call temp.foo.bar(1, 2, 3)
+        let mut visitor = Gs2Emitter::new(context);
+        let method_call = create_method_call(
+            "bar",
+            vec![
+                *create_integer_literal(1),
+                *create_integer_literal(2),
+                *create_integer_literal(3),
+            ],
+            Box::new(ExprNode::MemberAccess(create_member_access(
+                create_identifier("temp"),
+                create_identifier("foo"),
+            ))),
+        );
+        method_call.accept(&mut visitor);
+        assert_eq!(visitor.output(), "temp.foo.bar(1, 2, 3)");
     }
 }

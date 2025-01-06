@@ -50,11 +50,11 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
             Opcode::AccessMember => {
                 let member_access_node =
                     SpecialTwoOperandHandler::create_member_access_node(lhs, rhs)?;
-                context.push_one_node(member_access_node);
+                context.push_one_node(member_access_node)?;
             }
             Opcode::Assign => {
                 let statement_node = SpecialTwoOperandHandler::create_statement_node(lhs, rhs)?;
-                context.push_one_node(statement_node);
+                context.push_one_node(statement_node)?;
             }
             _ => {
                 return Err(FunctionDecompilerError::UnimplementedOpcode(

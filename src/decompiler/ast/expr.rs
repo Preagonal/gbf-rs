@@ -3,9 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 use super::{
-    bin_op::BinaryOperationNode, identifier::IdentifierNode, literal::LiteralNode,
-    member_access::MemberAccessNode, unary_op::UnaryOperationNode, visitors::AstVisitor,
-    AstNodeTrait,
+    bin_op::BinaryOperationNode, func_call::FunctionCallNode, identifier::IdentifierNode,
+    literal::LiteralNode, member_access::MemberAccessNode, unary_op::UnaryOperationNode,
+    visitors::AstVisitor, AstNodeTrait,
 };
 
 /// Represents an expression node in the AST.
@@ -21,6 +21,8 @@ pub enum ExprNode {
     BinOp(BinaryOperationNode),
     /// Represents a unary operation node in the AST.
     UnaryOp(UnaryOperationNode),
+    /// Represents a function call node in the AST.
+    FunctionCall(FunctionCallNode),
 }
 
 impl AstNodeTrait for ExprNode {

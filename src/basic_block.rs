@@ -319,7 +319,12 @@ impl RenderableNode for BasicBlock {
                             op_str.truncate(OPERAND_TRUNCATE_LENGTH);
                             op_str.push_str("...");
                         }
-                        op_str
+
+                        if !op_str.is_empty() {
+                            op_str
+                        } else {
+                            " ".to_string()
+                        }
                     })
                     .unwrap_or_else(|| " ".to_string());
 
