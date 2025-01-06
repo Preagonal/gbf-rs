@@ -63,11 +63,6 @@ impl FunctionDecompilerContext {
             .current_block_id
             .expect("Critical error: current block id should always be set");
 
-        // TODO: Handle pop instructions
-        if instr.opcode == Opcode::Pop {
-            //self.pop_one_node()?;
-            return Ok(());
-        }
         // TODO: Better handle PushArray
         if instr.opcode == Opcode::PushArray {
             let stack = self

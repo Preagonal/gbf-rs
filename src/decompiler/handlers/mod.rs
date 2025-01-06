@@ -17,6 +17,8 @@ use super::{
 
 /// Handles binary operation instructions.
 pub mod bin_op;
+/// Contains general handlers for instructions.
+pub mod general;
 /// Handles identifier instructions.
 pub mod identifier;
 /// Handles literal instructions.
@@ -51,6 +53,9 @@ static GLOBAL_OPCODE_HANDLERS: OnceLock<HashMap<Opcode, Box<dyn OpcodeHandler>>>
 pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandler>> {
     GLOBAL_OPCODE_HANDLERS.get_or_init(|| {
         let mut handlers: HashMap<Opcode, Box<dyn OpcodeHandler>> = HashMap::new();
+
+        // General cases
+        handlers.insert(Opcode::Pop, Box::new(general::GeneralHandler));
 
         // These handlers are used to create identifier nodes. All of them, with the
         // exception of `PushVariable`, use the lowercase opcode name as the identifier
