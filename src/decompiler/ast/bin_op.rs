@@ -79,11 +79,11 @@ impl BinaryOperationNode {
         lhs: Box<ExprNode>,
         rhs: Box<ExprNode>,
         op_type: BinOpType,
-    ) -> Result<Box<Self>, AstNodeError> {
+    ) -> Result<Self, AstNodeError> {
         Self::validate_operand(&lhs)?;
         Self::validate_operand(&rhs)?;
 
-        Ok(Box::new(Self { lhs, rhs, op_type }))
+        Ok(Self { lhs, rhs, op_type })
     }
 
     fn validate_operand(expr: &ExprNode) -> Result<(), AstNodeError> {

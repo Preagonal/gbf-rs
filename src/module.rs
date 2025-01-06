@@ -125,7 +125,7 @@ impl ModuleBuilder {
         };
 
         // Create entry function
-        let fun_id = FunctionId::new(module.functions.len(), None, 0);
+        let fun_id = FunctionId::new_without_name(module.functions.len(), 0);
 
         // Create new function struct
         module.functions.push(Function::new(fun_id.clone()));

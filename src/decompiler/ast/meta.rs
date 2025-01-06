@@ -86,9 +86,9 @@ mod tests {
     use crate::decompiler::ast::literal::LiteralNode;
 
     fn create_test_node() -> MetaNode {
-        let node: AstNode = AstNode::Expression(Box::new(ExprNode::Literal(LiteralNode::String(
+        let node: AstNode = AstNode::Expression(ExprNode::Literal(LiteralNode::String(
             "inner_node".to_string(),
-        ))));
+        )));
         MetaNode {
             node: Box::new(node),
             comment: Some("This is a comment".to_string()),
@@ -147,9 +147,9 @@ mod tests {
 
         assert_eq!(
             node.node(),
-            &AstNode::Expression(Box::new(ExprNode::Literal(LiteralNode::String(
+            &AstNode::Expression(ExprNode::Literal(LiteralNode::String(
                 "inner_node".to_string()
-            ))))
+            )))
         );
         assert_eq!(node.comment(), Some(&"This is a comment".to_string()));
         assert_eq!(node.source_location(), Some(0x1234 as Gs2BytecodeAddress));

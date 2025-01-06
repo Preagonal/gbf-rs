@@ -11,7 +11,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     cfg_dot::RenderableNode,
     instruction::Instruction,
-    utils::{Gs2BytecodeAddress, OPERAND_TRUNCATE_LENGTH},
+    utils::{
+        Gs2BytecodeAddress, GBF_BLUE, GBF_GREEN, GBF_RED, GBF_YELLOW, OPERAND_TRUNCATE_LENGTH,
+    },
 };
 
 /// Represents the type of basic block.
@@ -292,40 +294,51 @@ impl RenderableNode for BasicBlock {
         )
         .unwrap();
 
-        // Render each instruction as a table row with indentation.
-        for inst in &self.instructions {
-            // Get the string of an operand, if it exists, or a space.
-            // If the resulting operand exceeds OPERAND_TRUNCATE_LENGTH,
-            // truncate it and append an ellipsis.
-
-            let operand = inst
-                .operand
-                .as_ref()
-                .map(|op| {
-                    let mut op_str = op.to_string();
-                    if op_str.len() > OPERAND_TRUNCATE_LENGTH {
-                        op_str.truncate(OPERAND_TRUNCATE_LENGTH);
-                        op_str.push_str("...");
-                    }
-                    op_str
-                })
-                .unwrap_or_else(|| " ".to_string());
-
+        if self.id.block_type == BasicBlockType::ModuleEnd {
             writeln!(
                 &mut label,
-                r##"{indent}    <TR>
-{indent}        <TD ALIGN="LEFT"><FONT COLOR="#bbff00">{:04X}</FONT></TD>
-{indent}        <TD ALIGN="LEFT">  </TD>
-{indent}        <TD ALIGN="LEFT"><FONT COLOR="#ffbb00">{}</FONT></TD>
-{indent}        <TD ALIGN="LEFT">  </TD>
-{indent}        <TD ALIGN="LEFT"><FONT COLOR="#00bbff">{}</FONT></TD>
-{indent}    </TR>"##,
-                inst.address,
-                inst.opcode,
-                operand,
+                r#"{indent}    <TR>
+{indent}        <TD ALIGN="CENTER"><FONT COLOR="{GBF_RED}">Module End</FONT></TD>
+{indent}    </TR>"#,
                 indent = indent
             )
             .unwrap();
+        } else {
+            // Render each instruction as a table row with indentation.
+            for inst in &self.instructions {
+                // Get the string of an operand, if it exists, or a space.
+                // If the resulting operand exceeds OPERAND_TRUNCATE_LENGTH,
+                // truncate it and append an ellipsis.
+
+                let operand = inst
+                    .operand
+                    .as_ref()
+                    .map(|op| {
+                        let mut op_str = op.to_string();
+                        if op_str.len() > OPERAND_TRUNCATE_LENGTH {
+                            op_str.truncate(OPERAND_TRUNCATE_LENGTH);
+                            op_str.push_str("...");
+                        }
+                        op_str
+                    })
+                    .unwrap_or_else(|| " ".to_string());
+
+                writeln!(
+                    &mut label,
+                    r##"{indent}    <TR>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="{GBF_GREEN}">{:04X}</FONT></TD>
+{indent}        <TD ALIGN="LEFT">  </TD>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="{GBF_YELLOW}">{}</FONT></TD>
+{indent}        <TD ALIGN="LEFT">  </TD>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="{GBF_BLUE}">{}</FONT></TD>
+{indent}    </TR>"##,
+                    inst.address,
+                    inst.opcode,
+                    operand,
+                    indent = indent
+                )
+                .unwrap();
+            }
         }
 
         // Close the HTML-like table.

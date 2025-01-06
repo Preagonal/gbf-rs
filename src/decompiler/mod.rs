@@ -2,9 +2,11 @@
 
 /// This provides the AST for the decompiler.
 pub mod ast;
-/// This decompiles one function
+/// This assists in decompiling one function
 pub mod function_decompiler;
-/// This is the specific context for the function decompiler
+/// This provides the context for the decompiler
 pub mod function_decompiler_context;
+/// This provides the handlers for the decompiler
+pub mod handlers;
 /// This provides the region for the decompiler
 pub mod region;

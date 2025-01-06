@@ -36,10 +36,10 @@ impl UnaryOperationNode {
     ///
     /// # Errors
     /// Returns an `AstNodeError` if `operand` is of an unsupported type.
-    pub fn new(operand: Box<ExprNode>, op_type: UnaryOpType) -> Result<Box<Self>, AstNodeError> {
+    pub fn new(operand: Box<ExprNode>, op_type: UnaryOpType) -> Result<Self, AstNodeError> {
         Self::validate_operand(&operand)?;
 
-        Ok(Box::new(Self { operand, op_type }))
+        Ok(Self { operand, op_type })
     }
 
     fn validate_operand(expr: &ExprNode) -> Result<(), AstNodeError> {

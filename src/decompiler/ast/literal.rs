@@ -15,6 +15,23 @@ pub enum LiteralNode {
     Float(String),
 }
 
+impl LiteralNode {
+    /// Creates a new `LiteralNode` from a string.
+    pub fn new_string<S: Into<String>>(s: S) -> Self {
+        Self::String(s.into())
+    }
+
+    /// Creates a new `LiteralNode` from a number.
+    pub fn new_number(n: i32) -> Self {
+        Self::Number(n)
+    }
+
+    /// Creates a new `LiteralNode` from a floating point number.
+    pub fn new_float<S: Into<String>>(s: S) -> Self {
+        Self::Float(s.into())
+    }
+}
+
 impl AstNodeTrait for LiteralNode {
     fn accept(&self, visitor: &mut dyn AstVisitor) {
         visitor.visit_literal(self);

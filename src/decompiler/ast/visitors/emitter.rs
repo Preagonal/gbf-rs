@@ -304,7 +304,7 @@ mod tests {
         ))
     }
 
-    fn create_statement(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> Box<StatementNode> {
+    fn create_statement(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> StatementNode {
         StatementNode::new(lhs, rhs).unwrap()
     }
 

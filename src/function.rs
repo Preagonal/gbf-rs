@@ -11,8 +11,8 @@ use std::ops::{Deref, Index};
 use thiserror::Error;
 
 use crate::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
-use crate::cfg_dot::{CfgDotBuilder, DotRenderableGraph, NodeResolver};
-use crate::utils::Gs2BytecodeAddress;
+use crate::cfg_dot::{CfgDot, CfgDotConfig, DotRenderableGraph, NodeResolver};
+use crate::utils::{Gs2BytecodeAddress, GBF_BLUE, GBF_GREEN, GBF_RED};
 
 /// Represents an error that can occur when working with functions.
 #[derive(Error, Debug)]
@@ -59,15 +59,23 @@ impl FunctionId {
     /// ```
     /// use gbf_rs::function::FunctionId;
     ///
-    /// let entry = FunctionId::new(0, None, 0);
-    /// let add = FunctionId::new(1, Some("add".to_string()), 0x100);
+    /// let entry = FunctionId::new_without_name(0, 0);
+    /// let add = FunctionId::new(1, Some("add"), 0x100);
     /// ```
-    pub fn new(index: usize, name: Option<String>, address: Gs2BytecodeAddress) -> Self {
+    pub fn new<S>(index: usize, name: Option<S>, address: Gs2BytecodeAddress) -> Self
+    where
+        S: Into<String>,
+    {
         Self {
             index,
-            name,
+            name: name.map(|n| n.into()),
             address,
         }
+    }
+
+    /// Helper method for creating a `FunctionId` without a name.
+    pub fn new_without_name(index: usize, address: Gs2BytecodeAddress) -> Self {
+        Self::new(index, None::<String>, address)
     }
 
     /// If the function has a name.
@@ -80,7 +88,7 @@ impl FunctionId {
     /// ```
     /// use gbf_rs::function::FunctionId;
     ///
-    /// let entry = FunctionId::new(0, None, 0);
+    /// let entry = FunctionId::new_without_name(0, 0);
     ///
     /// assert!(entry.is_named());
     /// ```
@@ -320,6 +328,22 @@ impl Function {
     /// ```
     pub fn basic_block_exists_by_address(&self, address: Gs2BytecodeAddress) -> bool {
         self.blocks.iter().any(|block| block.id.address == address)
+    }
+
+    /// Gets the entry basic block id of the function.
+    ///
+    /// # Returns
+    /// - The `BasicBlockId` of the entry block.
+    ///
+    /// # Example
+    /// ```
+    /// use gbf_rs::function::{Function, FunctionId};
+    ///
+    /// let mut function = Function::new(FunctionId::new(0, None, 0));
+    /// let entry = function.get_entry_basic_block_id();
+    /// ```
+    pub fn get_entry_basic_block_id(&self) -> BasicBlockId {
+        self.blocks[0].id
     }
 
     /// Get the entry basic block of the function.
@@ -602,6 +626,50 @@ impl Display for FunctionId {
     }
 }
 
+/// Clone implementation for Function
+impl Clone for Function {
+    fn clone(&self) -> Self {
+        let mut blocks = Vec::new();
+        let mut block_map = HashMap::new();
+        let mut graph_node_to_block = HashMap::new();
+        let mut block_to_graph_node = HashMap::new();
+        let address_to_id = HashMap::new();
+        let mut cfg = DiGraph::new();
+
+        // Clone blocks
+        for block in &self.blocks {
+            let new_block = block.clone();
+            let new_block_id = new_block.id;
+            blocks.push(new_block);
+            block_map.insert(new_block_id, blocks.len() - 1);
+
+            // Insert a node in the petgraph to represent this BasicBlock
+            let node_id = cfg.add_node(());
+            block_to_graph_node.insert(new_block_id, node_id);
+            graph_node_to_block.insert(node_id, new_block_id);
+        }
+
+        // Clone edges
+        for edge in self.cfg.raw_edges() {
+            let source = self.graph_node_to_block[&edge.source()];
+            let target = self.graph_node_to_block[&edge.target()];
+            let source_node_id = block_to_graph_node[&source];
+            let target_node_id = block_to_graph_node[&target];
+            cfg.add_edge(source_node_id, target_node_id, ());
+        }
+
+        Self {
+            id: self.id.clone(),
+            blocks,
+            block_map,
+            cfg,
+            graph_node_to_block,
+            block_to_graph_node,
+            address_to_id,
+        }
+    }
+}
+
 /// Deref implementation for Function
 impl Deref for Function {
     type Target = [BasicBlock];
@@ -678,17 +746,17 @@ impl NodeResolver for Function {
         let target_address = target_block.id.address;
         if source_last_address + 1 != target_address {
             // This represents a branch. Color the edge green.
-            return "#bbff00".to_string();
+            return GBF_GREEN.to_string();
         }
 
         // If the opcode of the last instruction is a fall through, color the edge red since
         // the target block's address is the next address
         if source_last_instruction.opcode.has_fall_through() {
-            return "#bb0000".to_string();
+            return GBF_RED.to_string();
         }
 
         // Otherwise, color the edge cyan (e.g. normal control flow)
-        "#00bbff".to_string()
+        GBF_BLUE.to_string()
     }
 }
 
@@ -697,9 +765,9 @@ impl DotRenderableGraph for Function {
     ///
     /// # Returns
     /// - A `String` containing the `dot` representation of the graph.
-    fn render_dot(&self) -> String {
-        let dot_bulder = CfgDotBuilder::new().build();
-        dot_bulder.render(&self.cfg, self)
+    fn render_dot(&self, config: CfgDotConfig) -> String {
+        let cfg = CfgDot { config };
+        cfg.render(&self.cfg, self)
     }
 }
 
@@ -709,7 +777,7 @@ mod tests {
 
     #[test]
     fn create_function() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let function = Function::new(id.clone());
 
         assert_eq!(function.id, id);
@@ -718,7 +786,7 @@ mod tests {
 
     #[test]
     fn create_block() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let mut function = Function::new(id.clone());
         let block_id = function.create_block(BasicBlockType::Normal, 32).unwrap();
 
@@ -736,7 +804,7 @@ mod tests {
 
     #[test]
     fn get_block() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let mut function = Function::new(id.clone());
         let block_id = function.create_block(BasicBlockType::Normal, 32).unwrap();
         let block = function.get_basic_block_by_id(block_id).unwrap();
@@ -746,7 +814,7 @@ mod tests {
 
     #[test]
     fn get_block_mut() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let mut function = Function::new(id);
         let block_id = function.create_block(BasicBlockType::Normal, 43).unwrap();
         let block = function.get_basic_block_by_id_mut(block_id).unwrap();
@@ -757,7 +825,7 @@ mod tests {
 
     #[test]
     fn test_get_block_not_found() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let function = Function::new(id.clone());
         let result =
             function.get_basic_block_by_id(BasicBlockId::new(1234, BasicBlockType::Normal, 0));
@@ -782,7 +850,7 @@ mod tests {
 
     #[test]
     fn test_get_block_by_address() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let mut function = Function::new(id.clone());
         let block_id = function
             .create_block(BasicBlockType::Normal, 0x100)
@@ -801,7 +869,7 @@ mod tests {
 
     #[test]
     fn test_display_function_id() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         assert_eq!(id.to_string(), "Unnamed Function (Entry)");
 
         let id = FunctionId::new(0, Some("test".to_string()), 0);
@@ -810,7 +878,7 @@ mod tests {
 
     #[test]
     fn test_into_iter_mut() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let mut function = Function::new(id.clone());
         let block_id = function.create_block(BasicBlockType::Normal, 32).unwrap();
 
@@ -826,7 +894,7 @@ mod tests {
 
     #[test]
     fn test_is_named() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         assert!(id.is_named());
 
         let id = FunctionId::new(0, Some("test".to_string()), 0);
@@ -835,7 +903,7 @@ mod tests {
 
     #[test]
     fn test_get_entry_block() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let function = Function::new(id.clone());
         let entry = function.get_entry_basic_block();
 
@@ -844,7 +912,7 @@ mod tests {
 
     #[test]
     fn test_get_entry_block_mut() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let mut function = Function::new(id.clone());
         let entry_id = function.get_entry_basic_block().id;
         let entry = function.get_entry_basic_block_mut();
@@ -854,7 +922,7 @@ mod tests {
 
     #[test]
     fn test_add_edge() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let mut function = Function::new(id.clone());
         let block1 = function.create_block(BasicBlockType::Normal, 32).unwrap();
         let block2 = function.create_block(BasicBlockType::Normal, 32).unwrap();
@@ -882,14 +950,14 @@ mod tests {
     #[test]
     fn test_basic_block_is_empty() {
         // will always be false since we always create an entry block
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let function = Function::new(id.clone());
         assert!(!function.is_empty());
     }
 
     #[test]
     fn test_get_predecessors() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let mut function = Function::new(id.clone());
         let block1 = function.create_block(BasicBlockType::Normal, 32).unwrap();
         let block2 = function.create_block(BasicBlockType::Normal, 32).unwrap();
@@ -907,7 +975,7 @@ mod tests {
 
     #[test]
     fn test_get_successors() {
-        let id = FunctionId::new(0, None, 0);
+        let id = FunctionId::new_without_name(0, 0);
         let mut function = Function::new(id.clone());
         let block1 = function.create_block(BasicBlockType::Normal, 32).unwrap();
         let block2 = function.create_block(BasicBlockType::Normal, 32).unwrap();

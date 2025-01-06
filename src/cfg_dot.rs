@@ -3,6 +3,8 @@
 use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::visit::{EdgeRef, IntoNodeReferences};
 
+use crate::utils::{GBF_DARK_GRAY, GBF_LIGHT_GRAY};
+
 /// A trait that defines how a node and its edges are rendered.
 pub trait RenderableNode {
     /// Renders the node as a Graphviz label.
@@ -24,7 +26,7 @@ pub trait NodeResolver {
 /// Trait to print the graph in DOT format. The must also implement `NodeResolver`.
 pub trait DotRenderableGraph: NodeResolver {
     /// Renders the graph in DOT format.
-    fn render_dot(&self) -> String;
+    fn render_dot(&self, config: CfgDotConfig) -> String;
 }
 
 /// Configuration options for rendering a DOT graph.
@@ -54,8 +56,8 @@ impl Default for CfgDotConfig {
             node_shape: "plaintext".to_string(),
             fontname: "Courier".to_string(),
             fontsize: "12".to_string(),
-            bgcolor: "#1c1c1c".to_string(),
-            fillcolor: "#555555".to_string(),
+            bgcolor: GBF_DARK_GRAY.to_string(),
+            fillcolor: GBF_LIGHT_GRAY.to_string(),
         }
     }
 }
@@ -125,7 +127,8 @@ impl CfgDotBuilder {
 
 /// The main struct for rendering DOT graphs.
 pub struct CfgDot {
-    config: CfgDotConfig,
+    /// The configuration for rendering the graph.
+    pub config: CfgDotConfig,
 }
 
 impl CfgDot {
@@ -295,7 +298,10 @@ mod tests {
         // Verify the output.
         assert!(dot_output.contains("digraph CFG {"));
         assert!(dot_output.contains("graph [rankdir=TB"));
-        assert!(dot_output.contains("N0 [style=filled, fillcolor=\"#555555\""));
+        assert!(dot_output.contains(&format!(
+            "N0 [style=filled, fillcolor=\"{}\"",
+            GBF_LIGHT_GRAY
+        )));
         assert!(dot_output.contains("Node A"));
         assert!(dot_output.contains("Node B"));
         assert!(dot_output.contains("N0 -> N1"));
@@ -388,7 +394,10 @@ mod tests {
         // Verify the output.
         assert!(dot_output.contains("digraph CFG {"));
         assert!(dot_output.contains("graph [rankdir=TB"));
-        assert!(dot_output.contains("N0 [style=filled, fillcolor=\"#555555\""));
+        assert!(dot_output.contains(&format!(
+            "N0 [style=filled, fillcolor=\"{}\"",
+            GBF_LIGHT_GRAY
+        )));
         assert!(dot_output.contains("Node A"));
         assert!(dot_output.contains("Node B"));
         assert!(dot_output.contains("N0 -> N1"));
@@ -488,7 +497,10 @@ mod tests {
         let dot_output = cfg_dot.render(&graph, &resolver);
 
         // Verify the output.
-        assert!(dot_output.contains("N0 [style=filled, fillcolor=\"#555555\""));
+        assert!(dot_output.contains(&format!(
+            "N0 [style=filled, fillcolor=\"{}\"",
+            GBF_LIGHT_GRAY
+        )));
         assert!(!dot_output.contains("N1")); // Node B should not be rendered.
     }
 }

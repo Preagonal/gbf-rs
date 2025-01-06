@@ -26,9 +26,9 @@ impl StatementNode {
     ///
     /// # Errors
     /// Returns an `AstNodeError` if `lhs` or `rhs` is of an unsupported type.
-    pub fn new(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> Result<Box<Self>, AstNodeError> {
+    pub fn new(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> Result<Self, AstNodeError> {
         Self::validate_lhs(&lhs)?;
-        Ok(Box::new(Self { lhs, rhs }))
+        Ok(Self { lhs, rhs })
     }
 
     fn validate_lhs(expr: &ExprNode) -> Result<(), AstNodeError> {

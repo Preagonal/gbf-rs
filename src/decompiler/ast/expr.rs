@@ -14,13 +14,13 @@ pub enum ExprNode {
     /// Represents a literal node in the AST.
     Literal(LiteralNode),
     /// Represents a member access node in the AST.
-    MemberAccess(Box<MemberAccessNode>),
+    MemberAccess(MemberAccessNode),
     /// Represents an identifier node in the AST.
-    Identifier(Box<IdentifierNode>),
+    Identifier(IdentifierNode),
     /// Represents a binary operation node in the AST.
-    BinOp(Box<BinaryOperationNode>),
+    BinOp(BinaryOperationNode),
     /// Represents a unary operation node in the AST.
-    UnaryOp(Box<UnaryOperationNode>),
+    UnaryOp(UnaryOperationNode),
 }
 
 impl AstNodeTrait for ExprNode {
@@ -76,8 +76,12 @@ mod tests {
         );
         let expr3 = ExprNode::MemberAccess(
             MemberAccessNode::new(
-                ExprNode::Identifier(IdentifierNode::new("object".to_string())).clone_box(),
-                ExprNode::Identifier(IdentifierNode::new("field2".to_string())).clone_box(),
+                Box::new(ExprNode::Identifier(IdentifierNode::new(
+                    "object".to_string(),
+                ))),
+                Box::new(ExprNode::Identifier(IdentifierNode::new(
+                    "field2".to_string(),
+                ))),
             )
             .unwrap(),
         );
@@ -85,8 +89,8 @@ mod tests {
         assert_ne!(expr1, expr3);
 
         // test identifier
-        let expr1 = ExprNode::Identifier(IdentifierNode::new("object".to_string()).clone_box());
-        let expr2 = ExprNode::Identifier(IdentifierNode::new("object".to_string()).clone_box());
+        let expr1 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
+        let expr2 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
 
         assert_eq!(expr1, expr2);
         assert_ne!(expr1, expr3);
@@ -94,8 +98,8 @@ mod tests {
         // test binary operation
         let expr1 = ExprNode::BinOp(
             BinaryOperationNode::new(
-                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
-                ExprNode::Literal(LiteralNode::Number(1)).clone_box(),
+                Box::new(ExprNode::Identifier(IdentifierNode::new("x".to_string()))),
+                Box::new(ExprNode::Literal(LiteralNode::Number(1))),
                 BinOpType::Add,
             )
             .unwrap(),
@@ -161,11 +165,11 @@ mod tests {
         assert_ne!(expr1, expr2);
 
         let expr1 = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
-        let expr2 = ExprNode::Identifier(IdentifierNode::new("object".to_string()).clone_box());
+        let expr2 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
 
         assert_ne!(expr1, expr2);
 
-        let expr1 = ExprNode::Identifier(IdentifierNode::new("object".to_string()).clone_box());
+        let expr1 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
         let expr2 = ExprNode::Literal(LiteralNode::String("object".to_string()));
 
         assert_ne!(expr1, expr2);

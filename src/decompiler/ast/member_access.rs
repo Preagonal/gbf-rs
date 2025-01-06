@@ -26,11 +26,11 @@ impl MemberAccessNode {
     ///
     /// # Errors
     /// Returns an `AstNodeError` if `lhs` or `rhs` is of an unsupported type.
-    pub fn new(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> Result<Box<Self>, AstNodeError> {
+    pub fn new(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> Result<Self, AstNodeError> {
         Self::validate_operand(&lhs)?;
         Self::validate_operand(&rhs)?;
 
-        Ok(Box::new(Self { lhs, rhs }))
+        Ok(Self { lhs, rhs })
     }
 
     fn validate_operand(expr: &ExprNode) -> Result<(), AstNodeError> {

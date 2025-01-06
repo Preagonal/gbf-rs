@@ -1,6 +1,9 @@
 use std::{fs::File, io::Read, path::Path};
 
-use gbf_rs::{cfg_dot::DotRenderableGraph, instruction::Instruction};
+use gbf_rs::{
+    cfg_dot::{CfgDotConfig, DotRenderableGraph},
+    instruction::Instruction,
+};
 
 /// Load bytecode file from gs2bc directory and return the reader.
 ///
@@ -170,6 +173,6 @@ fn load_multiple_functions() {
     }
 
     // For the first function output the dot representation
-    let function = module[5].render_dot();
+    let function = module[5].render_dot(CfgDotConfig::default());
     assert!(function.contains("digraph CFG {"));
 }

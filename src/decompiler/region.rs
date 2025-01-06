@@ -5,6 +5,7 @@ use crate::decompiler::ast::visitors::emit_context::{EmitContextBuilder, EmitVer
 use crate::decompiler::ast::visitors::emitter::Gs2Emitter;
 use crate::decompiler::ast::visitors::AstVisitor;
 use crate::decompiler::ast::AstNode;
+use crate::utils::GBF_YELLOW;
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::slice::Iter;
@@ -144,7 +145,7 @@ impl RenderableNode for Region {
             writeln!(
                 &mut label,
                 r##"{indent}    <TR>
-{indent}        <TD ALIGN="LEFT"><FONT COLOR="#ffbb00">{}</FONT></TD>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="{GBF_YELLOW}">{}</FONT></TD>
 {indent}    </TR>"##,
                 result,
                 indent = indent
@@ -188,7 +189,7 @@ mod tests {
         ))
     }
 
-    fn create_statement(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> Box<StatementNode> {
+    fn create_statement(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> StatementNode {
         StatementNode::new(lhs, rhs).unwrap()
     }
 
