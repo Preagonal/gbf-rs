@@ -41,14 +41,75 @@ TODO: Add example code.
 
 #### Generate Control Flow Graph (CFG)
 
-TODO: Add example code.
+This library can generate directed control flow graphs using Graphviz. We can load arbitrary GS2 bytecode using the following Rust code:
 
-#### Render CFGs with Graphviz
+```rs
+use std::{fs::File, io::Read, path::Path};
 
-Save the DOT output to a file and render it using Graphviz:
+use gbf_rs::{
+    cfg_dot::{CfgDotConfig, DotRenderableGraph},
+};
 
-```bash
-dot -Tpng cfg.dot -o cfg.png
+fn load_bytecode(name: &str) -> Result<impl Read, std::io::Error> {
+    let path = Path::new("tests").join("gs2bc").join(name);
+    let file = File::open(path)?;
+    Ok(file)
+}
+
+fn main() {
+    // Load `switch.gs2bc` bytecode file
+    let reader = load_bytecode("switch.gs2bc").unwrap();
+    let module = gbf_rs::module::ModuleBuilder::new()
+        .name("switch.gs2".to_string())
+        .reader(Box::new(reader))
+        .build()
+        .unwrap();
+
+    // Get the first function in the module. The "entry"
+    // function is 0, so this really is the "first"
+    // function.
+    let function = module.get(1).unwrap();
+
+    println!("{}", function.render_dot(CfgDotConfig::default()));
+}
+```
+
+<details> 
+  <summary>As an example, consider this simple GS2 switch statement.</summary>
+
+  ```js
+  function switchWithMultipleCasesPerNode() {
+      temp.server = "classicplus";
+      switch (temp.server) {
+          case "classic":
+          case "classicplus":
+              this.loginserver = "loginclassic1.graalonline.com:14900";
+              break;
+          case "delteria":
+          case "delteriaplus":
+              this.loginserver = "logindelteria1.graalonline.com:14900";
+              break;
+          case "foo":
+              this.loginserver = "loginfoo1.graalonline.com:14900";
+              break;
+          default:
+              this.loginserver = "loginserver.graalonline.com:14900";
+              break;
+      }
+      temp.i = this.loginserver.pos(":");
+      this.loginhost = this.loginserver.substring(0, temp.i);
+      this.loginport = this.loginserver.substring(temp.i + 1, 255);
+  }
+  ```
+
+  The resulting Graphviz code that `gbf-rs` generates will look like this when exported:
+  ![Switch CFG](./docs/switch.svg)
+</details>
+
+To export the resulting Graphviz code, you can use the popular `dot` utility like so:
+
+```sh
+$ dot -Tpng cfg.dot -o cfg.png
 ```
 
 #### Build Abstract Syntax Trees (ASTs)
@@ -67,25 +128,25 @@ TODO: Add example code.
 To build the library:
 
 ```bash
-cargo build
+$ cargo build
 ```
 
 To run tests:
 
 ```bash
-cargo test
+$ cargo test
 ```
 
 To check formatting:
 
 ```bash
-cargo fmt --all -- --check
+$ cargo fmt --all -- --check
 ```
 
 To lint the code:
 
 ```bash
-cargo clippy --workspace --all-targets -- -D warnings
+$ cargo clippy --workspace --all-targets -- -D warnings
 ```
 
 ### Documentation
@@ -93,7 +154,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 Generate and view the documentation locally
 
 ```bash
-cargo doc --no-deps --workspace
+$ cargo doc --no-deps --workspace
 ```
 
 ## Contributing
@@ -114,8 +175,8 @@ This project is licensed under the Mozilla Public License v2.0 - see the [LICENS
 
 ## Acknowledgments
 
-- **Graphviz** for CFG visualization.
-- **Rust Analyzer** for excellent developer tooling.
+- **Graphviz** is used to make human-readable directed graphs for debugging purposes.
+- **petgraph** is used to implement the directed graph functionality.
 
 ## Contact
 
