@@ -33,9 +33,13 @@ impl MemberAccessNode {
         Ok(Self { lhs, rhs })
     }
 
+    // This is marked as unreachable because the only two types of operands are Identifier and MemberAccess.
+    // In the future, if more types are added, this function will need to be updated, especially for array.
+    #[allow(unreachable_patterns)]
     fn validate_operand(expr: &AssignableExpr) -> Result<(), AstNodeError> {
         match expr {
             AssignableExpr::Identifier(_) | AssignableExpr::MemberAccess(_) => Ok(()),
+
             _ => Err(AstNodeError::InvalidOperand(
                 "MemberAccessNode".to_string(),
                 "Unsupported operand type".to_string(),
