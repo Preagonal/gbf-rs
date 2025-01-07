@@ -113,6 +113,12 @@ impl AstNodeTrait for BinaryOperationNode {
     }
 }
 
+impl From<BinaryOperationNode> for ExprNode {
+    fn from(bo: BinaryOperationNode) -> Self {
+        ExprNode::BinOp(bo)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

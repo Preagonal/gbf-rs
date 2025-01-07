@@ -69,6 +69,12 @@ impl PartialEq for UnaryOperationNode {
     }
 }
 
+impl From<UnaryOperationNode> for ExprNode {
+    fn from(unary: UnaryOperationNode) -> Self {
+        ExprNode::UnaryOp(unary)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

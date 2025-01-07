@@ -2,7 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{expr::AssignableExpr, visitors::AstVisitor, AstNodeError};
+use super::{
+    expr::{AssignableExpr, ExprNode},
+    visitors::AstVisitor,
+    AstNodeError,
+};
 use crate::decompiler::ast::AstNodeTrait;
 
 /// Represents a member access node in the AST, such as `object.field`.
@@ -53,6 +57,18 @@ impl MemberAccessNode {
 impl AstNodeTrait for MemberAccessNode {
     fn accept(&self, visitor: &mut dyn AstVisitor) {
         visitor.visit_member_access(self);
+    }
+}
+
+impl From<MemberAccessNode> for AssignableExpr {
+    fn from(ma: MemberAccessNode) -> Self {
+        AssignableExpr::MemberAccess(ma)
+    }
+}
+
+impl From<MemberAccessNode> for ExprNode {
+    fn from(ma: MemberAccessNode) -> Self {
+        ExprNode::Assignable(AssignableExpr::MemberAccess(ma))
     }
 }
 

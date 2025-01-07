@@ -41,6 +41,12 @@ impl AstNodeTrait for FunctionCallNode {
     }
 }
 
+impl From<FunctionCallNode> for ExprNode {
+    fn from(fc: FunctionCallNode) -> Self {
+        ExprNode::FunctionCall(fc)
+    }
+}
+
 // == Other implementations for unary operations ==
 impl PartialEq for FunctionCallNode {
     fn eq(&self, other: &Self) -> bool {

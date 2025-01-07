@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{visitors::AstVisitor, AstNodeTrait};
+use super::{expr::ExprNode, visitors::AstVisitor, AstNodeTrait};
 
 /// Represents a type of literal.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -13,6 +13,8 @@ pub enum LiteralNode {
     Number(i32),
     /// A floating point number literal (represented in GS2 as a string).
     Float(String),
+    /// A boolean literal.
+    Boolean(bool),
 }
 
 impl LiteralNode {
@@ -30,11 +32,22 @@ impl LiteralNode {
     pub fn new_float<S: Into<String>>(s: S) -> Self {
         Self::Float(s.into())
     }
+
+    /// Creates a new `LiteralNode` from a boolean.
+    pub fn new_boolean(b: bool) -> Self {
+        Self::Boolean(b)
+    }
 }
 
 impl AstNodeTrait for LiteralNode {
     fn accept(&self, visitor: &mut dyn AstVisitor) {
         visitor.visit_literal(self);
+    }
+}
+
+impl From<LiteralNode> for ExprNode {
+    fn from(literal: LiteralNode) -> Self {
+        ExprNode::Literal(literal)
     }
 }
 

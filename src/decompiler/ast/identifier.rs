@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{visitors::AstVisitor, AstNodeTrait};
+use super::{expr::AssignableExpr, visitors::AstVisitor, AstNodeTrait};
 
 /// Represents a type of literal.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -30,6 +30,12 @@ impl IdentifierNode {
     /// Returns the identifier as a `&str`.
     pub fn as_str(&self) -> &str {
         &self.id
+    }
+}
+
+impl From<IdentifierNode> for AssignableExpr {
+    fn from(literal: IdentifierNode) -> Self {
+        AssignableExpr::Identifier(literal)
     }
 }
 

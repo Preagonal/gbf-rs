@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     bin_op::BinaryOperationNode, func_call::FunctionCallNode, identifier::IdentifierNode,
     literal::LiteralNode, member_access::MemberAccessNode, unary_op::UnaryOperationNode,
-    visitors::AstVisitor, AstNodeTrait,
+    visitors::AstVisitor, AstNode, AstNodeTrait,
 };
 
 /// Represents an expression node in the AST.
@@ -29,6 +29,12 @@ impl AstNodeTrait for ExprNode {
     }
 }
 
+impl From<ExprNode> for AstNode {
+    fn from(expr: ExprNode) -> Self {
+        AstNode::Expression(expr)
+    }
+}
+
 /// Represents an assignable expression node in the AST.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub enum AssignableExpr {
@@ -41,6 +47,12 @@ pub enum AssignableExpr {
 impl AstNodeTrait for AssignableExpr {
     fn accept(&self, visitor: &mut dyn AstVisitor) {
         visitor.visit_assignable_expr(self);
+    }
+}
+
+impl From<Box<AssignableExpr>> for Box<ExprNode> {
+    fn from(assignable: Box<AssignableExpr>) -> Self {
+        Box::new(ExprNode::Assignable(*assignable))
     }
 }
 
@@ -65,6 +77,36 @@ impl PartialEq for AssignableExpr {
             (AssignableExpr::Identifier(i1), AssignableExpr::Identifier(i2)) => i1 == i2,
             _ => false,
         }
+    }
+}
+
+/// Allows conversion to a boxed expression.
+pub trait ToBoxedExpr {
+    /// Converts the type to a boxed expression.
+    fn to_boxed_expr(self) -> Box<ExprNode>;
+}
+
+/// Allows conversion to a boxed assignable expression.
+pub trait ToBoxedAssignableExpr {
+    /// Converts the type to a boxed assignable expression.
+    fn to_boxed_assignable_expr(self) -> Box<AssignableExpr>;
+}
+
+impl<T> ToBoxedExpr for T
+where
+    T: Into<ExprNode>,
+{
+    fn to_boxed_expr(self) -> Box<ExprNode> {
+        Box::new(self.into())
+    }
+}
+
+impl<T> ToBoxedAssignableExpr for T
+where
+    T: Into<AssignableExpr>,
+{
+    fn to_boxed_assignable_expr(self) -> Box<AssignableExpr> {
+        Box::new(self.into())
     }
 }
 

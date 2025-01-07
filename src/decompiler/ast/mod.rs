@@ -1,11 +1,16 @@
 #![deny(missing_docs)]
 
 use crate::decompiler::ast::visitors::AstVisitor;
-use expr::ExprNode;
+use expr::{AssignableExpr, ExprNode};
+use func_call::FunctionCallNode;
+use identifier::IdentifierNode;
+use literal::LiteralNode;
+use member_access::MemberAccessNode;
 use meta::MetaNode;
 use serde::{Deserialize, Serialize};
 use statement::StatementNode;
 use thiserror::Error;
+use visitors::{emit_context::EmitContext, emitter::Gs2Emitter};
 
 /// Represents binary operations in the AST.
 pub mod bin_op;
@@ -80,5 +85,71 @@ impl AstNodeTrait for AstNode {
             AstNode::Statement(stmt) => stmt.accept(visitor),
             AstNode::Empty => {}
         }
+    }
+}
+
+/// Emits a node into a string.
+pub fn emit(node: &AstNode) -> String {
+    let mut emit = Gs2Emitter::new(EmitContext::default());
+    node.accept(&mut emit);
+    emit.output().to_string()
+}
+
+/// Creates a new AstNode for a statement.
+pub fn statement(lhs: Box<AssignableExpr>, rhs: Box<ExprNode>) -> StatementNode {
+    StatementNode::new(lhs, rhs).unwrap()
+}
+
+/// Creates a new member access node.
+pub fn member_access(lhs: Box<AssignableExpr>, rhs: Box<AssignableExpr>) -> MemberAccessNode {
+    MemberAccessNode::new(lhs, rhs).unwrap()
+}
+
+/// Creates a new AssignableExpr for an identifier
+pub fn identifier(name: &str) -> IdentifierNode {
+    IdentifierNode::new(name)
+}
+
+/// Creates a new function call node.
+pub fn call(name: &str, args: Vec<ExprNode>) -> FunctionCallNode {
+    FunctionCallNode::new(identifier::IdentifierNode::new(name), args, None)
+}
+
+// == Literals ==
+
+/// Creates a new ExprNode for a literal string.
+pub fn literal_string(value: &str) -> LiteralNode {
+    LiteralNode::String(value.to_string())
+}
+
+/// Creates a new ExprNode for a literal number.
+pub fn literal_number(value: i32) -> LiteralNode {
+    LiteralNode::Number(value)
+}
+
+/// Creates a new ExprNode for a literal float.
+pub fn literal_float(value: String) -> LiteralNode {
+    LiteralNode::Float(value)
+}
+
+/// Creates a new ExprNode for a literal boolean.
+pub fn literal_bool(value: bool) -> LiteralNode {
+    LiteralNode::Boolean(value)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::decompiler::ast::expr::{ToBoxedAssignableExpr, ToBoxedExpr};
+
+    use super::{emit, identifier, literal_number, statement};
+
+    #[test]
+    pub fn test_funcs() {
+        let node = statement(
+            identifier("foo").to_boxed_assignable_expr(),
+            literal_number(32).to_boxed_expr(),
+        );
+
+        //assert_eq!(emit(node.into()), "foo = 32;");
     }
 }

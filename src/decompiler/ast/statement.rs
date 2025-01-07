@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     expr::{AssignableExpr, ExprNode},
     visitors::AstVisitor,
-    AstNodeError,
+    AstNode, AstNodeError,
 };
 use crate::decompiler::ast::AstNodeTrait;
 
@@ -46,6 +46,12 @@ impl AstNodeTrait for StatementNode {
 impl PartialEq for StatementNode {
     fn eq(&self, other: &Self) -> bool {
         self.lhs == other.lhs && self.rhs == other.rhs
+    }
+}
+
+impl From<StatementNode> for AstNode {
+    fn from(stmt: StatementNode) -> Self {
+        AstNode::Statement(stmt)
     }
 }
 

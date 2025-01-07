@@ -239,6 +239,7 @@ impl AstVisitor for Gs2Emitter {
                 }
             }
             LiteralNode::Float(f) => f.clone(),
+            LiteralNode::Boolean(b) => b.to_string(),
         };
 
         self.output.push_str(&emitted_literal);
