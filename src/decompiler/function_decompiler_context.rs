@@ -5,7 +5,7 @@ use crate::instruction::Instruction;
 use crate::opcode::Opcode;
 use std::collections::HashMap;
 
-use super::ast::expr::ExprNode;
+use super::ast::expr::{AssignableExpr, ExprNode};
 use super::ast::identifier::IdentifierNode;
 use super::ast::AstNode;
 use super::execution_frame::ExecutionFrame;
@@ -141,11 +141,24 @@ impl FunctionDecompilerContext {
         }
     }
 
+    /// Pops an assignable expression from the current basic block's stack.
+    pub fn pop_assignable(&mut self) -> Result<AssignableExpr, FunctionDecompilerError> {
+        let node = self.pop_expression()?;
+        match node {
+            ExprNode::Assignable(assignable) => Ok(assignable),
+            _ => Err(FunctionDecompilerError::InvalidNodeType(
+                self.current_block_id.unwrap(),
+                "Assignable".to_string(),
+                format!("{:?}", node),
+            )),
+        }
+    }
+
     /// Pops an identifier from the current basic block's stack.
     pub fn pop_identifier(&mut self) -> Result<IdentifierNode, FunctionDecompilerError> {
         let node = self.pop_expression()?;
         match node {
-            ExprNode::Identifier(ident) => Ok(ident),
+            ExprNode::Assignable(AssignableExpr::Identifier(ident)) => Ok(ident),
             _ => Err(FunctionDecompilerError::InvalidNodeType(
                 self.current_block_id.unwrap(),
                 "Identifier".to_string(),

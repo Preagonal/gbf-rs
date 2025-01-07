@@ -4,7 +4,7 @@ use super::{
     emit_context::{EmitContext, EmitVerbosity},
     AstVisitor,
 };
-use crate::decompiler::ast::expr::ExprNode;
+use crate::decompiler::ast::expr::{AssignableExpr, ExprNode};
 use crate::decompiler::ast::identifier::IdentifierNode;
 use crate::decompiler::ast::literal::LiteralNode;
 use crate::decompiler::ast::member_access::MemberAccessNode;
@@ -49,16 +49,17 @@ impl AstVisitor for Gs2Emitter {
             AstNode::Empty => {}
         }
     }
-    fn visit_statement(&mut self, node: &StatementNode) {
+    fn visit_statement(&mut self, stmt_node: &StatementNode) {
         // Step 1: Visit and emit the LHS
-        node.lhs.accept(self);
+        stmt_node.lhs.accept(self);
         let lhs_str = self.output.clone(); // Retrieve the emitted LHS
         self.output.clear();
 
         // Step 2: Handle RHS
-        if let ExprNode::BinOp(bin_op_node) = node.rhs.as_ref() {
+        if let ExprNode::BinOp(bin_op_node) = stmt_node.rhs.as_ref() {
             // Check if the binary operation directly involves the LHS
-            let lhs_in_rhs = bin_op_node.lhs.as_ref() == node.lhs.as_ref();
+            let lhs_in_rhs =
+                bin_op_node.lhs.as_ref() == &ExprNode::Assignable(*stmt_node.lhs.clone());
 
             if lhs_in_rhs {
                 match bin_op_node.op_type {
@@ -103,7 +104,7 @@ impl AstVisitor for Gs2Emitter {
         let prev_context = self.context;
         self.context = self.context.with_expr_root(true);
 
-        node.rhs.accept(self); // Visit the RHS
+        stmt_node.rhs.accept(self); // Visit the RHS
         let rhs_str = self.output.clone();
         self.output.clear();
 
@@ -114,11 +115,20 @@ impl AstVisitor for Gs2Emitter {
     fn visit_expr(&mut self, node: &ExprNode) {
         match node {
             ExprNode::Literal(literal) => literal.accept(self),
-            ExprNode::MemberAccess(member_access) => member_access.accept(self),
-            ExprNode::Identifier(identifier) => identifier.accept(self),
+            ExprNode::Assignable(AssignableExpr::MemberAccess(member_access)) => {
+                member_access.accept(self)
+            }
+            ExprNode::Assignable(AssignableExpr::Identifier(identifier)) => identifier.accept(self),
             ExprNode::BinOp(bin_op) => bin_op.accept(self),
             ExprNode::UnaryOp(unary_op) => unary_op.accept(self),
             ExprNode::FunctionCall(func_call) => func_call.accept(self),
+        }
+    }
+
+    fn visit_assignable_expr(&mut self, node: &AssignableExpr) {
+        match node {
+            AssignableExpr::MemberAccess(member_access) => member_access.accept(self),
+            AssignableExpr::Identifier(identifier) => identifier.accept(self),
         }
     }
 
@@ -294,7 +304,7 @@ impl AstVisitor for Gs2Emitter {
 #[cfg(test)]
 mod tests {
     use crate::decompiler::ast::bin_op::{BinOpType, BinaryOperationNode};
-    use crate::decompiler::ast::expr::ExprNode;
+    use crate::decompiler::ast::expr::{AssignableExpr, ExprNode};
     use crate::decompiler::ast::func_call::FunctionCallNode;
     use crate::decompiler::ast::identifier::IdentifierNode;
     use crate::decompiler::ast::literal::LiteralNode;
@@ -306,8 +316,14 @@ mod tests {
     use crate::decompiler::ast::visitors::emitter::Gs2Emitter;
     use crate::decompiler::ast::{AstNode, AstNodeTrait};
 
+    fn create_identifier_assignable(id: &str) -> Box<AssignableExpr> {
+        Box::new(AssignableExpr::Identifier(IdentifierNode::new(
+            id.to_string(),
+        )))
+    }
+
     fn create_identifier(id: &str) -> Box<ExprNode> {
-        Box::new(ExprNode::Identifier(IdentifierNode::new(id.to_string())))
+        Box::new(ExprNode::Assignable(*create_identifier_assignable(id)))
     }
 
     fn create_integer_literal(value: i32) -> Box<ExprNode> {
@@ -336,7 +352,7 @@ mod tests {
         ))
     }
 
-    fn create_statement(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> StatementNode {
+    fn create_statement(lhs: Box<AssignableExpr>, rhs: Box<ExprNode>) -> StatementNode {
         StatementNode::new(lhs, rhs).unwrap()
     }
 
@@ -348,7 +364,10 @@ mod tests {
         FunctionCallNode::new(IdentifierNode::new(name.to_string()), args, Some(base))
     }
 
-    fn create_member_access(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> MemberAccessNode {
+    fn create_member_access(
+        lhs: Box<AssignableExpr>,
+        rhs: Box<AssignableExpr>,
+    ) -> MemberAccessNode {
         MemberAccessNode::new(lhs, rhs).unwrap()
     }
 
@@ -358,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_statement_emit() {
-        let lhs = create_identifier("variable");
+        let lhs = create_identifier_assignable("variable");
         let rhs = create_integer_literal(42);
         let statement_node = create_statement(lhs, rhs);
 
@@ -370,8 +389,11 @@ mod tests {
 
     #[test]
     fn test_statement_nested_bin_op() {
-        let lhs = create_identifier("variable");
-        let rhs = create_addition(lhs.clone_box(), create_integer_literal(1));
+        let lhs = create_identifier_assignable("variable");
+        let rhs = create_addition(
+            Box::new(ExprNode::Assignable(*lhs.clone())),
+            create_integer_literal(1),
+        );
         let statement_node = create_statement(lhs, rhs);
 
         let context = EmitContextBuilder::default().build();
@@ -379,31 +401,40 @@ mod tests {
         statement_node.accept(&mut visitor);
         assert_eq!(visitor.output(), "variable++;");
 
-        let lhs = create_identifier("variable");
-        let rhs = create_addition(lhs.clone_box(), create_integer_literal(2));
+        let lhs = create_identifier_assignable("variable");
+        let rhs = create_addition(
+            Box::new(ExprNode::Assignable(*lhs.clone())),
+            create_integer_literal(2),
+        );
         let statement_node = create_statement(lhs, rhs);
         let mut visitor = Gs2Emitter::new(context);
         statement_node.accept(&mut visitor);
         assert_eq!(visitor.output(), "variable += 2;");
 
         // test -- case
-        let lhs = create_identifier("variable");
-        let rhs = create_subtraction(lhs.clone_box(), create_integer_literal(1));
+        let lhs = create_identifier_assignable("variable");
+        let rhs = create_subtraction(
+            Box::new(ExprNode::Assignable(*lhs.clone())),
+            create_integer_literal(1),
+        );
         let statement_node = create_statement(lhs, rhs);
         let mut visitor = Gs2Emitter::new(context);
         statement_node.accept(&mut visitor);
         assert_eq!(visitor.output(), "variable--;");
 
         // test -= case
-        let lhs = create_identifier("variable");
-        let rhs = create_subtraction(lhs.clone_box(), create_integer_literal(2));
+        let lhs = create_identifier_assignable("variable");
+        let rhs = create_subtraction(
+            Box::new(ExprNode::Assignable(*lhs.clone())),
+            create_integer_literal(2),
+        );
         let statement_node = create_statement(lhs, rhs);
         let mut visitor = Gs2Emitter::new(context);
         statement_node.accept(&mut visitor);
         assert_eq!(visitor.output(), "variable -= 2;");
 
         // test variable = 1 + (2 + 3)
-        let lhs = create_identifier("variable");
+        let lhs = create_identifier_assignable("variable");
         let rhs = create_addition(
             create_integer_literal(1),
             create_addition(create_integer_literal(2), create_integer_literal(3)),
@@ -414,7 +445,7 @@ mod tests {
         assert_eq!(visitor.output(), "variable = 1 + (2 + 3);");
 
         // test variable = (1 + 2) + (3 + 4)
-        let lhs = create_identifier("variable");
+        let lhs = create_identifier_assignable("variable");
         let rhs = create_addition(
             create_addition(create_integer_literal(1), create_integer_literal(2)),
             create_addition(create_integer_literal(3), create_integer_literal(4)),
@@ -427,7 +458,7 @@ mod tests {
 
     #[test]
     fn test_meta() {
-        let lhs = create_identifier("variable");
+        let lhs = create_identifier_assignable("variable");
         let rhs = create_integer_literal(42);
         let statement_node = create_statement(lhs, rhs);
         let ast_node = Box::new(AstNode::Statement(statement_node));
@@ -447,8 +478,8 @@ mod tests {
 
     #[test]
     fn test_member_access() {
-        let lhs = create_identifier("temp");
-        let rhs = create_identifier("property");
+        let lhs = create_identifier_assignable("temp");
+        let rhs = create_identifier_assignable("property");
         let member_access_node = MemberAccessNode::new(lhs, rhs).unwrap();
 
         let context = EmitContextBuilder::default().build();
@@ -457,11 +488,11 @@ mod tests {
         assert_eq!(visitor.output(), "temp.property");
 
         // test three-level member access
-        let lhs = create_identifier("temp");
-        let rhs = create_identifier("property");
+        let lhs = create_identifier_assignable("temp");
+        let rhs = create_identifier_assignable("property");
         let member_access_node = MemberAccessNode::new(lhs, rhs).unwrap();
-        let lhs = Box::new(ExprNode::MemberAccess(member_access_node));
-        let rhs = create_identifier("property2");
+        let lhs = Box::new(AssignableExpr::MemberAccess(member_access_node));
+        let rhs = create_identifier_assignable("property2");
         let member_access_node = MemberAccessNode::new(lhs, rhs).unwrap();
 
         let mut visitor = Gs2Emitter::new(context);
@@ -472,12 +503,14 @@ mod tests {
     #[test]
     fn test_literal_string() {
         // temp.asdf = "Hello, world!";
-        let lhs = create_identifier("temp");
-        let rhs = create_identifier("asdf");
+        let lhs = create_identifier_assignable("temp");
+        let rhs = create_identifier_assignable("asdf");
         let member_access_node = MemberAccessNode::new(lhs, rhs).unwrap();
         let hello = create_string_literal("Hello, world!");
-        let statement_node =
-            create_statement(Box::new(ExprNode::MemberAccess(member_access_node)), hello);
+        let statement_node = create_statement(
+            Box::new(AssignableExpr::MemberAccess(member_access_node)),
+            hello,
+        );
 
         let context = EmitContextBuilder::default().build();
         let mut visitor = Gs2Emitter::new(context);
@@ -492,7 +525,7 @@ mod tests {
         let mut visitor = Gs2Emitter::new(context);
 
         let operand = create_addition(create_integer_literal(42), create_integer_literal(1));
-        let lhs = create_identifier("i");
+        let lhs = create_identifier_assignable("i");
         let unary_op_node = create_unary_op(operand, UnaryOpType::Negate);
         let statement_node = create_statement(lhs, unary_op_node);
         statement_node.accept(&mut visitor);
@@ -504,7 +537,7 @@ mod tests {
 
         let operand = create_integer_literal(42);
         let unary_op_node = create_unary_op(operand, UnaryOpType::Negate);
-        let lhs = create_identifier("i");
+        let lhs = create_identifier_assignable("i");
         let statement_node = create_statement(lhs, unary_op_node);
         statement_node.accept(&mut visitor);
         assert_eq!(visitor.output(), "i = -42;");
@@ -649,9 +682,11 @@ mod tests {
                 *create_integer_literal(2),
                 *create_integer_literal(3),
             ],
-            Box::new(ExprNode::MemberAccess(create_member_access(
-                create_identifier("temp"),
-                create_identifier("foo"),
+            Box::new(ExprNode::Assignable(AssignableExpr::MemberAccess(
+                create_member_access(
+                    create_identifier_assignable("temp"),
+                    create_identifier_assignable("foo"),
+                ),
             ))),
         );
         method_call.accept(&mut visitor);

@@ -2,7 +2,12 @@
 
 use crate::{
     decompiler::{
-        ast::{expr::ExprNode, func_call::FunctionCallNode, identifier::IdentifierNode, AstNode},
+        ast::{
+            expr::{AssignableExpr, ExprNode},
+            func_call::FunctionCallNode,
+            identifier::IdentifierNode,
+            AstNode,
+        },
         execution_frame::ExecutionFrame,
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
@@ -57,7 +62,7 @@ impl OpcodeHandler for VariableOperandHandler {
                     // Pop the function name (last argument in the array)
                     let function_name = args.pop().unwrap();
                     let function_name = match function_name {
-                        ExprNode::Identifier(ident) => Ok(ident),
+                        ExprNode::Assignable(AssignableExpr::Identifier(ident)) => Ok(ident),
                         _ => Err(FunctionDecompilerError::InvalidNodeType(
                             current_block_id,
                             "Identifier".to_string(),

@@ -117,13 +117,19 @@ impl AstNodeTrait for BinaryOperationNode {
 mod tests {
     use super::*;
     use crate::decompiler::ast::{
-        expr::ExprNode, identifier::IdentifierNode, literal::LiteralNode,
+        expr::{AssignableExpr, ExprNode},
+        identifier::IdentifierNode,
+        literal::LiteralNode,
     };
 
     #[test]
     fn test_binary_operation_node_eq() {
-        let lhs = ExprNode::Identifier(IdentifierNode::new("x".to_string()));
-        let rhs = ExprNode::Identifier(IdentifierNode::new("y".to_string()));
+        let lhs = ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+            "x".to_string(),
+        )));
+        let rhs = ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+            "y".to_string(),
+        )));
         let node1 =
             BinaryOperationNode::new(lhs.clone_box(), rhs.clone_box(), BinOpType::Add).unwrap();
         let node2 =
@@ -138,7 +144,9 @@ mod tests {
     #[test]
     fn test_binary_operation_node_new_invalid_operand() {
         let lhs = ExprNode::Literal(LiteralNode::String("invalid".to_string()));
-        let rhs = ExprNode::Identifier(IdentifierNode::new("y".to_string()));
+        let rhs = ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+            "y".to_string(),
+        )));
 
         let result = BinaryOperationNode::new(Box::new(lhs), Box::new(rhs), BinOpType::Sub);
         assert!(result.is_err());

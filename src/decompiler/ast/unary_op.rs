@@ -72,12 +72,15 @@ impl PartialEq for UnaryOperationNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::decompiler::ast::expr::AssignableExpr;
     use crate::decompiler::ast::literal::LiteralNode;
     use crate::decompiler::ast::{expr::ExprNode, identifier::IdentifierNode};
 
     #[test]
     fn test_unary_operation_node_eq() {
-        let operand = ExprNode::Identifier(IdentifierNode::new("x".to_string()));
+        let operand = ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+            "x".to_string(),
+        )));
         let node1 = UnaryOperationNode::new(operand.clone_box(), UnaryOpType::Negate).unwrap();
         let node2 = UnaryOperationNode::new(operand.clone_box(), UnaryOpType::Negate).unwrap();
         let node3 = UnaryOperationNode::new(operand.clone_box(), UnaryOpType::LogicalNot).unwrap();

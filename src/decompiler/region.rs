@@ -164,13 +164,15 @@ impl RenderableNode for Region {
 mod tests {
     use super::*;
     use crate::decompiler::ast::bin_op::{BinOpType, BinaryOperationNode};
-    use crate::decompiler::ast::expr::ExprNode;
+    use crate::decompiler::ast::expr::{AssignableExpr, ExprNode};
     use crate::decompiler::ast::identifier::IdentifierNode;
     use crate::decompiler::ast::literal::LiteralNode;
     use crate::decompiler::ast::statement::StatementNode;
 
-    fn create_identifier(id: &str) -> Box<ExprNode> {
-        Box::new(ExprNode::Identifier(IdentifierNode::new(id.to_string())))
+    fn create_identifier(id: &str) -> Box<AssignableExpr> {
+        Box::new(AssignableExpr::Identifier(IdentifierNode::new(
+            id.to_string(),
+        )))
     }
 
     fn create_integer_literal(value: i32) -> Box<ExprNode> {
@@ -189,7 +191,7 @@ mod tests {
         ))
     }
 
-    fn create_statement(lhs: Box<ExprNode>, rhs: Box<ExprNode>) -> StatementNode {
+    fn create_statement(lhs: Box<AssignableExpr>, rhs: Box<ExprNode>) -> StatementNode {
         StatementNode::new(lhs, rhs).unwrap()
     }
 

@@ -2,7 +2,11 @@
 
 use crate::{
     decompiler::{
-        ast::{expr::ExprNode, identifier::IdentifierNode, AstNode},
+        ast::{
+            expr::{AssignableExpr, ExprNode},
+            identifier::IdentifierNode,
+            AstNode,
+        },
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
     },
@@ -17,7 +21,9 @@ pub struct IdentifierHandler;
 
 impl IdentifierHandler {
     fn create_identifier(name: &str) -> AstNode {
-        AstNode::Expression(ExprNode::Identifier(IdentifierNode::new(name)))
+        AstNode::Expression(ExprNode::Assignable(AssignableExpr::Identifier(
+            IdentifierNode::new(name),
+        )))
     }
 }
 

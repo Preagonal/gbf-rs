@@ -13,10 +13,8 @@ use super::{
 pub enum ExprNode {
     /// Represents a literal node in the AST.
     Literal(LiteralNode),
-    /// Represents a member access node in the AST.
-    MemberAccess(MemberAccessNode),
-    /// Represents an identifier node in the AST.
-    Identifier(IdentifierNode),
+    /// Represents an assignable expression node in the AST.
+    Assignable(AssignableExpr),
     /// Represents a binary operation node in the AST.
     BinOp(BinaryOperationNode),
     /// Represents a unary operation node in the AST.
@@ -31,16 +29,40 @@ impl AstNodeTrait for ExprNode {
     }
 }
 
+/// Represents an assignable expression node in the AST.
+#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
+pub enum AssignableExpr {
+    /// Represents a member access node in the AST.
+    MemberAccess(MemberAccessNode),
+    /// Represents an identifier node in the AST.
+    Identifier(IdentifierNode),
+}
+
+impl AstNodeTrait for AssignableExpr {
+    fn accept(&self, visitor: &mut dyn AstVisitor) {
+        visitor.visit_assignable_expr(self);
+    }
+}
+
 // == Other implementations for literal ==
 
 impl PartialEq for ExprNode {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (ExprNode::Literal(l1), ExprNode::Literal(l2)) => l1 == l2,
-            (ExprNode::MemberAccess(m1), ExprNode::MemberAccess(m2)) => m1 == m2,
-            (ExprNode::Identifier(id1), ExprNode::Identifier(id2)) => id1 == id2,
+            (ExprNode::Assignable(a1), ExprNode::Assignable(a2)) => a1 == a2,
             (ExprNode::BinOp(b1), ExprNode::BinOp(b2)) => b1 == b2,
             (ExprNode::UnaryOp(u1), ExprNode::UnaryOp(u2)) => u1 == u2,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq for AssignableExpr {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (AssignableExpr::MemberAccess(m1), AssignableExpr::MemberAccess(m2)) => m1 == m2,
+            (AssignableExpr::Identifier(i1), AssignableExpr::Identifier(i2)) => i1 == i2,
             _ => false,
         }
     }
@@ -62,37 +84,49 @@ mod tests {
         assert_ne!(expr1, expr3);
 
         // test member access
-        let expr1 = ExprNode::MemberAccess(
+        let expr1 = ExprNode::Assignable(AssignableExpr::MemberAccess(
             MemberAccessNode::new(
-                ExprNode::Identifier(IdentifierNode::new("object".to_string())).clone_box(),
-                ExprNode::Identifier(IdentifierNode::new("field".to_string())).clone_box(),
-            )
-            .unwrap(),
-        );
-        let expr2 = ExprNode::MemberAccess(
-            MemberAccessNode::new(
-                ExprNode::Identifier(IdentifierNode::new("object".to_string())).clone_box(),
-                ExprNode::Identifier(IdentifierNode::new("field".to_string())).clone_box(),
-            )
-            .unwrap(),
-        );
-        let expr3 = ExprNode::MemberAccess(
-            MemberAccessNode::new(
-                Box::new(ExprNode::Identifier(IdentifierNode::new(
+                Box::new(AssignableExpr::Identifier(IdentifierNode::new(
                     "object".to_string(),
                 ))),
-                Box::new(ExprNode::Identifier(IdentifierNode::new(
-                    "field2".to_string(),
+                Box::new(AssignableExpr::Identifier(IdentifierNode::new(
+                    "field".to_string(),
                 ))),
             )
             .unwrap(),
-        );
+        ));
+        let expr2 = ExprNode::Assignable(AssignableExpr::MemberAccess(
+            MemberAccessNode::new(
+                Box::new(AssignableExpr::Identifier(IdentifierNode::new(
+                    "object".to_string(),
+                ))),
+                Box::new(AssignableExpr::Identifier(IdentifierNode::new(
+                    "field".to_string(),
+                ))),
+            )
+            .unwrap(),
+        ));
+        let expr3 = ExprNode::Assignable(AssignableExpr::MemberAccess(
+            MemberAccessNode::new(
+                Box::new(AssignableExpr::Identifier(IdentifierNode::new(
+                    "object".to_string(),
+                ))),
+                Box::new(AssignableExpr::Identifier(IdentifierNode::new(
+                    "field3".to_string(),
+                ))),
+            )
+            .unwrap(),
+        ));
         assert_eq!(expr1, expr2);
         assert_ne!(expr1, expr3);
 
         // test identifier
-        let expr1 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
-        let expr2 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
+        let expr1 = ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+            "object".to_string(),
+        )));
+        let expr2 = ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+            "object".to_string(),
+        )));
 
         assert_eq!(expr1, expr2);
         assert_ne!(expr1, expr3);
@@ -100,7 +134,9 @@ mod tests {
         // test binary operation
         let expr1 = ExprNode::BinOp(
             BinaryOperationNode::new(
-                Box::new(ExprNode::Identifier(IdentifierNode::new("x".to_string()))),
+                Box::new(ExprNode::Assignable(AssignableExpr::Identifier(
+                    IdentifierNode::new("x".to_string()),
+                ))),
                 Box::new(ExprNode::Literal(LiteralNode::Number(1))),
                 BinOpType::Add,
             )
@@ -108,7 +144,10 @@ mod tests {
         );
         let expr2 = ExprNode::BinOp(
             BinaryOperationNode::new(
-                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+                    "x".to_string(),
+                )))
+                .clone_box(),
                 ExprNode::Literal(LiteralNode::Number(1)).clone_box(),
                 BinOpType::Add,
             )
@@ -116,7 +155,10 @@ mod tests {
         );
         let expr3 = ExprNode::BinOp(
             BinaryOperationNode::new(
-                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+                    "x".to_string(),
+                )))
+                .clone_box(),
                 ExprNode::Literal(LiteralNode::Number(2)).clone_box(),
                 BinOpType::Add,
             )
@@ -129,21 +171,30 @@ mod tests {
         // test unary operation
         let expr1 = ExprNode::UnaryOp(
             UnaryOperationNode::new(
-                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+                    "x".to_string(),
+                )))
+                .clone_box(),
                 UnaryOpType::Negate,
             )
             .unwrap(),
         );
         let expr2 = ExprNode::UnaryOp(
             UnaryOperationNode::new(
-                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+                    "x".to_string(),
+                )))
+                .clone_box(),
                 UnaryOpType::Negate,
             )
             .unwrap(),
         );
         let expr3 = ExprNode::UnaryOp(
             UnaryOperationNode::new(
-                ExprNode::Identifier(IdentifierNode::new("x".to_string())).clone_box(),
+                ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+                    "x".to_string(),
+                )))
+                .clone_box(),
                 UnaryOpType::LogicalNot,
             )
             .unwrap(),
@@ -156,22 +207,30 @@ mod tests {
     #[test]
     fn test_expr_node_ne_different_types() {
         let expr1 = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
-        let expr2 = ExprNode::MemberAccess(
+        let expr2 = ExprNode::Assignable(AssignableExpr::MemberAccess(
             MemberAccessNode::new(
-                ExprNode::Identifier(IdentifierNode::new("object".to_string())).clone_box(),
-                ExprNode::Identifier(IdentifierNode::new("field".to_string())).clone_box(),
+                Box::new(AssignableExpr::Identifier(IdentifierNode::new(
+                    "object".to_string(),
+                ))),
+                Box::new(AssignableExpr::Identifier(IdentifierNode::new(
+                    "field".to_string(),
+                ))),
             )
             .unwrap(),
-        );
+        ));
 
         assert_ne!(expr1, expr2);
 
         let expr1 = ExprNode::Literal(LiteralNode::String("Hello, world!".to_string()));
-        let expr2 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
+        let expr2 = ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+            "object".to_string(),
+        )));
 
         assert_ne!(expr1, expr2);
 
-        let expr1 = ExprNode::Identifier(IdentifierNode::new("object".to_string()));
+        let expr1 = ExprNode::Assignable(AssignableExpr::Identifier(IdentifierNode::new(
+            "object".to_string(),
+        )));
         let expr2 = ExprNode::Literal(LiteralNode::String("object".to_string()));
 
         assert_ne!(expr1, expr2);

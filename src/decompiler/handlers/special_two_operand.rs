@@ -2,7 +2,12 @@
 
 use crate::{
     decompiler::{
-        ast::{expr::ExprNode, member_access::MemberAccessNode, statement::StatementNode, AstNode},
+        ast::{
+            expr::{AssignableExpr, ExprNode},
+            member_access::MemberAccessNode,
+            statement::StatementNode,
+            AstNode,
+        },
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
     },
@@ -17,17 +22,19 @@ pub struct SpecialTwoOperandHandler;
 
 impl SpecialTwoOperandHandler {
     fn create_member_access_node(
-        lhs: ExprNode,
-        rhs: ExprNode,
+        lhs: AssignableExpr,
+        rhs: AssignableExpr,
     ) -> Result<AstNode, FunctionDecompilerError> {
         let member_access = MemberAccessNode::new(Box::new(lhs), Box::new(rhs))?;
 
         // Convert the member access to an AST node
-        Ok(AstNode::Expression(ExprNode::MemberAccess(member_access)))
+        Ok(AstNode::Expression(ExprNode::Assignable(
+            AssignableExpr::MemberAccess(member_access),
+        )))
     }
 
     fn create_statement_node(
-        lhs: ExprNode,
+        lhs: AssignableExpr,
         rhs: ExprNode,
     ) -> Result<AstNode, FunctionDecompilerError> {
         let statement = StatementNode::new(Box::new(lhs), Box::new(rhs))?;
@@ -43,16 +50,17 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
         context: &mut FunctionDecompilerContext,
         instruction: &Instruction,
     ) -> Result<(), FunctionDecompilerError> {
-        let rhs = context.pop_expression()?;
-        let lhs = context.pop_expression()?;
-
         match instruction.opcode {
             Opcode::AccessMember => {
+                let rhs = context.pop_assignable()?;
+                let lhs = context.pop_assignable()?;
                 let member_access_node =
                     SpecialTwoOperandHandler::create_member_access_node(lhs, rhs)?;
                 context.push_one_node(member_access_node)?;
             }
             Opcode::Assign => {
+                let rhs = context.pop_expression()?;
+                let lhs = context.pop_assignable()?;
                 let statement_node = SpecialTwoOperandHandler::create_statement_node(lhs, rhs)?;
                 context.push_one_node(statement_node)?;
             }
