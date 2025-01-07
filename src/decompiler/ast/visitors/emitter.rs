@@ -74,7 +74,11 @@ impl AstVisitor for Gs2Emitter {
                                 return;
                             } else {
                                 // Emit compound assignment (+=)
-                                self.output.push_str(&format!("{} += {};", lhs_str, num));
+                                bin_op_node.rhs.accept(self); // Visit the RHS to get the formatted number
+                                let rhs_str = self.output.clone();
+                                self.output.clear();
+                                self.output
+                                    .push_str(&format!("{} += {};", lhs_str, rhs_str));
                                 return;
                             }
                         }
@@ -90,7 +94,11 @@ impl AstVisitor for Gs2Emitter {
                                 return;
                             } else {
                                 // Emit compound assignment (-=)
-                                self.output.push_str(&format!("{} -= {};", lhs_str, num));
+                                bin_op_node.rhs.accept(self); // Visit the RHS to get the formatted number
+                                let rhs_str = self.output.clone();
+                                self.output.clear();
+                                self.output
+                                    .push_str(&format!("{} -= {};", lhs_str, rhs_str));
                                 return;
                             }
                         }

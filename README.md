@@ -37,7 +37,57 @@ This project supports Rust 1.70.0 and later.
 
 ### Decompile GS2 Bytecode
 
-TODO: Add example code.
+Decompiling GS2 Bytecode is easy and extremely customizable in `gbf-rs`. We can do so by loading a GS2 module and invoking the `FunctionDecompiler`, like so:
+
+```rs
+use std::{fs::File, io::Read, path::Path};
+
+use gbf_rs::decompiler::{
+    ast::visitors::emit_context::{EmitContextBuilder, EmitVerbosity, IndentStyle},
+    function_decompiler::FunctionDecompiler,
+};
+
+fn load_bytecode(name: &str) -> Result<impl Read, std::io::Error> {
+    let path = Path::new("tests").join("gs2bc").join(name);
+    let file = File::open(path)?;
+    Ok(file)
+}
+
+fn main() {
+    // Load `simple.gs2bc` bytecode file
+    let reader = load_bytecode("simple.gs2bc").unwrap();
+    let module = gbf_rs::module::ModuleBuilder::new()
+        .name("simple.gs2".to_string())
+        .reader(Box::new(reader))
+        .build()
+        .unwrap();
+
+    // Get the first function in the module
+    let function = module.get(0).unwrap();
+
+    // Configure the emitter to use specific formatting
+    let context = EmitContextBuilder::default()
+        .verbosity(EmitVerbosity::Pretty)
+        .format_number_hex(true)
+        .indent_style(IndentStyle::Allman)
+        .build();
+    
+    // Invoke the `FunctionDecompiler`
+    let mut decompiler = FunctionDecompiler::new(function.clone()).unwrap();
+    let decompiled = decompiler.decompile(context).unwrap();
+    println!("{}", decompiled);
+}
+```
+
+This is the resulting GS2 decompilation for `simple.gs2bc`:
+
+```js
+player.chat = "Hello, World!";
+echo("This is a test");
+temp.x = 0x0;
+temp.x += 0x2;
+echo(temp.x);
+```
 
 #### Generate Control Flow Graph (CFG)
 
