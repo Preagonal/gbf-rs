@@ -99,14 +99,14 @@ impl AstVisitable for BinaryOperationNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{bin_op, emit, identifier, literal_string};
+    use crate::decompiler::ast::{new_bin_op, emit, new_id, new_str};
 
     use super::*;
 
     #[test]
     fn test_bin_op_emit() -> Result<(), AstNodeError> {
         for op_type in BinOpType::all_variants() {
-            let expr = bin_op(identifier("a"), identifier("b"), op_type.clone())?;
+            let expr = new_bin_op(new_id("a"), new_id("b"), op_type.clone())?;
             assert_eq!(emit(expr), format!("a {} b", op_type.as_str()));
         }
         Ok(())
@@ -114,9 +114,9 @@ mod tests {
 
     #[test]
     fn test_nested_bin_op_emit() -> Result<(), AstNodeError> {
-        let expr = bin_op(
-            bin_op(identifier("a"), identifier("b"), BinOpType::Add)?,
-            identifier("c"),
+        let expr = new_bin_op(
+            new_bin_op(new_id("a"), new_id("b"), BinOpType::Add)?,
+            new_id("c"),
             BinOpType::Mul,
         )?;
         assert_eq!(emit(expr), "(a + b) * c");
@@ -125,10 +125,10 @@ mod tests {
 
     #[test]
     fn test_bin_op_eq() -> Result<(), AstNodeError> {
-        let a = bin_op(identifier("a"), identifier("b"), BinOpType::Add)?;
-        let b = bin_op(identifier("a"), identifier("b"), BinOpType::Add)?;
-        let c = bin_op(identifier("a"), identifier("b"), BinOpType::Sub)?;
-        let d = bin_op(identifier("a"), identifier("c"), BinOpType::Add)?;
+        let a = new_bin_op(new_id("a"), new_id("b"), BinOpType::Add)?;
+        let b = new_bin_op(new_id("a"), new_id("b"), BinOpType::Add)?;
+        let c = new_bin_op(new_id("a"), new_id("b"), BinOpType::Sub)?;
+        let d = new_bin_op(new_id("a"), new_id("c"), BinOpType::Add)?;
 
         assert_eq!(a, b);
         assert_ne!(a, c);
@@ -138,9 +138,9 @@ mod tests {
 
     #[test]
     fn test_bin_op_validate_operand() -> Result<(), AstNodeError> {
-        let a = bin_op(identifier("a"), identifier("b"), BinOpType::Add);
-        let b = bin_op(identifier("a"), literal_string("string"), BinOpType::Add);
-        let c = bin_op(literal_string("string"), identifier("b"), BinOpType::Add);
+        let a = new_bin_op(new_id("a"), new_id("b"), BinOpType::Add);
+        let b = new_bin_op(new_id("a"), new_str("string"), BinOpType::Add);
+        let c = new_bin_op(new_str("string"), new_id("b"), BinOpType::Add);
 
         assert!(a.is_ok());
         assert!(b.is_err());

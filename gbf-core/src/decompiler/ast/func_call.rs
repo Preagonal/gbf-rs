@@ -54,43 +54,46 @@ impl PartialEq for FunctionCallNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{call, emit, identifier, method_call};
+    use crate::decompiler::ast::{emit, new_fn_call, new_id, new_m_call};
 
     #[test]
     fn test_call_emit() {
-        let call = call("echo", vec![identifier("hello")]);
+        let call = new_fn_call(new_id("echo"), vec![new_id("hello")]);
         assert_eq!(emit(call), "echo(hello)");
     }
 
     #[test]
     fn test_call_equality() {
-        let call1 = call("echo", vec![identifier("hello")]);
-        let call2 = call("echo", vec![identifier("hello")]);
+        let call1 = new_fn_call(new_id("echo"), vec![new_id("hello")]);
+        let call2 = new_fn_call(new_id("echo"), vec![new_id("hello")]);
         assert_eq!(call1, call2);
 
-        let call3 = call("echo", vec![identifier("world")]);
+        let call3 = new_fn_call(new_id("echo"), vec![new_id("world")]);
         assert_ne!(call1, call3);
     }
 
     #[test]
     fn test_method_call_emit() {
-        let call = method_call(identifier("foo"), "bar", vec![identifier("baz")]);
+        let call = new_m_call(new_id("foo"), new_id("bar"), vec![new_id("baz")]);
         assert_eq!(emit(call), "foo.bar(baz)");
     }
 
     #[test]
     fn test_method_call_equality() {
-        let call1 = method_call(identifier("foo"), "bar", vec![identifier("baz")]);
-        let call2 = method_call(identifier("foo"), "bar", vec![identifier("baz")]);
+        let call1 = new_m_call(new_id("foo"), new_id("bar"), vec![new_id("baz")]);
+        let call2 = new_m_call(new_id("foo"), new_id("bar"), vec![new_id("baz")]);
         assert_eq!(call1, call2);
 
-        let call3 = method_call(identifier("foo"), "bar", vec![identifier("qux")]);
+        let call3 = new_m_call(new_id("foo"), new_id("bar"), vec![new_id("qux")]);
         assert_ne!(call1, call3);
     }
 
     #[test]
     fn test_nested_call_emit() {
-        let call = call("foo", vec![call("bar", vec![identifier("baz")])]);
+        let call = new_fn_call(
+            new_id("foo"),
+            vec![new_fn_call(new_id("bar"), vec![new_id("baz")])],
+        );
         assert_eq!(emit(call), "foo(bar(baz))");
     }
 }

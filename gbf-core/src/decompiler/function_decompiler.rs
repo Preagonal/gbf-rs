@@ -91,7 +91,7 @@ impl FunctionDecompiler {
     ///
     /// # Errors
     /// - `FunctionDecompilerError` if there is an error while decompiling the function.
-    pub fn new(function: Function) -> Result<Self, FunctionDecompilerError> {
+    pub fn new(function: Function) -> Self {
         let func_decompiler = FunctionDecompiler {
             function,
             regions: Vec::new(),
@@ -102,7 +102,7 @@ impl FunctionDecompiler {
             context: FunctionDecompilerContext::new(),
         };
 
-        Ok(func_decompiler)
+        func_decompiler
     }
 }
 

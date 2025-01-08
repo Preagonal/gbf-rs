@@ -2,8 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::{assignable::AssignableKind, expr::ExprKind, identifier::IdentifierNode, AstKind},
-        function_decompiler::FunctionDecompilerError,
+        ast::new_id, function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
     },
     instruction::Instruction,
@@ -14,14 +13,6 @@ use super::OpcodeHandler;
 
 /// Handles identifier instructions.
 pub struct IdentifierHandler;
-
-impl IdentifierHandler {
-    fn create_identifier(name: &str) -> AstKind {
-        AstKind::Expression(ExprKind::Assignable(AssignableKind::Identifier(
-            IdentifierNode::new(name),
-        )))
-    }
-}
 
 impl OpcodeHandler for IdentifierHandler {
     fn handle_instruction(
@@ -40,7 +31,7 @@ impl OpcodeHandler for IdentifierHandler {
             // Otherwise, we can just use the opcode name (e.g. "player", "level", "this", etc.).
             opcode.to_string().to_lowercase()
         };
-        context.push_one_node(Self::create_identifier(str_operand.as_str()))?;
+        context.push_one_node(new_id(str_operand.as_str()).into())?;
         Ok(())
     }
 }

@@ -51,21 +51,19 @@ impl PartialEq for StatementNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{
-        emit, identifier, literal_string, member_access, statement, AstNodeError,
-    };
+    use crate::decompiler::ast::{emit, member_access, new_id, new_str, statement, AstNodeError};
 
     #[test]
     fn test_statement_emit() -> Result<(), AstNodeError> {
-        let var = identifier("test1");
-        let var2 = identifier("test2");
+        let var = new_id("test1");
+        let var2 = new_id("test2");
         let stmt = statement(var, var2);
         assert_eq!(emit(stmt), "test1 = test2;");
 
         // player.chat = "Hello, world!";
-        let player = identifier("player");
-        let chat = identifier("chat");
-        let chat_str = literal_string("Hello, world!");
+        let player = new_id("player");
+        let chat = new_id("chat");
+        let chat_str = new_str("Hello, world!");
         let ma = member_access(player, chat)?;
         let stmt = statement(ma, chat_str);
         assert_eq!(emit(stmt), "player.chat = \"Hello, world!\";");

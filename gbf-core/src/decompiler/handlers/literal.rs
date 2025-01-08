@@ -2,7 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::{expr::ExprKind, literal::LiteralNode, AstKind},
+        ast::{new_num, new_str},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
     },
@@ -14,15 +14,6 @@ use super::OpcodeHandler;
 
 /// Handles identifier instructions.
 pub struct LiteralHandler;
-
-impl LiteralHandler {
-    fn create_string_literal(name: &str) -> AstKind {
-        AstKind::Expression(ExprKind::Literal(LiteralNode::new_string(name)))
-    }
-    fn create_number_literal(value: i32) -> AstKind {
-        AstKind::Expression(ExprKind::Literal(LiteralNode::new_number(value)))
-    }
-}
 
 impl OpcodeHandler for LiteralHandler {
     fn handle_instruction(
@@ -37,10 +28,10 @@ impl OpcodeHandler for LiteralHandler {
 
         match instruction.opcode {
             Opcode::PushString => {
-                context.push_one_node(Self::create_string_literal(operand.get_string_value()?))?;
+                context.push_one_node(new_str(operand.get_string_value()?).into())?;
             }
             Opcode::PushNumber => {
-                context.push_one_node(Self::create_number_literal(operand.get_number_value()?))?;
+                context.push_one_node(new_num(operand.get_number_value()?).into())?;
             }
             _ => {
                 return Err(FunctionDecompilerError::UnimplementedOpcode(

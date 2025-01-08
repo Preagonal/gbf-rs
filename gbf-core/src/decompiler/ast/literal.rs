@@ -49,50 +49,48 @@ impl AstVisitable for LiteralNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{
-        emit, literal_bool, literal_float, literal_number, literal_string,
-    };
+    use crate::decompiler::ast::{emit, new_bool, new_float, new_num, new_str};
 
     #[test]
     fn test_literal_emit() {
-        let string = literal_string("str");
+        let string = new_str("str");
         assert_eq!(emit(string), "\"str\"");
 
-        let number = literal_number(42);
+        let number = new_num(42);
         assert_eq!(emit(number), "42");
 
-        let float = literal_float("3.14");
+        let float = new_float("3.14");
         assert_eq!(emit(float), "3.14");
 
-        let boolean = literal_bool(true);
+        let boolean = new_bool(true);
         assert_eq!(emit(boolean), "true");
     }
 
     #[test]
     fn test_literal_equalities() {
-        let string = literal_string("str");
-        let number = literal_number(42);
-        let float = literal_float("3.14");
-        let boolean = literal_bool(true);
+        let string = new_str("str");
+        let number = new_num(42);
+        let float = new_float("3.14");
+        let boolean = new_bool(true);
 
-        assert_eq!(string, literal_string("str"));
+        assert_eq!(string, new_str("str"));
         assert_ne!(string, number);
         assert_ne!(string, float);
         assert_ne!(string, boolean);
 
         assert_ne!(number, string);
-        assert_eq!(number, literal_number(42));
+        assert_eq!(number, new_num(42));
         assert_ne!(number, float);
         assert_ne!(number, boolean);
 
         assert_ne!(float, string);
         assert_ne!(float, number);
-        assert_eq!(float, literal_float("3.14"));
+        assert_eq!(float, new_float("3.14"));
         assert_ne!(float, boolean);
 
         assert_ne!(boolean, string);
         assert_ne!(boolean, number);
         assert_ne!(boolean, float);
-        assert_eq!(boolean, literal_bool(true));
+        assert_eq!(boolean, new_bool(true));
     }
 }

@@ -47,21 +47,21 @@ impl AstVisitable for IdentifierNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{emit, identifier};
+    use crate::decompiler::ast::{emit, new_id};
 
     #[test]
     fn test_identifier_emit() {
-        let id = identifier("test");
+        let id = new_id("test");
         assert_eq!(emit(id), "test");
     }
 
     #[test]
     fn test_identifier_equality() {
-        let id1 = identifier("test");
-        let id2 = identifier("test");
+        let id1 = new_id("test");
+        let id2 = new_id("test");
         assert_eq!(id1, id2);
 
-        let id3 = identifier("test2");
+        let id3 = new_id("test2");
         assert_ne!(id1, id3);
     }
 }

@@ -1,22 +1,10 @@
-use std::{fs::File, io::Read, path::Path};
+use common::load_bytecode;
+pub mod common;
 
 use gbf_rs::{
     cfg_dot::{CfgDotConfig, DotRenderableGraph},
     instruction::Instruction,
 };
-
-/// Load bytecode file from gs2bc directory and return the reader.
-///
-/// # Arguments
-/// - `name`: The name of the file to load.
-///
-/// # Returns
-/// - A `Result` containing the reader if the file was found, or an error if it was not.
-fn load_bytecode(name: &str) -> Result<impl Read, std::io::Error> {
-    let path = Path::new("tests").join("gs2bc").join(name);
-    let file = File::open(path)?;
-    Ok(file)
-}
 
 #[test]
 fn load_simple_gs2() {

@@ -73,7 +73,7 @@ impl PartialEq for UnaryOperationNode {
 #[cfg(test)]
 mod tests {
     use crate::decompiler::ast::{
-        bin_op, bin_op::BinOpType, emit, identifier, literal_string, unary_op, AstNodeError,
+        bin_op::BinOpType, emit, new_str, new_bin_op, new_id, new_unary_op, AstNodeError,
     };
 
     use super::UnaryOpType;
@@ -81,7 +81,7 @@ mod tests {
     #[test]
     fn test_unary_op_emit() -> Result<(), AstNodeError> {
         for op_type in UnaryOpType::all_variants() {
-            let expr = unary_op(identifier("a"), op_type.clone())?;
+            let expr = new_unary_op(new_id("a"), op_type.clone())?;
             assert_eq!(emit(expr), format!("{}a", op_type.as_str()));
         }
         Ok(())
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn test_nested_unary_op_emit() -> Result<(), AstNodeError> {
         for op_type in UnaryOpType::all_variants() {
-            let expr = unary_op(unary_op(identifier("a"), op_type.clone())?, op_type.clone())?;
+            let expr = new_unary_op(new_unary_op(new_id("a"), op_type.clone())?, op_type.clone())?;
             assert_eq!(
                 emit(expr),
                 format!("{}({}a)", op_type.as_str(), op_type.as_str())
@@ -101,8 +101,8 @@ mod tests {
 
     #[test]
     fn test_unary_op_binary_operand() -> Result<(), AstNodeError> {
-        let result = unary_op(
-            bin_op(identifier("a"), identifier("b"), BinOpType::Add)?,
+        let result = new_unary_op(
+            new_bin_op(new_id("a"), new_id("b"), BinOpType::Add)?,
             UnaryOpType::Negate,
         )?;
 
@@ -113,17 +113,17 @@ mod tests {
 
     #[test]
     fn test_unary_op_invalid_operand() {
-        let result = unary_op(literal_string("a"), UnaryOpType::Negate);
+        let result = new_unary_op(new_str("a"), UnaryOpType::Negate);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_unary_op_equality() -> Result<(), AstNodeError> {
-        let unary1 = unary_op(identifier("a"), UnaryOpType::Negate)?;
-        let unary2 = unary_op(identifier("a"), UnaryOpType::Negate)?;
+        let unary1 = new_unary_op(new_id("a"), UnaryOpType::Negate)?;
+        let unary2 = new_unary_op(new_id("a"), UnaryOpType::Negate)?;
         assert_eq!(unary1, unary2);
 
-        let unary3 = unary_op(identifier("b"), UnaryOpType::Negate)?;
+        let unary3 = new_unary_op(new_id("b"), UnaryOpType::Negate)?;
         assert_ne!(unary1, unary3);
         Ok(())
     }

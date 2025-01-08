@@ -149,29 +149,31 @@ where
 // = Expressions =
 
 /// Creates a new AssignableExpr for an identifier
-pub fn identifier(name: &str) -> IdentifierNode {
+pub fn new_id(name: &str) -> IdentifierNode {
     IdentifierNode::new(name)
 }
 
 /// Creates a new function call node.
-pub fn call<A>(name: &str, args: A) -> FunctionCallNode
+pub fn new_fn_call<N, A>(name: N, args: A) -> FunctionCallNode
 where
+    N: Into<IdentifierNode>,
     A: Into<AstVec<ExprKind>>,
 {
-    FunctionCallNode::new(identifier(name), args.into(), None)
+    FunctionCallNode::new(name.into(), args.into(), None)
 }
 
 /// Creates a new function call node with a base.
-pub fn method_call<A, B>(base: A, name: &str, args: B) -> FunctionCallNode
+pub fn new_m_call<N, A, B>(base: A, name: N, args: B) -> FunctionCallNode
 where
     A: Into<Box<ExprKind>>,
+    N: Into<IdentifierNode>,
     B: Into<AstVec<ExprKind>>,
 {
-    FunctionCallNode::new(identifier(name), args.into(), Some(base.into()))
+    FunctionCallNode::new(name.into(), args.into(), Some(base.into()))
 }
 
 /// Creates binary operation node.
-pub fn bin_op<L, R>(
+pub fn new_bin_op<L, R>(
     lhs: L,
     rhs: R,
     op_type: bin_op::BinOpType,
@@ -184,7 +186,7 @@ where
 }
 
 /// Creates a new unary operation node.
-pub fn unary_op<A>(
+pub fn new_unary_op<A>(
     operand: A,
     op_type: unary_op::UnaryOpType,
 ) -> Result<UnaryOperationNode, AstNodeError>
@@ -197,21 +199,21 @@ where
 // == Literals ==
 
 /// Creates a new ExprNode for a literal string.
-pub fn literal_string(value: &str) -> LiteralNode {
+pub fn new_str(value: &str) -> LiteralNode {
     LiteralNode::String(value.to_string())
 }
 
 /// Creates a new ExprNode for a literal number.
-pub fn literal_number(value: i32) -> LiteralNode {
+pub fn new_num(value: i32) -> LiteralNode {
     LiteralNode::Number(value)
 }
 
 /// Creates a new ExprNode for a literal float.
-pub fn literal_float(value: &str) -> LiteralNode {
+pub fn new_float(value: &str) -> LiteralNode {
     LiteralNode::Float(value.to_string())
 }
 
 /// Creates a new ExprNode for a literal boolean.
-pub fn literal_bool(value: bool) -> LiteralNode {
+pub fn new_bool(value: bool) -> LiteralNode {
     LiteralNode::Boolean(value)
 }

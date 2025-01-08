@@ -2,11 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::{
-            bin_op::{BinOpType, BinaryOperationNode},
-            expr::ExprKind,
-            AstKind,
-        },
+        ast::{bin_op::BinOpType, new_bin_op},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
     },
@@ -19,18 +15,6 @@ use super::OpcodeHandler;
 /// Handles identifier instructions.
 pub struct BinaryOperationHandler;
 
-impl BinaryOperationHandler {
-    fn create_binary_operation_node(
-        bin_op_type: BinOpType,
-        left: ExprKind,
-        right: ExprKind,
-    ) -> Result<AstKind, FunctionDecompilerError> {
-        Ok(AstKind::Expression(ExprKind::BinOp(
-            BinaryOperationNode::new(Box::new(left), Box::new(right), bin_op_type)?,
-        )))
-    }
-}
-
 impl OpcodeHandler for BinaryOperationHandler {
     fn handle_instruction(
         &self,
@@ -41,11 +25,7 @@ impl OpcodeHandler for BinaryOperationHandler {
         let lhs = context.pop_expression()?;
         match instruction.opcode {
             Opcode::Add => {
-                context.push_one_node(Self::create_binary_operation_node(
-                    BinOpType::Add,
-                    lhs,
-                    rhs,
-                )?)?;
+                context.push_one_node(new_bin_op(lhs, rhs, BinOpType::Add)?.into())?;
             }
             _ => {
                 return Err(FunctionDecompilerError::UnimplementedOpcode(

@@ -2,10 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::{
-            assignable::AssignableKind, ast_vec::AstVec, expr::ExprKind,
-            func_call::FunctionCallNode, identifier::IdentifierNode, AstKind,
-        },
+        ast::{assignable::AssignableKind, ast_vec::AstVec, expr::ExprKind, new_fn_call},
         execution_frame::ExecutionFrame,
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
@@ -18,16 +15,6 @@ use super::OpcodeHandler;
 
 /// Handles other instructions.
 pub struct VariableOperandHandler;
-
-impl VariableOperandHandler {
-    fn create_function_call_node(function_name: IdentifierNode, args: AstVec<ExprKind>) -> AstKind {
-        AstKind::Expression(ExprKind::FunctionCall(FunctionCallNode::new(
-            function_name,
-            args,
-            None,
-        )))
-    }
-}
 
 impl OpcodeHandler for VariableOperandHandler {
     fn handle_instruction(
@@ -72,7 +59,8 @@ impl OpcodeHandler for VariableOperandHandler {
                     let args = args.into_iter().rev().collect::<AstVec<_>>();
 
                     // Create the function call node
-                    let function_call_node = Self::create_function_call_node(function_name, args);
+                    // TODO: Handle method call case
+                    let function_call_node = new_fn_call(function_name, args).into();
 
                     // Push the function call node back to the execution stack
                     context.push_one_node(function_call_node)?;
