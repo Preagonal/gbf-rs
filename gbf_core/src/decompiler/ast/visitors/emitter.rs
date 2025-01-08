@@ -4,7 +4,6 @@ use super::{
     emit_context::{EmitContext, EmitVerbosity},
     AstVisitor,
 };
-use crate::decompiler::ast::identifier::IdentifierNode;
 use crate::decompiler::ast::literal::LiteralNode;
 use crate::decompiler::ast::member_access::MemberAccessNode;
 use crate::decompiler::ast::meta::MetaNode;
@@ -16,6 +15,7 @@ use crate::decompiler::ast::{
     func_call::FunctionCallNode,
 };
 use crate::decompiler::ast::{AstKind, AstVisitable};
+use crate::{decompiler::ast::identifier::IdentifierNode, utils::escape_string};
 
 /// An emitter for the AST.
 pub struct Gs2Emitter {
@@ -206,7 +206,7 @@ impl AstVisitor for Gs2Emitter {
 
     fn visit_literal(&mut self, node: &LiteralNode) {
         let emitted_literal = match node {
-            LiteralNode::String(s) => format!("\"{}\"", s),
+            LiteralNode::String(s) => format!("\"{}\"", escape_string(s)),
             LiteralNode::Number(n) => {
                 if self.context.format_number_hex {
                     format!("0x{:X}", n)
