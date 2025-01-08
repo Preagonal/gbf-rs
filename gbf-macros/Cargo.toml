@@ -1,6 +1,7 @@
 [package]
 name = "gbf-macros"
-version = "0.1.0"
+version = "0.0.3"
+# TODO: Once 2024 edition is stable, switch to it. ETA Feb 2025.
 edition = "2021"
 
 [lib]
