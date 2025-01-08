@@ -167,9 +167,7 @@ $ dot -Tpng cfg.dot -o cfg.png
 The library can also be used to manually build ASTs. Not only can you access the AST from the decompiled output, there are helper functions you can use to define your own AST for testing purposes:
 
 ```rs
-use gbf_core::decompiler::ast::{
-    emit, member_access, new_id, new_str, statement, AstNodeError,
-};
+use gbf_core::decompiler::ast::{emit, member_access, new_id, new_str, statement, AstNodeError};
 
 fn build_player_chat() -> Result<String, AstNodeError> {
     // player.chat = "Hello, world!";
@@ -177,7 +175,13 @@ fn build_player_chat() -> Result<String, AstNodeError> {
         member_access(new_id("player"), new_id("chat"))?,
         new_str("Hello, world!"),
     );
-    emit(stmt)
+    Ok(emit(stmt))
+}
+
+fn main() -> Result<(), AstNodeError> {
+    let result = build_player_chat()?;
+    println!("{}", result);
+    Ok(())
 }
 ```
 
