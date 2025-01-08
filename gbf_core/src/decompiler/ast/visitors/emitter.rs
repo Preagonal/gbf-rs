@@ -320,7 +320,8 @@ impl AstVisitor for Gs2Emitter {
         let name = name.unwrap();
 
         // Emit the function parameters
-        self.output.push_str(format!("function {}(", name).as_str());
+        self.output
+            .push_str(format!("function {} (", name).as_str());
         for (i, param) in node.params().iter().enumerate() {
             param.accept(self);
             if i < node.params().len() - 1 {
