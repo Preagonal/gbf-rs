@@ -1,5 +1,5 @@
 use common::{load_bytecode, load_expected_output};
-use gbf_rs::decompiler::{
+use gbf_core::decompiler::{
     ast::visitors::emit_context::EmitContext, function_decompiler::FunctionDecompiler,
 };
 pub mod common;
@@ -12,7 +12,7 @@ fn load_simple_gs2() {
         .trim()
         .to_string();
 
-    let module = gbf_rs::module::ModuleBuilder::new()
+    let module = gbf_core::module::ModuleBuilder::new()
         .name("simple.gs2".to_string())
         .reader(Box::new(reader))
         .build()

@@ -2,7 +2,7 @@
 [![codecov](https://codecov.io/gh/Preagonal/gbf-rs/graph/badge.svg?token=V66BCXQ5IX)](https://codecov.io/gh/Preagonal/gbf-rs)
 [![Rust CI](https://github.com/cernec1999/gbf-rs/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/cernec1999/gbf-rs/actions/workflows/rust-ci.yml)
 
-`gbf-rs` is a Rust library designed to analyze, disassemble, process, and decompile Graal Script 2 (GS2) bytecode. It provides tools for GS2 bytecode analysis, control flow graph (CFG) generation, and abstract syntax tree (AST) construction, with a focus on modern Rust best practices.
+`gbf_core` is a Rust library designed to analyze, disassemble, process, and decompile Graal Script 2 (GS2) bytecode. It provides tools for GS2 bytecode analysis, control flow graph (CFG) generation, and abstract syntax tree (AST) construction, with a focus on modern Rust best practices.
 
 ## Features
 
@@ -23,11 +23,11 @@
 
 ### Installation
 
-Add `gbf-rs` as a dependency in your `Cargo.toml`:
+Add `gbf_core` as a dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-gbf-rs = "0.0.3"
+gbf_core = "0.0.3"
 ```
 
 ### Minimum Supported Rust Version
@@ -37,12 +37,12 @@ This project supports Rust 1.70.0 and later.
 
 ### Decompile GS2 Bytecode
 
-Decompiling GS2 Bytecode is easy and extremely customizable in `gbf-rs`. We can do so by loading a GS2 module and invoking the `FunctionDecompiler`, like so:
+Decompiling GS2 Bytecode is easy and extremely customizable in `gbf_core`. We can do so by loading a GS2 module and invoking the `FunctionDecompiler`, like so:
 
 ```rs
 use std::{fs::File, io::Read, path::Path};
 
-use gbf_rs::decompiler::{
+use gbf_core::decompiler::{
     ast::visitors::emit_context::{EmitContextBuilder, EmitVerbosity, IndentStyle},
     function_decompiler::FunctionDecompiler,
 };
@@ -56,7 +56,7 @@ fn load_bytecode(name: &str) -> Result<impl Read, std::io::Error> {
 fn main() {
     // Load `simple.gs2bc` bytecode file
     let reader = load_bytecode("simple.gs2bc").unwrap();
-    let module = gbf_rs::module::ModuleBuilder::new()
+    let module = gbf_core::module::ModuleBuilder::new()
         .name("simple.gs2".to_string())
         .reader(Box::new(reader))
         .build()
@@ -96,7 +96,7 @@ This library can generate directed control flow graphs using Graphviz. We can lo
 ```rs
 use std::{fs::File, io::Read, path::Path};
 
-use gbf_rs::{
+use gbf_core::{
     cfg_dot::{CfgDotConfig, DotRenderableGraph},
 };
 
@@ -109,7 +109,7 @@ fn load_bytecode(name: &str) -> Result<impl Read, std::io::Error> {
 fn main() {
     // Load `switch.gs2bc` bytecode file
     let reader = load_bytecode("switch.gs2bc").unwrap();
-    let module = gbf_rs::module::ModuleBuilder::new()
+    let module = gbf_core::module::ModuleBuilder::new()
         .name("switch.gs2".to_string())
         .reader(Box::new(reader))
         .build()
@@ -152,7 +152,7 @@ fn main() {
   }
   ```
 
-  The resulting Graphviz code that `gbf-rs` generates will look like this when exported:
+  The resulting Graphviz code that `gbf_core` generates will look like this when exported:
   ![Switch CFG](./docs/switch.svg)
 </details>
 
@@ -164,7 +164,22 @@ $ dot -Tpng cfg.dot -o cfg.png
 
 #### Build Abstract Syntax Trees (ASTs)
 
-TODO: Add example code.
+The library can also be used to manually build ASTs. Not only can you access the AST from the decompiled output, there are helper functions you can use to define your own AST for testing purposes:
+
+```rs
+use gbf_core::decompiler::ast::{
+    emit, member_access, new_id, new_str, statement, AstNodeError,
+};
+
+fn build_player_chat() -> Result<String, AstNodeError> {
+    // player.chat = "Hello, world!";
+    let stmt = statement(
+        member_access(new_id("player"), new_id("chat"))?,
+        new_str("Hello, world!"),
+    );
+    emit(stmt)
+}
+```
 
 ## Development
 

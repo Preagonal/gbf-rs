@@ -60,9 +60,9 @@ impl Instruction {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::instruction::Instruction;
-    /// use gbf_rs::operand::Operand;
-    /// use gbf_rs::opcode::Opcode;
+    /// use gbf_core::instruction::Instruction;
+    /// use gbf_core::operand::Operand;
+    /// use gbf_core::opcode::Opcode;
     ///
     /// let mut instruction = Instruction::new(Opcode::PushNumber, 0);
     /// instruction.set_operand(Operand::new_number(42));
@@ -81,9 +81,9 @@ impl std::fmt::Display for Instruction {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::instruction::Instruction;
-    /// use gbf_rs::operand::Operand;
-    /// use gbf_rs::opcode::Opcode;
+    /// use gbf_core::instruction::Instruction;
+    /// use gbf_core::operand::Operand;
+    /// use gbf_core::opcode::Opcode;
     ///
     /// let instruction = Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42));
     /// let string = instruction.to_string();

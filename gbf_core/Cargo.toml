@@ -1,5 +1,5 @@
 [package]
-name = "gbf-rs"
+name = "gbf_core"
 version = "0.0.3"
 # TODO: Once 2024 edition is stable, switch to it. ETA Feb 2025.
 edition = "2021"
@@ -9,7 +9,7 @@ log = "0.4.22"
 petgraph = { version = "0.7.0", features = ["serde-1"] }
 serde = {version = "1.0.216", features = ["derive"]}
 thiserror = "2.0.8"
-gbf-macros = { path = "../gbf-macros" }
+gbf_macros = { path = "../gbf_macros" }
 
 [package.metadata]
 msrv = "1.70.0"

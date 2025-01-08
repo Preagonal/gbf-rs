@@ -98,7 +98,7 @@ impl<R: std::io::Read> BytecodeLoaderBuilder<R> {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::bytecode_loader::BytecodeLoaderBuilder;
+    /// use gbf_core::bytecode_loader::BytecodeLoaderBuilder;
     ///
     /// let reader = std::io::Cursor::new(vec![0x00, 0x00, 0x00, 0x00]);
     /// let builder = BytecodeLoaderBuilder::new(reader);

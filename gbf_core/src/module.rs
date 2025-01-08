@@ -56,7 +56,7 @@ impl ModuleBuilder {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let builder = ModuleBuilder::new();
     /// ```
@@ -76,7 +76,7 @@ impl ModuleBuilder {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let builder = ModuleBuilder::new().name("test");
     /// ```
@@ -95,7 +95,7 @@ impl ModuleBuilder {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let builder = ModuleBuilder::new().reader(Box::new(std::io::Cursor::new(vec![0x00, 0x01])));
     /// ```
@@ -111,7 +111,7 @@ impl ModuleBuilder {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let module = ModuleBuilder::new().name("test").build().unwrap();
     /// ```
@@ -168,7 +168,7 @@ impl Module {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
     /// let function_id = module.create_function("test_function", 123).unwrap();
@@ -217,7 +217,7 @@ impl Module {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
     /// let function_id = module.create_function("test_function", 123).unwrap();
@@ -241,7 +241,7 @@ impl Module {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
     /// let function_id = module.create_function("test_function", 123).unwrap();
@@ -260,7 +260,7 @@ impl Module {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
     /// let function_id = module.create_function("test_function", 123).unwrap();
@@ -278,7 +278,7 @@ impl Module {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
     /// let function_id = module.create_function("test_function", 123).unwrap();
@@ -304,7 +304,7 @@ impl Module {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
     /// let function_id = module.create_function("test_function", 123).unwrap();
@@ -332,7 +332,7 @@ impl Module {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
     /// let function_id = module.create_function("test_function", 123).unwrap();
@@ -356,7 +356,7 @@ impl Module {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let mut module = ModuleBuilder::new().name("test.gs2").build().unwrap();
     /// let function_id = module.create_function("test_function", 123).unwrap();
@@ -373,7 +373,7 @@ impl Module {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::module::ModuleBuilder;
+    /// use gbf_core::module::ModuleBuilder;
     ///
     /// let module = ModuleBuilder::new().name("test.gs2").build().unwrap();
     /// assert!(!module.is_empty());

@@ -57,7 +57,7 @@ impl FunctionId {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::FunctionId;
+    /// use gbf_core::function::FunctionId;
     ///
     /// let entry = FunctionId::new_without_name(0, 0);
     /// let add = FunctionId::new(1, Some("add"), 0x100);
@@ -86,7 +86,7 @@ impl FunctionId {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::FunctionId;
+    /// use gbf_core::function::FunctionId;
     ///
     /// let entry = FunctionId::new_without_name(0, 0);
     ///
@@ -163,8 +163,8 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::function::{Function, FunctionId};
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let block = function.create_block(BasicBlockType::Normal, 0);
@@ -204,8 +204,8 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::function::{Function, FunctionId};
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let block_id = function.create_block(BasicBlockType::Normal, 0).unwrap();
@@ -233,8 +233,8 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::function::{Function, FunctionId};
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let block_id = function.create_block(BasicBlockType::Normal, 0).unwrap();
@@ -264,8 +264,8 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::function::{Function, FunctionId};
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let block_id = function.create_block(BasicBlockType::Normal, 0x100).unwrap();
@@ -293,8 +293,8 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::function::{Function, FunctionId};
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let block_id = function.create_block(BasicBlockType::Normal, 0x100).unwrap();
@@ -319,8 +319,8 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::function::{Function, FunctionId};
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let block_id = function.create_block(BasicBlockType::Normal, 0x100).unwrap();
@@ -337,7 +337,7 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
+    /// use gbf_core::function::{Function, FunctionId};
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let entry = function.get_entry_basic_block_id();
@@ -353,7 +353,7 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
+    /// use gbf_core::function::{Function, FunctionId};
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let entry = function.get_entry_basic_block();
@@ -369,7 +369,7 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
+    /// use gbf_core::function::{Function, FunctionId};
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let entry = function.get_entry_basic_block_mut();
@@ -390,8 +390,8 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::function::{Function, FunctionId};
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let block1 = function.create_block(BasicBlockType::Normal, 0).unwrap();
@@ -423,8 +423,8 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::function::{Function, FunctionId};
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let block1 = function.create_block(BasicBlockType::Normal, 0).unwrap();
@@ -444,7 +444,7 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
+    /// use gbf_core::function::{Function, FunctionId};
     ///
     /// let function = Function::new(FunctionId::new_without_name(0, 0));
     /// assert!(!function.is_empty());
@@ -468,8 +468,8 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::function::{Function, FunctionId};
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let block1 = function.create_block(BasicBlockType::Normal, 0).unwrap();
@@ -509,8 +509,8 @@ impl Function {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::function::{Function, FunctionId};
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::function::{Function, FunctionId};
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let mut function = Function::new(FunctionId::new_without_name(0, 0));
     /// let block1 = function.create_block(BasicBlockType::Normal, 0).unwrap();

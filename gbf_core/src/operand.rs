@@ -43,7 +43,7 @@ impl Operand {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::operand::Operand;
+    /// use gbf_core::operand::Operand;
     ///
     /// let operand = Operand::new_string("Hello, world!");
     /// ```
@@ -61,7 +61,7 @@ impl Operand {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::operand::Operand;
+    /// use gbf_core::operand::Operand;
     ///
     /// let operand = Operand::new_float("3.14");
     /// ```
@@ -79,7 +79,7 @@ impl Operand {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::operand::Operand;
+    /// use gbf_core::operand::Operand;
     ///
     /// let operand = Operand::new_number(42);
     /// ```
@@ -97,7 +97,7 @@ impl Operand {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::operand::Operand;
+    /// use gbf_core::operand::Operand;
     ///
     /// let operand = Operand::new_string("Hello, world!");
     /// let value = operand.get_string_value().unwrap();
@@ -123,7 +123,7 @@ impl Operand {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::operand::Operand;
+    /// use gbf_core::operand::Operand;
     ///
     /// let operand = Operand::new_number(42);
     /// let value = operand.get_number_value().unwrap();

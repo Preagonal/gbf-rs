@@ -63,7 +63,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let reader = GraalReader::new(Cursor::new(vec![1, 2, 3, 4]));
@@ -82,7 +82,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let value = GraalReader::<Cursor<Vec<u8>>>::decode_bits(&[32, 32, 32, 33]);
@@ -112,7 +112,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![104, 101, 108, 108, 111, 0, 119, 111, 114, 108, 100, 0]));
@@ -150,7 +150,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 5, 104, 101, 108, 108, 111, 32 + 5, 119, 111, 114, 108, 100]));
@@ -179,7 +179,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![1, 2]));
@@ -202,7 +202,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![0, 1, 0, 2]));
@@ -225,7 +225,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![0, 0, 0, 1, 0, 0, 0, 2]));
@@ -248,7 +248,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1]));
@@ -268,7 +268,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1]));
@@ -288,7 +288,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1, 32 + 1]));
@@ -308,7 +308,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1, 32 + 1, 32 + 1]));
@@ -328,7 +328,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1, 32 + 1, 32 + 1, 32 + 1]));
@@ -351,7 +351,7 @@ impl<R: Read> GraalReader<R> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalReader;
+    /// use gbf_core::graal_io::GraalReader;
     /// use std::io::Cursor;
     ///
     /// let mut reader = GraalReader::new(Cursor::new(vec![32 + 1, 32 + 1, 32 + 1, 32 + 1, 32 + 1]));
@@ -379,7 +379,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let data = vec![0];
@@ -401,7 +401,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut buffer = vec![0, 0, 0, 0];
@@ -430,7 +430,7 @@ impl<W: Write> GraalWriter<W> {
     /// # Examples
     /// ```
     /// use std::io::Cursor;
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     ///
     /// let mut buffer = Cursor::new(Vec::new());
     /// let mut writer = GraalWriter::new(buffer);
@@ -447,7 +447,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
@@ -471,7 +471,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
@@ -499,7 +499,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
@@ -524,7 +524,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
@@ -546,7 +546,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
@@ -569,7 +569,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
@@ -597,7 +597,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
@@ -625,7 +625,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
@@ -653,7 +653,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));
@@ -681,7 +681,7 @@ impl<W: Write> GraalWriter<W> {
     ///
     /// # Examples
     /// ```
-    /// use gbf_rs::graal_io::GraalWriter;
+    /// use gbf_core::graal_io::GraalWriter;
     /// use std::io::Cursor;
     ///
     /// let mut writer = GraalWriter::new(Cursor::new(vec![]));

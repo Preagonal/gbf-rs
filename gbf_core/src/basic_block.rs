@@ -94,8 +94,8 @@ impl BasicBlockId {
     ///
     /// Example
     /// ```
-    /// use gbf_rs::basic_block::BasicBlockId;
-    /// use gbf_rs::basic_block::BasicBlockType;
+    /// use gbf_core::basic_block::BasicBlockId;
+    /// use gbf_core::basic_block::BasicBlockType;
     ///
     /// let block = BasicBlockId::new(0, BasicBlockType::Normal, 0);
     /// ```
@@ -128,7 +128,7 @@ impl BasicBlock {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
+    /// use gbf_core::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
     ///
     /// let block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
     /// ```
@@ -146,10 +146,10 @@ impl BasicBlock {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
-    /// use gbf_rs::instruction::Instruction;
-    /// use gbf_rs::opcode::Opcode;
-    /// use gbf_rs::operand::Operand;
+    /// use gbf_core::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
+    /// use gbf_core::instruction::Instruction;
+    /// use gbf_core::opcode::Opcode;
+    /// use gbf_core::operand::Operand;
     ///
     /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
     /// block.add_instruction(Instruction::new_with_operand(Opcode::PushNumber, 0, Operand::new_number(42)));
@@ -165,9 +165,9 @@ impl BasicBlock {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
-    /// use gbf_rs::instruction::Instruction;
-    /// use gbf_rs::opcode::Opcode;
+    /// use gbf_core::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
+    /// use gbf_core::instruction::Instruction;
+    /// use gbf_core::opcode::Opcode;
     ///
     /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
     /// block.add_instruction(Instruction::new(Opcode::PushNumber, 0));
@@ -186,7 +186,7 @@ impl BasicBlock {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
+    /// use gbf_core::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
     ///
     /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
     /// assert_eq!(block.len(), 0);
@@ -202,7 +202,7 @@ impl BasicBlock {
     ///
     /// # Example
     /// ```
-    /// use gbf_rs::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
+    /// use gbf_core::basic_block::{BasicBlock, BasicBlockId, BasicBlockType};
     ///
     /// let mut block = BasicBlock::new(BasicBlockId::new(0, BasicBlockType::Normal, 0));
     /// assert!(block.is_empty());

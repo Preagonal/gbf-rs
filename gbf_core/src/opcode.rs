@@ -51,7 +51,7 @@ macro_rules! define_opcodes {
             ///
             /// # Example
             /// ```
-            /// use gbf_rs::opcode::Opcode;
+            /// use gbf_core::opcode::Opcode;
             ///
             /// let opcode = Opcode::from_byte(0x1).unwrap();
             /// assert_eq!(opcode, Opcode::Jmp);
@@ -72,7 +72,7 @@ macro_rules! define_opcodes {
             ///
             /// # Example
             /// ```
-            /// use gbf_rs::opcode::Opcode;
+            /// use gbf_core::opcode::Opcode;
             ///
             /// let opcode = Opcode::Jmp;
             /// assert_eq!(opcode.to_byte(), 0x1);
@@ -88,7 +88,7 @@ macro_rules! define_opcodes {
             ///
             /// # Example
             /// ```
-            /// use gbf_rs::opcode::Opcode;
+            /// use gbf_core::opcode::Opcode;
             ///
             /// let count = Opcode::count();
             /// ```
@@ -103,7 +103,7 @@ macro_rules! define_opcodes {
             ///
             /// # Example
             /// ```
-            /// use gbf_rs::opcode::Opcode;
+            /// use gbf_core::opcode::Opcode;
             ///
             /// let opcodes = Opcode::all();
             /// ```
@@ -123,7 +123,7 @@ macro_rules! define_opcodes {
             ///
             /// # Example
             /// ```
-            /// use gbf_rs::opcode::Opcode;
+            /// use gbf_core::opcode::Opcode;
             ///
             /// let opcode = Opcode::Jeq;
             /// assert!(opcode.is_conditional_jump());
@@ -146,7 +146,7 @@ macro_rules! define_opcodes {
             ///
             /// # Example
             /// ```
-            /// use gbf_rs::opcode::Opcode;
+            /// use gbf_core::opcode::Opcode;
             ///
             /// let opcode = Opcode::Jmp;
             /// assert!(opcode.is_unconditional_jump());
@@ -169,7 +169,7 @@ macro_rules! define_opcodes {
             ///
             /// # Example
             /// ```
-            /// use gbf_rs::opcode::Opcode;
+            /// use gbf_core::opcode::Opcode;
             ///
             /// let opcode = Opcode::Jmp;
             /// assert!(!opcode.has_fall_through());
@@ -193,7 +193,7 @@ macro_rules! define_opcodes {
             ///
             /// # Example
             /// ```
-            /// use gbf_rs::opcode::Opcode;
+            /// use gbf_core::opcode::Opcode;
             ///
             /// let opcode = Opcode::Jmp;
             /// assert!(!opcode.connects_to_next_block());
@@ -213,7 +213,7 @@ macro_rules! define_opcodes {
             ///
             /// # Example
             /// ```
-            /// use gbf_rs::opcode::Opcode;
+            /// use gbf_core::opcode::Opcode;
             ///
             /// let opcode = Opcode::Jmp;
             /// assert!(opcode.has_jump_target());
@@ -231,7 +231,7 @@ macro_rules! define_opcodes {
             ///
             /// # Example
             /// ```
-            /// use gbf_rs::opcode::Opcode;
+            /// use gbf_core::opcode::Opcode;
             ///
             /// let opcode = Opcode::Ret;
             /// assert!(opcode.is_block_end());

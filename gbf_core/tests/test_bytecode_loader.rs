@@ -1,7 +1,7 @@
 use common::load_bytecode;
 pub mod common;
 
-use gbf_rs::{
+use gbf_core::{
     cfg_dot::{CfgDotConfig, DotRenderableGraph},
     instruction::Instruction,
 };
@@ -9,7 +9,7 @@ use gbf_rs::{
 #[test]
 fn load_simple_gs2() {
     let reader = load_bytecode("simple.gs2bc").unwrap();
-    let module = gbf_rs::module::ModuleBuilder::new()
+    let module = gbf_core::module::ModuleBuilder::new()
         .name("simple.gs2".to_string())
         .reader(Box::new(reader))
         .build()
@@ -32,7 +32,7 @@ fn load_simple_gs2() {
 
     // Re-initialize the reader & module, but this time, try out the iterators.
     let reader = load_bytecode("simple.gs2bc").unwrap();
-    let module = gbf_rs::module::ModuleBuilder::new()
+    let module = gbf_core::module::ModuleBuilder::new()
         .name("simple.gs2".to_string())
         .reader(Box::new(reader))
         .build()
@@ -54,7 +54,7 @@ fn load_simple_gs2() {
 #[test]
 fn load_multiple_functions() {
     let reader = load_bytecode("multiple-functions.gs2bc").unwrap();
-    let module = gbf_rs::module::ModuleBuilder::new()
+    let module = gbf_core::module::ModuleBuilder::new()
         .name("multiple-functions.gs2".to_string())
         .reader(Box::new(reader))
         .build()
@@ -88,11 +88,11 @@ fn load_multiple_functions() {
     assert_eq!(instructions, 20);
     assert_eq!(
         basic_block[0],
-        Instruction::new(gbf_rs::opcode::Opcode::PushArray, 1)
+        Instruction::new(gbf_core::opcode::Opcode::PushArray, 1)
     );
     assert_eq!(
         basic_block[19],
-        Instruction::new(gbf_rs::opcode::Opcode::Ret, 20)
+        Instruction::new(gbf_core::opcode::Opcode::Ret, 20)
     );
 
     // Function 2: foo
@@ -141,7 +141,7 @@ fn load_multiple_functions() {
     let first_instruction = &basic_block[0];
     assert_eq!(
         first_instruction,
-        &Instruction::new(gbf_rs::opcode::Opcode::PushArray, 46)
+        &Instruction::new(gbf_core::opcode::Opcode::PushArray, 46)
     );
 
     let basic_block = &function[1];

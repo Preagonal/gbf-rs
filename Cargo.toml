@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "gbf-core",
-    "gbf-macros"
+    "gbf_core",
+    "gbf_macros"
 ]
 resolver = "2"

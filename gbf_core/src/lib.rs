@@ -41,7 +41,7 @@ pub mod utils;
 ///
 /// # Examples
 /// ```
-/// use gbf_rs::disassemble_bytecode;
+/// use gbf_core::disassemble_bytecode;
 ///
 /// // read from a file
 /// let reader = std::fs::File::open("tests/gs2bc/simple.gs2bc").unwrap();

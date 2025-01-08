@@ -41,8 +41,8 @@ impl RegionId {
     ///
     /// Example
     /// ```
-    /// use gbf_rs::decompiler::region::RegionId;
-    /// use gbf_rs::decompiler::region::RegionType;
+    /// use gbf_core::decompiler::region::RegionId;
+    /// use gbf_core::decompiler::region::RegionType;
     ///
     /// let block = RegionId::new(0, RegionType::Linear);
     /// ```
