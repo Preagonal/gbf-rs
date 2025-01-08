@@ -15,7 +15,7 @@ get_main_version() {
 
 # Fetch the current branch version
 get_current_version() {
-    CURRENT_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "//;s/"//')
+    CURRENT_VERSION=$(grep '^version' ./gbf-core/Cargo.toml | sed 's/version = "//;s/"//')
     echo "$CURRENT_VERSION"
 }
 
