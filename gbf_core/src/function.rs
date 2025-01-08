@@ -990,4 +990,13 @@ mod tests {
         let result = function.get_successors(BasicBlockId::new(1234, BasicBlockType::Normal, 0));
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_get_entry_basic_block_id() {
+        let id = FunctionId::new_without_name(0, 0);
+        let function = Function::new(id.clone());
+        let entry = function.get_entry_basic_block_id();
+
+        assert_eq!(entry, function.get_entry_basic_block().id);
+    }
 }
