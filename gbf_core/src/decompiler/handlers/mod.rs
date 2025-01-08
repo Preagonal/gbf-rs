@@ -12,7 +12,7 @@ use crate::{instruction::Instruction, opcode::Opcode};
 
 use super::{
     function_decompiler::FunctionDecompilerError,
-    function_decompiler_context::FunctionDecompilerContext,
+    function_decompiler_context::FunctionDecompilerContext, ProcessedInstruction,
 };
 
 /// Handles binary operation instructions.
@@ -44,7 +44,7 @@ pub trait OpcodeHandler: Send + Sync {
         &self,
         context: &mut FunctionDecompilerContext,
         instruction: &Instruction,
-    ) -> Result<(), FunctionDecompilerError>;
+    ) -> Result<ProcessedInstruction, FunctionDecompilerError>;
 }
 
 static GLOBAL_OPCODE_HANDLERS: OnceLock<HashMap<Opcode, Box<dyn OpcodeHandler>>> = OnceLock::new();
@@ -75,9 +75,31 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
 
         // These handlers are used to create binary operation nodes.
         handlers.insert(Opcode::Add, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::Subtract, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::Multiply, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::Divide, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::Modulo, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::BitwiseAnd, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::BitwiseOr, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::BitwiseXor, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::ShiftLeft, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::ShiftRight, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::Equal, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::NotEqual, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::LessThan, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::LessThanOrEqual, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::GreaterThan, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::GreaterThanOrEqual, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::ShortCircuitAnd, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::ShortCircuitOr, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::In, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::Join, Box::new(BinaryOperationHandler));
 
         // These opcodes do nothing ATM
         handlers.insert(Opcode::ConvertToFloat, Box::new(NopHandler));
+        handlers.insert(Opcode::FunctionStart, Box::new(NopHandler));
+        handlers.insert(Opcode::IncreaseLoopCounter, Box::new(NopHandler));
+        handlers.insert(Opcode::Ret, Box::new(NopHandler)); // TODO: Handle return statements
 
         // Special cases
         handlers.insert(
@@ -91,6 +113,7 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
 
         // Variable operand handlers
         handlers.insert(Opcode::Call, Box::new(VariableOperandHandler));
+        handlers.insert(Opcode::EndParams, Box::new(VariableOperandHandler));
 
         handlers
     })

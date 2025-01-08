@@ -1,10 +1,9 @@
 #![deny(missing_docs)]
 
 use super::{
-    emit_context::{EmitContext, EmitVerbosity},
+    emit_context::{EmitContext, EmitVerbosity, IndentStyle},
     AstVisitor,
 };
-use crate::decompiler::ast::literal::LiteralNode;
 use crate::decompiler::ast::member_access::MemberAccessNode;
 use crate::decompiler::ast::meta::MetaNode;
 use crate::decompiler::ast::statement::StatementNode;
@@ -14,6 +13,7 @@ use crate::decompiler::ast::{
     bin_op::{BinOpType, BinaryOperationNode},
     func_call::FunctionCallNode,
 };
+use crate::decompiler::ast::{function::FunctionNode, literal::LiteralNode};
 use crate::decompiler::ast::{AstKind, AstVisitable};
 use crate::{decompiler::ast::identifier::IdentifierNode, utils::escape_string};
 
@@ -46,13 +46,19 @@ impl AstVisitor for Gs2Emitter {
             AstKind::Expression(expr) => expr.accept(self),
             AstKind::Meta(meta) => meta.accept(self),
             AstKind::Statement(stmt) => stmt.accept(self),
+            AstKind::Function(func) => func.accept(self),
             AstKind::Empty => {}
         }
     }
     fn visit_statement(&mut self, stmt_node: &StatementNode) {
+        // Step 0: Print the whitespace
+        let indent_level = self.context.indent;
+        for _ in 0..indent_level {
+            self.output.push(' ');
+        }
         // Step 1: Visit and emit the LHS
         stmt_node.lhs.accept(self);
-        let lhs_str = self.output.clone(); // Retrieve the emitted LHS
+        let lhs_str = self.output.clone();
         self.output.clear();
 
         // Step 2: Handle RHS
@@ -123,10 +129,7 @@ impl AstVisitor for Gs2Emitter {
     fn visit_expr(&mut self, node: &ExprKind) {
         match node {
             ExprKind::Literal(literal) => literal.accept(self),
-            ExprKind::Assignable(AssignableKind::MemberAccess(member_access)) => {
-                member_access.accept(self)
-            }
-            ExprKind::Assignable(AssignableKind::Identifier(identifier)) => identifier.accept(self),
+            ExprKind::Assignable(assignable) => self.visit_assignable_expr(assignable),
             ExprKind::BinOp(bin_op) => bin_op.accept(self),
             ExprKind::UnaryOp(unary_op) => unary_op.accept(self),
             ExprKind::FunctionCall(func_call) => func_call.accept(self),
@@ -135,8 +138,25 @@ impl AstVisitor for Gs2Emitter {
 
     fn visit_assignable_expr(&mut self, node: &AssignableKind) {
         match node {
-            AssignableKind::MemberAccess(member_access) => member_access.accept(self),
-            AssignableKind::Identifier(identifier) => identifier.accept(self),
+            AssignableKind::MemberAccess(member_access) => {
+                if member_access.ssa_version.is_some() && self.context.include_ssa_versions {
+                    self.output.push('{');
+                }
+                member_access.accept(self);
+                if self.context.include_ssa_versions {
+                    if let Some(ssa_version) = member_access.ssa_version {
+                        self.output.push_str(&format!("}}@{}", ssa_version));
+                    }
+                }
+            }
+            AssignableKind::Identifier(identifier) => {
+                identifier.accept(self);
+                if self.context.include_ssa_versions {
+                    if let Some(ssa_version) = identifier.ssa_version {
+                        self.output.push_str(&format!("@{}", ssa_version));
+                    }
+                }
+            }
         }
     }
 
@@ -283,5 +303,47 @@ impl AstVisitor for Gs2Emitter {
             }
         }
         self.output.push(')');
+    }
+
+    fn visit_function(&mut self, node: &FunctionNode) {
+        let name = node.name().clone();
+        if name.is_none() {
+            // Just emit the function body if there is no name since we're
+            // in the entry point function
+            for stmt in node.body() {
+                stmt.accept(self);
+                self.output.push('\n');
+            }
+            return;
+        }
+
+        let name = name.unwrap();
+
+        // Emit the function parameters
+        self.output.push_str(format!("function {}(", name).as_str());
+        for (i, param) in node.params().iter().enumerate() {
+            param.accept(self);
+            if i < node.params().len() - 1 {
+                self.output.push_str(", ");
+            }
+        }
+        self.output.push(')');
+
+        // Check if we we are using allman or k&r style
+        if self.context.indent_style == IndentStyle::Allman {
+            self.output.push_str("\n{\n");
+        } else {
+            self.output.push_str(" {\n");
+        }
+
+        // Emit the function body, indented
+        let old_context = self.context;
+        self.context = self.context.with_indent();
+        for stmt in node.body() {
+            stmt.accept(self);
+            self.output.push('\n');
+        }
+        self.context = old_context;
+        self.output.push_str("}\n");
     }
 }

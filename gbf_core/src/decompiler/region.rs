@@ -11,7 +11,7 @@ use std::fmt::Write;
 use std::slice::Iter;
 
 /// Represents the type of control-flow region.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
 pub enum RegionType {
     /// Simply moves on to the next region without control flow
     Linear,
@@ -22,7 +22,7 @@ pub enum RegionType {
 }
 
 /// Describes a region
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
 pub struct RegionId {
     /// The index of the region
     pub index: usize,
@@ -80,7 +80,7 @@ impl Region {
     /// # Arguments
     ///
     /// * `node` - The AST node to add.
-    pub fn push_instruction(&mut self, node: AstKind) {
+    pub fn push_node(&mut self, node: AstKind) {
         self.nodes.push(node);
     }
 
@@ -214,8 +214,8 @@ mod tests {
             create_subtraction(create_integer_literal(3), create_integer_literal(4)),
         );
 
-        region.push_instruction(AstKind::Statement(ast_node1.clone()));
-        region.push_instruction(AstKind::Statement(ast_node2.clone()));
+        region.push_node(AstKind::Statement(ast_node1.clone()));
+        region.push_node(AstKind::Statement(ast_node2.clone()));
 
         let mut iter = region.iter_statements();
         assert_eq!(iter.next(), Some(&AstKind::Statement(ast_node1)));

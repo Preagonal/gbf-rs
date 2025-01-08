@@ -10,6 +10,9 @@ use petgraph::graph::{DiGraph, NodeIndex};
 use std::collections::HashMap;
 use thiserror::Error;
 
+use super::ast::ast_vec::AstVec;
+use super::ast::expr::ExprKind;
+use super::ast::function::FunctionNode;
 use super::ast::visitors::emit_context::EmitContext;
 use super::ast::visitors::emitter::Gs2Emitter;
 use super::ast::{AstKind, AstVisitable};
@@ -78,6 +81,8 @@ pub struct FunctionDecompiler {
     region_to_graph_node: HashMap<RegionId, NodeIndex>,
     /// The current context for the decompiler
     context: FunctionDecompilerContext,
+    /// The parameters for the function
+    function_parameters: AstVec<ExprKind>,
 }
 
 impl FunctionDecompiler {
@@ -100,6 +105,7 @@ impl FunctionDecompiler {
             graph_node_to_region: HashMap::new(),
             region_to_graph_node: HashMap::new(),
             context: FunctionDecompilerContext::new(),
+            function_parameters: Vec::<ExprKind>::new().into(),
         }
     }
 }
@@ -123,28 +129,34 @@ impl FunctionDecompiler {
         self.process_regions()?;
 
         let entry_block_id = self.function.get_entry_basic_block().id;
-        let entry_stack = self
-            .context
-            .get_stack(&entry_block_id)
-            .expect("Critical error: stack should always be set for each basic block");
+        let entry_region_id = self.block_to_region.get(&entry_block_id).unwrap();
+        let entry_region = self.regions.get(entry_region_id.index).unwrap();
+
+        let entry_region_nodes = entry_region
+            .iter_statements()
+            .cloned()
+            .collect::<AstVec<_>>();
+
+        let func = AstKind::Function(FunctionNode::new(
+            self.function.id.name.clone(),
+            self.function_parameters.clone(),
+            entry_region_nodes,
+        ));
 
         let mut output = String::new();
-        for node in entry_stack {
-            // Each node should be StandaloneNode.
-            if let ExecutionFrame::StandaloneNode(node) = node {
-                let mut emitter = Gs2Emitter::new(emit_context);
-                node.accept(&mut emitter);
-                output.push_str(emitter.output());
-                output.push('\n');
-            } else {
-                return Err(FunctionDecompilerError::UnexpectedExecutionState(
-                    ExecutionFrame::StandaloneNode(AstKind::Empty),
-                    node.clone(),
-                ));
-            }
-        }
+        let mut emitter = Gs2Emitter::new(emit_context);
+        func.accept(&mut emitter);
+        output.push_str(emitter.output());
+        output.push('\n');
 
         Ok(output)
+    }
+
+    /// Add a node to the current region.
+    pub fn add_node_to_current_region(&mut self, node: AstKind) {
+        let current_region_id = self.context.current_region_id.unwrap();
+        let current_region = self.regions.get_mut(current_region_id.index).unwrap();
+        current_region.push_node(node);
     }
 
     fn generate_regions(&mut self) {
@@ -157,14 +169,12 @@ impl FunctionDecompiler {
             };
 
             let new_region_id: RegionId = RegionId::new(self.regions.len(), region_type);
-            self.block_to_region.insert(block.id, new_region_id.clone());
+            self.block_to_region.insert(block.id, new_region_id);
 
             // Add to the graph
             let node_id = self.region_graph.add_node(());
-            self.graph_node_to_region
-                .insert(node_id, new_region_id.clone());
-            self.region_to_graph_node
-                .insert(new_region_id.clone(), node_id);
+            self.graph_node_to_region.insert(node_id, new_region_id);
+            self.region_to_graph_node.insert(new_region_id, node_id);
 
             // Add to the array of regions
             self.regions.push(Region::new(new_region_id));
@@ -182,10 +192,13 @@ impl FunctionDecompiler {
             .map_err(FunctionDecompilerError::FunctionError)?;
 
         for block_id in reverse_post_order {
-            self.context.start_block_processing(block_id)?;
-
             // Get the region id for the block
-            let region_id = self.block_to_region.get(&block_id).unwrap().clone();
+            let region_id = *self
+                .block_to_region
+                .get(&block_id)
+                .expect("We just made the regions, so not sure why it doesn't exist.");
+
+            self.context.start_block_processing(block_id, region_id)?;
 
             // Connect the block's predecessors in the graph
             self.connect_predecessor_regions(block_id, region_id)?;
@@ -195,8 +208,15 @@ impl FunctionDecompiler {
                 let block = self.function.get_basic_block_by_id(block_id)?;
                 block.iter().cloned().collect()
             };
+
             for instr in instructions {
-                self.context.process_instruction(&instr)?;
+                let processed = self.context.process_instruction(&instr)?;
+                if let Some(node) = processed.node_to_push {
+                    self.add_node_to_current_region(node);
+                }
+                if let Some(params) = processed.function_parameters {
+                    self.function_parameters = params;
+                }
             }
         }
 
@@ -214,7 +234,7 @@ impl FunctionDecompiler {
             .map_err(FunctionDecompilerError::FunctionError)?;
         let predecessor_regions: Vec<RegionId> = predecessors
             .iter()
-            .map(|pred_id| self.block_to_region.get(pred_id).unwrap().clone())
+            .map(|pred_id| *self.block_to_region.get(pred_id).unwrap())
             .collect();
 
         for pred_region_id in predecessor_regions {

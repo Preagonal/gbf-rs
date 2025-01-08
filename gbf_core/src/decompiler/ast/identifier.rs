@@ -4,7 +4,8 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    assignable::AssignableKind, expr::ExprKind, visitors::AstVisitor, AstKind, AstVisitable,
+    assignable::AssignableKind, expr::ExprKind, ssa::SsaVersion, visitors::AstVisitor, AstKind,
+    AstVisitable,
 };
 
 /// Represents a type of literal.
@@ -12,6 +13,8 @@ use super::{
 #[convert_to(ExprKind::Assignable, AstKind::Expression, AssignableKind::Identifier)]
 pub struct IdentifierNode {
     id: String,
+    /// Represents the SSA version of a variable.
+    pub ssa_version: Option<SsaVersion>,
 }
 
 impl IdentifierNode {
@@ -23,7 +26,26 @@ impl IdentifierNode {
     /// # Returns
     /// - An `IdentifierNode` instance containing the provided identifier.
     pub fn new<S: Into<String>>(s: S) -> Self {
-        Self { id: s.into() }
+        Self {
+            id: s.into(),
+            ssa_version: None,
+        }
+    }
+
+    /// Creates a new `IdentifierNode` with an SSA version from any type that can be converted into a `String`.
+    /// This is useful for creating an `IdentifierNode` with an SSA version.
+    ///
+    /// # Arguments
+    /// - `s`: The input string-like type.
+    /// - `ssa_version`: The SSA version of the identifier.
+    ///
+    /// # Returns
+    /// - An `IdentifierNode` instance containing the provided identifier and SSA version.
+    pub fn with_ssa<S: Into<String>>(s: S, ssa_version: SsaVersion) -> Self {
+        Self {
+            id: s.into(),
+            ssa_version: Some(ssa_version),
+        }
     }
 
     /// Returns the identifier as a reference to a `String`.

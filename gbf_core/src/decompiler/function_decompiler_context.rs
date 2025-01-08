@@ -8,10 +8,13 @@ use std::collections::HashMap;
 use super::ast::assignable::AssignableKind;
 use super::ast::expr::ExprKind;
 use super::ast::identifier::IdentifierNode;
+use super::ast::ssa::SsaContext;
 use super::ast::AstKind;
 use super::execution_frame::ExecutionFrame;
 use super::function_decompiler::FunctionDecompilerError;
 use super::handlers::{global_opcode_handlers, OpcodeHandler};
+use super::region::RegionId;
+use super::{ProcessedInstruction, ProcessedInstructionBuilder};
 
 /// Manages the state of the decompiler, including per-block AST stacks and current processing context.
 pub struct FunctionDecompilerContext {
@@ -19,8 +22,12 @@ pub struct FunctionDecompilerContext {
     pub block_ast_node_stack: HashMap<BasicBlockId, Vec<ExecutionFrame>>,
     /// The current basic block being processed.
     pub current_block_id: Option<BasicBlockId>,
+    /// The current region being processed.
+    pub current_region_id: Option<RegionId>,
     /// The handlers for each opcode.
     pub opcode_handlers: HashMap<Opcode, Box<dyn OpcodeHandler>>,
+    /// The SSA Context
+    pub ssa_context: SsaContext,
 }
 
 impl FunctionDecompilerContext {
@@ -29,7 +36,9 @@ impl FunctionDecompilerContext {
         Self {
             block_ast_node_stack: HashMap::new(),
             current_block_id: None,
+            current_region_id: None,
             opcode_handlers: HashMap::new(),
+            ssa_context: SsaContext::new(),
         }
     }
 
@@ -37,14 +46,17 @@ impl FunctionDecompilerContext {
     ///
     /// # Arguments
     /// - `block_id`: The ID of the basic block to start processing.
+    /// - `region_id`: The ID of the region the basic block belongs to.
     ///
     /// # Errors
     /// - Returns `FunctionDecompilerError` if there is an issue initializing the block stack.
     pub fn start_block_processing(
         &mut self,
         block_id: BasicBlockId,
+        region_id: RegionId,
     ) -> Result<(), FunctionDecompilerError> {
         self.current_block_id = Some(block_id);
+        self.current_region_id = Some(region_id);
         self.block_ast_node_stack.insert(block_id, Vec::new());
         Ok(())
     }
@@ -59,7 +71,7 @@ impl FunctionDecompilerContext {
     pub fn process_instruction(
         &mut self,
         instr: &Instruction,
-    ) -> Result<(), FunctionDecompilerError> {
+    ) -> Result<ProcessedInstruction, FunctionDecompilerError> {
         let current_block_id = self
             .current_block_id
             .expect("Critical error: current block id should always be set");
@@ -72,7 +84,7 @@ impl FunctionDecompilerContext {
                 .expect("Critical error: stack should always be set for each basic block");
 
             stack.push(ExecutionFrame::BuildingArray(Vec::new()));
-            return Ok(());
+            return Ok(ProcessedInstructionBuilder::new().build());
         }
 
         let handlers = global_opcode_handlers();
@@ -85,7 +97,15 @@ impl FunctionDecompilerContext {
                     current_block_id,
                 ))?;
 
-        handler.handle_instruction(self, instr)
+        // Handle the instruction
+        let op = handler.handle_instruction(self, instr)?;
+
+        // Push the SSA ID onto the stack if it exists
+        if let Some(ssa_id) = &op.ssa_id {
+            self.push_one_node(ssa_id.clone().into())?;
+        }
+
+        Ok(op)
     }
 
     /// Retrieves the AST stack for a basic block.

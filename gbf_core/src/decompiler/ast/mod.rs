@@ -6,11 +6,13 @@ use ast_vec::AstVec;
 use bin_op::BinaryOperationNode;
 use expr::ExprKind;
 use func_call::FunctionCallNode;
+use function::FunctionNode;
 use identifier::IdentifierNode;
 use literal::LiteralNode;
 use member_access::MemberAccessNode;
 use meta::MetaNode;
 use serde::{Deserialize, Serialize};
+use ssa::SsaVersion;
 use statement::StatementNode;
 use thiserror::Error;
 use unary_op::UnaryOperationNode;
@@ -28,6 +30,8 @@ pub mod bin_op;
 pub mod expr;
 /// Contains the specifications for any AstNodes that are function calls.
 pub mod func_call;
+/// Contains the specifications for any AstNodes that are functions.
+pub mod function;
 /// Contains the specifications for any AstNodes that are identifiers.
 pub mod identifier;
 /// Contains the specifications for any AstNodes that are literals.
@@ -36,6 +40,8 @@ pub mod literal;
 pub mod member_access;
 /// Contains the specifications for any AstNodes that are metadata.
 pub mod meta;
+/// Represents SSA versioning for the AST.
+pub mod ssa;
 /// Contains the specifications for any AstNodes that are statements
 pub mod statement;
 /// Represents unary operations in the AST.
@@ -74,6 +80,8 @@ pub trait AstVisitable: Clone {
 pub enum AstKind {
     /// Represents a statement node in the AST, such as `variable = value;`.
     Statement(StatementNode),
+    /// Represents a function node in the AST.
+    Function(FunctionNode),
     // ControlFlow(ControlFlowNode),
     /// Represents a literal node in the AST.
     Expression(ExprKind),
@@ -93,6 +101,7 @@ impl AstVisitable for AstKind {
             AstKind::Expression(expr) => expr.accept(visitor),
             AstKind::Meta(meta) => meta.accept(visitor),
             AstKind::Statement(stmt) => stmt.accept(visitor),
+            AstKind::Function(func) => func.accept(visitor),
             AstKind::Empty => {}
         }
     }
@@ -151,6 +160,11 @@ where
 /// Creates a new AssignableExpr for an identifier
 pub fn new_id(name: &str) -> IdentifierNode {
     IdentifierNode::new(name)
+}
+
+/// Creates a new AssignableExpr for an identifier with an SSA version.
+pub fn new_id_with_version(name: &str, version: SsaVersion) -> IdentifierNode {
+    IdentifierNode::with_ssa(name, version)
 }
 
 /// Creates a new function call node.

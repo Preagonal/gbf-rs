@@ -3,7 +3,8 @@
 use crate::{
     decompiler::{
         function_decompiler::FunctionDecompilerError,
-        function_decompiler_context::FunctionDecompilerContext,
+        function_decompiler_context::FunctionDecompilerContext, ProcessedInstruction,
+        ProcessedInstructionBuilder,
     },
     instruction::Instruction,
 };
@@ -18,7 +19,7 @@ impl OpcodeHandler for NopHandler {
         &self,
         _context: &mut FunctionDecompilerContext,
         _instruction: &Instruction,
-    ) -> Result<(), FunctionDecompilerError> {
-        Ok(())
+    ) -> Result<ProcessedInstruction, FunctionDecompilerError> {
+        Ok(ProcessedInstructionBuilder::new().build())
     }
 }

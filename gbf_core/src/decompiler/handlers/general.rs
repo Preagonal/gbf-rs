@@ -3,7 +3,8 @@
 use crate::{
     decompiler::{
         function_decompiler::FunctionDecompilerError,
-        function_decompiler_context::FunctionDecompilerContext,
+        function_decompiler_context::FunctionDecompilerContext, ProcessedInstruction,
+        ProcessedInstructionBuilder,
     },
     instruction::Instruction,
     opcode::Opcode,
@@ -19,11 +20,11 @@ impl OpcodeHandler for GeneralHandler {
         &self,
         context: &mut FunctionDecompilerContext,
         instruction: &Instruction,
-    ) -> Result<(), FunctionDecompilerError> {
+    ) -> Result<ProcessedInstruction, FunctionDecompilerError> {
         match instruction.opcode {
             Opcode::Pop => {
                 // TODO: Handle popping nodes
-                // context.pop_one_node()?;
+                context.pop_one_node()?;
             }
             _ => {
                 return Err(FunctionDecompilerError::UnimplementedOpcode(
@@ -33,6 +34,6 @@ impl OpcodeHandler for GeneralHandler {
             }
         }
 
-        Ok(())
+        Ok(ProcessedInstructionBuilder::new().build())
     }
 }

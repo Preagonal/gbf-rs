@@ -2,9 +2,10 @@
 
 use crate::{
     decompiler::{
-        ast::{member_access, statement},
+        ast::{assignable::AssignableKind, member_access, statement},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
+        ProcessedInstruction, ProcessedInstructionBuilder,
     },
     instruction::Instruction,
     opcode::Opcode,
@@ -20,25 +21,36 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
         &self,
         context: &mut FunctionDecompilerContext,
         instruction: &Instruction,
-    ) -> Result<(), FunctionDecompilerError> {
+    ) -> Result<ProcessedInstruction, FunctionDecompilerError> {
         match instruction.opcode {
             Opcode::AccessMember => {
                 let rhs = context.pop_assignable()?;
                 let lhs = context.pop_assignable()?;
-                context.push_one_node(member_access(lhs, rhs)?.into())?;
+
+                let mut ma: AssignableKind = member_access(lhs, rhs)?.into();
+                let ver = context
+                    .ssa_context
+                    .current_version_of_or_new(&ma.ssa_string());
+                ma.set_ssa_version(ver);
+                Ok(ProcessedInstructionBuilder::new().ssa_id(ma).build())
             }
             Opcode::Assign => {
                 let rhs = context.pop_expression()?;
-                let lhs = context.pop_assignable()?;
-                context.push_one_node(statement(lhs, rhs).into())?;
+                let mut lhs = context.pop_assignable()?;
+
+                // an assignment bumps the version of the lhs
+                let ver = context.ssa_context.new_ssa_version_for(&lhs.ssa_string());
+                lhs.set_ssa_version(ver);
+                let stmt = statement(lhs, rhs);
+
+                Ok(ProcessedInstructionBuilder::new()
+                    .node_to_push(stmt.into())
+                    .build())
             }
-            _ => {
-                return Err(FunctionDecompilerError::UnimplementedOpcode(
-                    instruction.opcode,
-                    context.current_block_id.unwrap(),
-                ));
-            }
+            _ => Err(FunctionDecompilerError::UnimplementedOpcode(
+                instruction.opcode,
+                context.current_block_id.unwrap(),
+            )),
         }
-        Ok(())
     }
 }

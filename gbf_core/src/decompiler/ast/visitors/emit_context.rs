@@ -41,6 +41,8 @@ pub struct EmitContext {
     pub indent_style: IndentStyle,
     /// The root of the expression tree.
     pub expr_root: bool,
+    /// If we should include SSA versions in the emitted code.
+    pub include_ssa_versions: bool,
 }
 
 impl EmitContext {
@@ -123,6 +125,7 @@ pub struct EmitContextBuilder {
     verbosity: EmitVerbosity,
     indent_style: IndentStyle,
     expr_root: bool,
+    include_ssa_versions: bool,
 }
 
 impl EmitContextBuilder {
@@ -162,6 +165,12 @@ impl EmitContextBuilder {
         self
     }
 
+    /// Sets the `include_ssa_versions` flag.
+    pub fn include_ssa_versions(mut self, include_ssa_versions: bool) -> Self {
+        self.include_ssa_versions = include_ssa_versions;
+        self
+    }
+
     /// Builds the `EmitContext` with the specified parameters.
     pub fn build(self) -> EmitContext {
         EmitContext {
@@ -171,6 +180,7 @@ impl EmitContextBuilder {
             verbosity: self.verbosity,
             indent_style: self.indent_style,
             expr_root: self.expr_root,
+            include_ssa_versions: self.include_ssa_versions,
         }
     }
 }
@@ -186,6 +196,7 @@ impl Default for EmitContextBuilder {
             verbosity: EmitVerbosity::Pretty,
             indent_style: IndentStyle::Allman,
             expr_root: true,
+            include_ssa_versions: false,
         }
     }
 }
@@ -234,11 +245,14 @@ mod tests {
             .verbosity(EmitVerbosity::Debug)
             .indent_style(IndentStyle::KAndR)
             .expr_root(true)
+            .include_ssa_versions(true)
             .build();
         assert_eq!(context.indent, 2);
         assert_eq!(context.indent_step, 8);
         assert!(context.format_number_hex);
         assert_eq!(context.verbosity, EmitVerbosity::Debug);
         assert_eq!(context.indent_style, IndentStyle::KAndR);
+        assert!(context.expr_root);
+        assert!(context.include_ssa_versions);
     }
 }

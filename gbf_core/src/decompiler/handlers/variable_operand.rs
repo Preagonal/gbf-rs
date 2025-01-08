@@ -2,10 +2,13 @@
 
 use crate::{
     decompiler::{
-        ast::{assignable::AssignableKind, ast_vec::AstVec, expr::ExprKind, new_fn_call},
+        ast::{
+            assignable::AssignableKind, expr::ExprKind, new_fn_call, new_id_with_version, statement,
+        },
         execution_frame::ExecutionFrame,
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
+        ProcessedInstruction, ProcessedInstructionBuilder,
     },
     instruction::Instruction,
     opcode::Opcode,
@@ -21,7 +24,7 @@ impl OpcodeHandler for VariableOperandHandler {
         &self,
         context: &mut FunctionDecompilerContext,
         instruction: &Instruction,
-    ) -> Result<(), FunctionDecompilerError> {
+    ) -> Result<ProcessedInstruction, FunctionDecompilerError> {
         let current_block_id = context.current_block_id.expect("Block ID should be set");
         match instruction.opcode {
             Opcode::Call => {
@@ -56,15 +59,46 @@ impl OpcodeHandler for VariableOperandHandler {
                     }?;
 
                     // Reverse the remaining arguments to get the correct order
-                    let args = args.into_iter().rev().collect::<AstVec<_>>();
+                    let args = args.into_iter().rev().collect::<Vec<_>>();
 
                     // Create the function call node
                     // TODO: Handle method call case
-                    let function_call_node = new_fn_call(function_name, args).into();
+                    let function_call_node = new_fn_call(function_name, args);
 
-                    // Push the function call node back to the execution stack
-                    context.push_one_node(function_call_node)?;
-                    return Ok(());
+                    // Create SSA ID for the function call
+                    let var = context.ssa_context.new_ssa_version_for("fn_call");
+                    let ssa_id = new_id_with_version("fn_call", var);
+                    let stmt = statement(ssa_id.clone(), function_call_node);
+
+                    return Ok(ProcessedInstructionBuilder::new()
+                        .ssa_id(ssa_id.into())
+                        .node_to_push(stmt.into())
+                        .build());
+                }
+
+                // Handle unexpected execution state
+                Err(FunctionDecompilerError::UnexpectedExecutionState(
+                    ExecutionFrame::BuildingArray(Vec::new()),
+                    last_frame,
+                ))
+            }
+            Opcode::EndParams => {
+                // Ensure the current execution state stack has a frame to pop
+                let last_frame = context
+                    .block_ast_node_stack
+                    .get_mut(&current_block_id)
+                    .ok_or(FunctionDecompilerError::CannotPopNode(current_block_id))?
+                    .pop()
+                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty)?;
+
+                // Ensure the last frame is a BuildingArray
+                if let ExecutionFrame::BuildingArray(args) = last_frame {
+                    // Reverse the arguments to get the correct order
+                    let args = args.into_iter().rev().collect::<Vec<_>>();
+
+                    return Ok(ProcessedInstructionBuilder::new()
+                        .function_parameters(args.into())
+                        .build());
                 }
 
                 // Handle unexpected execution state

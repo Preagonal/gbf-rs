@@ -2,8 +2,10 @@
 
 use crate::{
     decompiler::{
-        ast::new_id, function_decompiler::FunctionDecompilerError,
+        ast::{assignable::AssignableKind, new_id},
+        function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
+        ProcessedInstruction, ProcessedInstructionBuilder,
     },
     instruction::Instruction,
     opcode::Opcode,
@@ -19,7 +21,7 @@ impl OpcodeHandler for IdentifierHandler {
         &self,
         context: &mut FunctionDecompilerContext,
         instruction: &Instruction,
-    ) -> Result<(), FunctionDecompilerError> {
+    ) -> Result<ProcessedInstruction, FunctionDecompilerError> {
         let opcode = instruction.opcode;
         // If we have a variable, we need to use the operand as the identifier name.
         let str_operand = if opcode == Opcode::PushVariable {
@@ -31,7 +33,10 @@ impl OpcodeHandler for IdentifierHandler {
             // Otherwise, we can just use the opcode name (e.g. "player", "level", "this", etc.).
             opcode.to_string().to_lowercase()
         };
-        context.push_one_node(new_id(str_operand.as_str()).into())?;
-        Ok(())
+
+        let mut id: AssignableKind = new_id(str_operand.as_str()).into();
+
+        id.set_ssa_version(context.ssa_context.current_version_of_or_new(&str_operand));
+        Ok(ProcessedInstructionBuilder::new().ssa_id(id).build())
     }
 }
