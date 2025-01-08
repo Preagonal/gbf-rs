@@ -99,7 +99,7 @@ impl AstVisitable for BinaryOperationNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{new_bin_op, emit, new_id, new_str};
+    use crate::decompiler::ast::{emit, new_bin_op, new_id, new_str};
 
     use super::*;
 

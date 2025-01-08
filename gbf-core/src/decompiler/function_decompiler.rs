@@ -92,7 +92,7 @@ impl FunctionDecompiler {
     /// # Errors
     /// - `FunctionDecompilerError` if there is an error while decompiling the function.
     pub fn new(function: Function) -> Self {
-        let func_decompiler = FunctionDecompiler {
+        FunctionDecompiler {
             function,
             regions: Vec::new(),
             block_to_region: HashMap::new(),
@@ -100,9 +100,7 @@ impl FunctionDecompiler {
             graph_node_to_region: HashMap::new(),
             region_to_graph_node: HashMap::new(),
             context: FunctionDecompilerContext::new(),
-        };
-
-        func_decompiler
+        }
     }
 }
 

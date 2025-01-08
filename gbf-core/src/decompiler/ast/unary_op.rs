@@ -73,7 +73,7 @@ impl PartialEq for UnaryOperationNode {
 #[cfg(test)]
 mod tests {
     use crate::decompiler::ast::{
-        bin_op::BinOpType, emit, new_str, new_bin_op, new_id, new_unary_op, AstNodeError,
+        bin_op::BinOpType, emit, new_bin_op, new_id, new_str, new_unary_op, AstNodeError,
     };
 
     use super::UnaryOpType;
