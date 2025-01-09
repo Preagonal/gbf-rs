@@ -4,7 +4,7 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    expr::ExprKind, identifier::IdentifierNode, visitors::AstVisitor, AstKind, AstVec, AstVisitable,
+    assignable::AssignableKind, expr::ExprKind, visitors::AstVisitor, AstKind, AstVec, AstVisitable,
 };
 
 /// Represents a function call
@@ -12,11 +12,9 @@ use super::{
 #[convert_to(ExprKind::FunctionCall, AstKind::Expression)]
 pub struct FunctionCallNode {
     /// The name of the function being called.
-    pub name: IdentifierNode,
+    pub name: AssignableKind,
     /// The arguments to the function.
     pub arguments: AstVec<ExprKind>,
-    /// The base of the function call, if it's a method call.
-    pub base: Option<Box<ExprKind>>,
 }
 
 impl FunctionCallNode {
@@ -26,16 +24,8 @@ impl FunctionCallNode {
     /// - `name`: The name of the function being called.
     /// - `arguments`: The arguments to the function.
     /// - `base`: The base of the function call, if it's a method call.
-    pub fn new(
-        name: IdentifierNode,
-        arguments: AstVec<ExprKind>,
-        base: Option<Box<ExprKind>>,
-    ) -> Self {
-        Self {
-            base,
-            name,
-            arguments,
-        }
+    pub fn new(name: AssignableKind, arguments: AstVec<ExprKind>) -> Self {
+        Self { name, arguments }
     }
 }
 
@@ -48,18 +38,24 @@ impl AstVisitable for FunctionCallNode {
 // == Other implementations for unary operations ==
 impl PartialEq for FunctionCallNode {
     fn eq(&self, other: &Self) -> bool {
-        self.base == other.base && self.name == other.name && self.arguments == other.arguments
+        self.name == other.name && self.arguments == other.arguments
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{emit, new_fn_call, new_id, new_m_call};
+    use crate::decompiler::ast::{emit, member_access, new_fn_call, new_id, AstNodeError};
 
     #[test]
-    fn test_call_emit() {
+    fn test_call_emit() -> Result<(), AstNodeError> {
         let call = new_fn_call(new_id("echo"), vec![new_id("hello")]);
         assert_eq!(emit(call), "echo(hello)");
+
+        // foo.bar(baz)
+        let ma = member_access(new_id("foo"), new_id("bar"))?;
+        let call = new_fn_call(ma, vec![new_id("baz")]);
+        assert_eq!(emit(call), "foo.bar(baz)");
+        Ok(())
     }
 
     #[test]
@@ -69,22 +65,6 @@ mod tests {
         assert_eq!(call1, call2);
 
         let call3 = new_fn_call(new_id("echo"), vec![new_id("world")]);
-        assert_ne!(call1, call3);
-    }
-
-    #[test]
-    fn test_method_call_emit() {
-        let call = new_m_call(new_id("foo"), new_id("bar"), vec![new_id("baz")]);
-        assert_eq!(emit(call), "foo.bar(baz)");
-    }
-
-    #[test]
-    fn test_method_call_equality() {
-        let call1 = new_m_call(new_id("foo"), new_id("bar"), vec![new_id("baz")]);
-        let call2 = new_m_call(new_id("foo"), new_id("bar"), vec![new_id("baz")]);
-        assert_eq!(call1, call2);
-
-        let call3 = new_m_call(new_id("foo"), new_id("bar"), vec![new_id("qux")]);
         assert_ne!(call1, call3);
     }
 

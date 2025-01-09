@@ -282,18 +282,7 @@ impl AstVisitor for Gs2Emitter {
 
     fn visit_function_call(&mut self, node: &FunctionCallNode) {
         // Visit and emit the base
-        if let Some(base) = &node.base {
-            base.accept(self);
-            let base_str = self.output.clone(); // Capture emitted base
-            self.output.clear();
-
-            // Combine the base and the function name with a dot for method calls
-            self.output
-                .push_str(&format!("{}.{}", base_str, node.name.id()));
-        } else {
-            // Emit the function name directly for function calls
-            self.output.push_str(node.name.id());
-        }
+        self.output.push_str(node.name.id_string().as_str());
 
         // Emit the arguments
         self.output.push('(');
@@ -321,8 +310,7 @@ impl AstVisitor for Gs2Emitter {
         let name = name.unwrap();
 
         // Emit the function parameters
-        self.output
-            .push_str(format!("function {} (", name).as_str());
+        self.output.push_str(format!("function {}(", name).as_str());
         for (i, param) in node.params().iter().enumerate() {
             param.accept(self);
             if i < node.params().len() - 1 {

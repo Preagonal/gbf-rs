@@ -28,7 +28,7 @@ impl AssignableKind {
     }
 
     /// Returns the SSA string representation of the assignable expression.
-    pub fn ssa_string(&self) -> String {
+    pub fn id_string(&self) -> String {
         match self {
             AssignableKind::MemberAccess(m) => emit(m.clone()),
             AssignableKind::Identifier(i) => emit(i.clone()),

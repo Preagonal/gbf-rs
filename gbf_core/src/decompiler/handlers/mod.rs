@@ -99,6 +99,7 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
 
         // These opcodes do nothing ATM
         handlers.insert(Opcode::ConvertToFloat, Box::new(NopHandler));
+        handlers.insert(Opcode::ConvertToObject, Box::new(NopHandler));
         handlers.insert(Opcode::FunctionStart, Box::new(NopHandler));
         handlers.insert(Opcode::IncreaseLoopCounter, Box::new(NopHandler));
 

@@ -183,20 +183,10 @@ pub fn new_id_with_version(name: &str, version: SsaVersion) -> IdentifierNode {
 /// Creates a new function call node.
 pub fn new_fn_call<N, A>(name: N, args: A) -> FunctionCallNode
 where
-    N: Into<IdentifierNode>,
+    N: Into<AssignableKind>,
     A: Into<AstVec<ExprKind>>,
 {
-    FunctionCallNode::new(name.into(), args.into(), None)
-}
-
-/// Creates a new function call node with a base.
-pub fn new_m_call<N, A, B>(base: A, name: N, args: B) -> FunctionCallNode
-where
-    A: Into<Box<ExprKind>>,
-    N: Into<IdentifierNode>,
-    B: Into<AstVec<ExprKind>>,
-{
-    FunctionCallNode::new(name.into(), args.into(), Some(base.into()))
+    FunctionCallNode::new(name.into(), args.into())
 }
 
 /// Creates binary operation node.

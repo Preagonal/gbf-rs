@@ -561,6 +561,7 @@ impl Function {
 
         Ok(dfs
             .into_iter()
+            .rev()
             .filter_map(|node_id| self.node_id_to_block_id(node_id))
             .collect())
     }

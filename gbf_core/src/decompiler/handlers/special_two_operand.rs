@@ -30,7 +30,7 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 let mut ma: AssignableKind = member_access(lhs, rhs)?.into();
                 let ver = context
                     .ssa_context
-                    .current_version_of_or_new(&ma.ssa_string());
+                    .current_version_of_or_new(&ma.id_string());
                 ma.set_ssa_version(ver);
                 Ok(ProcessedInstructionBuilder::new().ssa_id(ma).build())
             }
@@ -39,7 +39,7 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 let mut lhs = context.pop_assignable()?;
 
                 // an assignment bumps the version of the lhs
-                let ver = context.ssa_context.new_ssa_version_for(&lhs.ssa_string());
+                let ver = context.ssa_context.new_ssa_version_for(&lhs.id_string());
                 lhs.set_ssa_version(ver);
                 let stmt = statement(lhs, rhs);
 
