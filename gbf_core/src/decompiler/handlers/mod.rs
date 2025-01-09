@@ -25,6 +25,8 @@ pub mod identifier;
 pub mod literal;
 /// Handles instructions that are not useful to our decompiler.
 pub mod nop;
+/// Handles instructions with one operand.
+pub mod special_one_operand;
 /// Handles member access instructions.
 pub mod special_two_operand;
 /// Handles cases with a variable number of operands.
@@ -99,9 +101,8 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::ConvertToFloat, Box::new(NopHandler));
         handlers.insert(Opcode::FunctionStart, Box::new(NopHandler));
         handlers.insert(Opcode::IncreaseLoopCounter, Box::new(NopHandler));
-        handlers.insert(Opcode::Ret, Box::new(NopHandler)); // TODO: Handle return statements
 
-        // Special cases
+        // Two operand handlers
         handlers.insert(
             Opcode::AccessMember,
             Box::new(special_two_operand::SpecialTwoOperandHandler),
@@ -109,6 +110,12 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(
             Opcode::Assign,
             Box::new(special_two_operand::SpecialTwoOperandHandler),
+        );
+
+        // One operand handlers
+        handlers.insert(
+            Opcode::Ret,
+            Box::new(special_one_operand::SpecialOneOperandHandler),
         );
 
         // Variable operand handlers

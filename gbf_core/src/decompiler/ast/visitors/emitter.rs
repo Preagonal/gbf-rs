@@ -4,7 +4,6 @@ use super::{
     emit_context::{EmitContext, EmitVerbosity, IndentStyle},
     AstVisitor,
 };
-use crate::decompiler::ast::member_access::MemberAccessNode;
 use crate::decompiler::ast::meta::MetaNode;
 use crate::decompiler::ast::statement::StatementNode;
 use crate::decompiler::ast::unary_op::UnaryOperationNode;
@@ -14,6 +13,7 @@ use crate::decompiler::ast::{
     func_call::FunctionCallNode,
 };
 use crate::decompiler::ast::{function::FunctionNode, literal::LiteralNode};
+use crate::decompiler::ast::{member_access::MemberAccessNode, ret::ReturnNode};
 use crate::decompiler::ast::{AstKind, AstVisitable};
 use crate::{decompiler::ast::identifier::IdentifierNode, utils::escape_string};
 
@@ -47,6 +47,7 @@ impl AstVisitor for Gs2Emitter {
             AstKind::Meta(meta) => meta.accept(self),
             AstKind::Statement(stmt) => stmt.accept(self),
             AstKind::Function(func) => func.accept(self),
+            AstKind::Return(ret) => ret.accept(self),
             AstKind::Empty => {}
         }
     }
@@ -346,5 +347,21 @@ impl AstVisitor for Gs2Emitter {
         }
         self.context = old_context;
         self.output.push_str("}\n");
+    }
+
+    fn visit_return(&mut self, node: &ReturnNode) {
+        // return with indentation
+        for _ in 0..self.context.indent {
+            self.output.push(' ');
+        }
+
+        // Emit the return keyword
+        self.output.push_str("return ");
+
+        // Emit the return value
+        node.ret.accept(self);
+
+        // Emit the semicolon
+        self.output.push(';');
     }
 }

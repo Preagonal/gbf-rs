@@ -52,7 +52,7 @@ impl ProcessedInstructionBuilder {
     ///
     /// # Returns
     /// A mutable reference to the builder for chaining.
-    pub fn node_to_push(mut self, node_to_push: AstKind) -> Self {
+    pub fn push_to_region(mut self, node_to_push: AstKind) -> Self {
         self.node_to_push = Some(node_to_push);
         self
     }

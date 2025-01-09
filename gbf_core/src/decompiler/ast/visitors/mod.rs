@@ -37,4 +37,6 @@ pub trait AstVisitor {
     fn visit_function_call(&mut self, node: &super::func_call::FunctionCallNode);
     /// Visits a function node.
     fn visit_function(&mut self, node: &super::function::FunctionNode);
+    /// Visits a return node.
+    fn visit_return(&mut self, node: &super::ret::ReturnNode);
 }

@@ -61,7 +61,7 @@ impl OpcodeHandler for BinaryOperationHandler {
 
         Ok(ProcessedInstructionBuilder::new()
             .ssa_id(ssa_id.into())
-            .node_to_push(stmt.into())
+            .push_to_region(stmt.into())
             .build())
     }
 }

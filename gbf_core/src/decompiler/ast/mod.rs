@@ -11,6 +11,7 @@ use identifier::IdentifierNode;
 use literal::LiteralNode;
 use member_access::MemberAccessNode;
 use meta::MetaNode;
+use ret::ReturnNode;
 use serde::{Deserialize, Serialize};
 use ssa::SsaVersion;
 use statement::StatementNode;
@@ -40,6 +41,8 @@ pub mod literal;
 pub mod member_access;
 /// Contains the specifications for any AstNodes that are metadata.
 pub mod meta;
+/// Represents a return node in the AST.
+pub mod ret;
 /// Represents SSA versioning for the AST.
 pub mod ssa;
 /// Contains the specifications for any AstNodes that are statements
@@ -87,7 +90,8 @@ pub enum AstKind {
     Expression(ExprKind),
     // Allocation(AllocationNode),
     // Array(ArrayNode),
-    // Return(ReturnNode),
+    /// Represents a return node in the AST, such as `return 5`.
+    Return(ReturnNode),
     // Phi(PhiNode),
     /// Represents a metadata node in the AST.
     Meta(MetaNode), // Covers comments or annotations
@@ -102,6 +106,7 @@ impl AstVisitable for AstKind {
             AstKind::Meta(meta) => meta.accept(visitor),
             AstKind::Statement(stmt) => stmt.accept(visitor),
             AstKind::Function(func) => func.accept(visitor),
+            AstKind::Return(ret) => ret.accept(visitor),
             AstKind::Empty => {}
         }
     }
@@ -144,6 +149,14 @@ where
         lhs: lhs.into(),
         rhs: rhs.into(),
     }
+}
+
+/// Creates a new return node.
+pub fn create_return<N>(node: N) -> ReturnNode
+where
+    N: Into<Box<ExprKind>>,
+{
+    ReturnNode::new(node.into())
 }
 
 /// Creates a new member access node.

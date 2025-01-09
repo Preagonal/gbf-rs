@@ -44,7 +44,7 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 let stmt = statement(lhs, rhs);
 
                 Ok(ProcessedInstructionBuilder::new()
-                    .node_to_push(stmt.into())
+                    .push_to_region(stmt.into())
                     .build())
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode(
