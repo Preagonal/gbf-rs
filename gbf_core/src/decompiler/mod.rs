@@ -21,6 +21,7 @@ pub struct ProcessedInstructionBuilder {
     ssa_id: Option<AssignableKind>,
     node_to_push: Option<AstKind>,
     function_parameters: Option<AstVec<ExprKind>>,
+    jump_condition: Option<ExprKind>,
 }
 
 impl ProcessedInstructionBuilder {
@@ -30,6 +31,7 @@ impl ProcessedInstructionBuilder {
             ssa_id: None,
             node_to_push: None,
             function_parameters: None,
+            jump_condition: None,
         }
     }
 
@@ -69,6 +71,18 @@ impl ProcessedInstructionBuilder {
         self
     }
 
+    /// Sets the jump condition for the processed instruction.
+    ///
+    /// # Arguments
+    /// - `jump_condition`: The jump condition to assign.
+    ///
+    /// # Returns
+    /// A mutable reference to the builder for chaining.
+    pub fn jump_condition(mut self, jump_condition: ExprKind) -> Self {
+        self.jump_condition = Some(jump_condition);
+        self
+    }
+
     /// Builds the `ProcessedInstruction` instance.
     ///
     /// # Returns
@@ -78,6 +92,7 @@ impl ProcessedInstructionBuilder {
             ssa_id: self.ssa_id,
             node_to_push: self.node_to_push,
             function_parameters: self.function_parameters,
+            jump_condition: self.jump_condition,
         }
     }
 }
@@ -91,4 +106,6 @@ pub struct ProcessedInstruction {
     pub node_to_push: Option<AstKind>,
     /// The parameters of a function. Returned with Opcode::EndParams.
     pub function_parameters: Option<AstVec<ExprKind>>,
+    /// The jump condition
+    pub jump_condition: Option<ExprKind>,
 }

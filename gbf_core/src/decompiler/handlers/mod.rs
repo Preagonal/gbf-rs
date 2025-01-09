@@ -21,6 +21,8 @@ pub mod bin_op;
 pub mod general;
 /// Handles identifier instructions.
 pub mod identifier;
+/// Handles jump instructions.
+pub mod jump;
 /// Handles literal instructions.
 pub mod literal;
 /// Handles instructions that are not useful to our decompiler.
@@ -122,6 +124,9 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         // Variable operand handlers
         handlers.insert(Opcode::Call, Box::new(VariableOperandHandler));
         handlers.insert(Opcode::EndParams, Box::new(VariableOperandHandler));
+
+        // Jump handlers
+        handlers.insert(Opcode::Jne, Box::new(jump::JumpHandler));
 
         handlers
     })

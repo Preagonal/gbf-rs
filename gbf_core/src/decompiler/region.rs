@@ -137,6 +137,7 @@ impl RenderableNode for Region {
             // Build a new EmitContext with debug
             let context = EmitContextBuilder::default()
                 .verbosity(EmitVerbosity::Debug)
+                .include_ssa_versions(true)
                 .build();
             let mut emitter = Gs2Emitter::new(context);
             emitter.visit_node(node);

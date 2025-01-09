@@ -25,6 +25,10 @@ pub enum ExprKind {
     FunctionCall(FunctionCallNode),
 }
 
+impl ExprKind {
+    // TODO: Make invert logic
+}
+
 impl AstVisitable for ExprKind {
     fn accept(&self, visitor: &mut dyn AstVisitor) {
         visitor.visit_expr(self);

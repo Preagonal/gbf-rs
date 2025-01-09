@@ -62,6 +62,10 @@ pub enum AstNodeError {
     /// Invalid operand for an AST node.
     #[error("Invalid {0} operand for {1}. Expected types in {2:?}, found {3}")]
     InvalidOperand(String, String, Vec<String>, String),
+
+    /// Cannot invert the AST node.
+    #[error("Cannot invert {0}")]
+    CannotInvert(String),
 }
 
 /// Trait for all AST nodes.
