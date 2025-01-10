@@ -1,0 +1,5 @@
+player.chat = "Hello, World!";
+echo("This is a test")
+temp.x = 0;
+temp.x += 2;
+echo(temp.x)

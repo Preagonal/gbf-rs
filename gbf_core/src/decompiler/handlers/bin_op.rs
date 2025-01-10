@@ -1,0 +1,67 @@
+#![deny(missing_docs)]
+
+use crate::{
+    decompiler::{
+        ast::{bin_op::BinOpType, new_bin_op, new_id_with_version, statement},
+        function_decompiler::FunctionDecompilerError,
+        function_decompiler_context::FunctionDecompilerContext,
+        ProcessedInstruction, ProcessedInstructionBuilder,
+    },
+    instruction::Instruction,
+    opcode::Opcode,
+};
+
+use super::OpcodeHandler;
+
+/// Handles identifier instructions.
+pub struct BinaryOperationHandler;
+
+impl OpcodeHandler for BinaryOperationHandler {
+    fn handle_instruction(
+        &self,
+        context: &mut FunctionDecompilerContext,
+        instruction: &Instruction,
+    ) -> Result<ProcessedInstruction, FunctionDecompilerError> {
+        let rhs = context.pop_expression()?;
+        let lhs = context.pop_expression()?;
+
+        let op_type = match instruction.opcode {
+            Opcode::Add => BinOpType::Add,
+            Opcode::Subtract => BinOpType::Sub,
+            Opcode::Multiply => BinOpType::Mul,
+            Opcode::Divide => BinOpType::Div,
+            Opcode::Modulo => BinOpType::Mod,
+            Opcode::BitwiseAnd => BinOpType::And,
+            Opcode::BitwiseOr => BinOpType::Or,
+            Opcode::BitwiseXor => BinOpType::Xor,
+            Opcode::ShiftLeft => BinOpType::ShiftLeft,
+            Opcode::ShiftRight => BinOpType::ShiftRight,
+            Opcode::Equal => BinOpType::Equal,
+            Opcode::NotEqual => BinOpType::NotEqual,
+            Opcode::LessThan => BinOpType::Less,
+            Opcode::LessThanOrEqual => BinOpType::LessOrEqual,
+            Opcode::GreaterThan => BinOpType::Greater,
+            Opcode::GreaterThanOrEqual => BinOpType::GreaterOrEqual,
+            Opcode::ShortCircuitAnd => BinOpType::LogicalAnd,
+            Opcode::ShortCircuitOr => BinOpType::LogicalOr,
+            Opcode::In => BinOpType::In,
+            Opcode::Join => BinOpType::Join,
+            _ => {
+                return Err(FunctionDecompilerError::UnimplementedOpcode(
+                    instruction.opcode,
+                    context.current_block_id.unwrap(),
+                ));
+            }
+        };
+
+        let op = new_bin_op(lhs, rhs, op_type)?;
+        let var = context.ssa_context.new_ssa_version_for("bin_op");
+        let ssa_id = new_id_with_version("bin_op", var);
+        let stmt = statement(ssa_id.clone(), op);
+
+        Ok(ProcessedInstructionBuilder::new()
+            .ssa_id(ssa_id.into())
+            .push_to_region(stmt.into())
+            .build())
+    }
+}

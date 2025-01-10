@@ -15,13 +15,19 @@ get_main_version() {
 
 # Fetch the current branch version
 get_current_version() {
-    CURRENT_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "//;s/"//')
+    CURRENT_VERSION=$(grep '^version' ./gbf_core/Cargo.toml | sed 's/version = "//;s/"//')
     echo "$CURRENT_VERSION"
+}
+
+# Fetch the gbf_macros version
+get_macros_version() {
+    MACROS_VERSION=$(grep '^version' ./gbf_macros/Cargo.toml | sed 's/version = "//;s/"//')
+    echo "$MACROS_VERSION"
 }
 
 # Extract version from README.md
 get_readme_version() {
-    README_VERSION=$(grep 'gbf-rs =' README.md | sed 's/.*gbf-rs = "//;s/"//;s/.*\[dependencies\]//')
+    README_VERSION=$(grep 'gbf_core =' README.md | sed 's/.*gbf_core = "//;s/"//;s/.*\[dependencies\]//')
     if [ -z "$README_VERSION" ]; then
         error "Could not find version in README.md"
     fi
@@ -57,6 +63,13 @@ check_readme_version() {
     fi
 }
 
+# Ensure the gbf_macros version matches the current version
+check_macros_version() {
+    if [ "$CURRENT_VERSION" != "$MACROS_VERSION" ]; then
+        error "Version mismatch: gbf_macros/Cargo.toml version is $MACROS_VERSION, but gbf_core/Cargo.toml version is $CURRENT_VERSION"
+    fi
+}
+
 # Main script logic
 echo "Fetching main branch version..."
 MAIN_VERSION=$(get_main_version)
@@ -65,6 +78,10 @@ echo "Main branch version: $MAIN_VERSION"
 echo "Fetching current branch version..."
 CURRENT_VERSION=$(get_current_version)
 echo "Current branch version: $CURRENT_VERSION"
+
+echo "Fetching gbf_macros version..."
+MACROS_VERSION=$(get_macros_version)
+echo "gbf_macros version: $MACROS_VERSION"
 
 echo "Parsing versions..."
 parse_version "$MAIN_VERSION"
@@ -87,5 +104,8 @@ check_patch_version
 
 echo "Checking README version..."
 check_readme_version
+
+echo "Checking gbf_macros version..."
+check_macros_version
 
 echo "All version checks passed!"

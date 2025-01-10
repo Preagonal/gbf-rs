@@ -24,7 +24,7 @@ Cargo.lock
 .DS_Store
 
 # Stop tracking main.rs
-src/main.rs
+gbf_core/src/main.rs
 
 # Don't track StartScript_Connector.gs2bc
-tests/gs2bc/StartScript_Connector.gs2bc
+gbf_core/tests/gs2bc/StartScript_Connector.gs2bc
