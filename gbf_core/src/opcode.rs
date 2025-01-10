@@ -391,7 +391,7 @@ define_opcodes! {
     AssignArray = 0x84,
     AssignMultiDimensionalArrayIndex = 0x85,
     AssignMultiDimensionalArray = 0x86,
-    // Unknown values: 0x87
+    ObjSubArray = 0x87,
     ObjAddString = 0x88,
     ObjDeleteString = 0x89,
     ObjRemoveString = 0x8a,
