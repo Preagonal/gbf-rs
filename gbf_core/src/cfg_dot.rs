@@ -3,7 +3,7 @@
 use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::visit::{EdgeRef, IntoNodeReferences};
 
-use crate::utils::{GBF_DARK_GRAY, GBF_LIGHT_GRAY};
+use crate::utils::GBF_DARK_GRAY;
 
 /// A trait that defines how a node and its edges are rendered.
 pub trait RenderableNode {
@@ -42,8 +42,6 @@ pub struct CfgDotConfig {
     pub fontname: String,
     /// The font size of the nodes.
     pub fontsize: String,
-    /// The background color of the graph.
-    pub bgcolor: String,
     /// The fill color of the nodes.
     pub fillcolor: String,
 }
@@ -56,8 +54,7 @@ impl Default for CfgDotConfig {
             node_shape: "plaintext".to_string(),
             fontname: "Courier".to_string(),
             fontsize: "12".to_string(),
-            bgcolor: GBF_DARK_GRAY.to_string(),
-            fillcolor: GBF_LIGHT_GRAY.to_string(),
+            fillcolor: GBF_DARK_GRAY.to_string(),
         }
     }
 }
@@ -102,12 +99,6 @@ impl CfgDotBuilder {
     /// Sets the font size of the nodes.
     pub fn fontsize(mut self, fontsize: &str) -> Self {
         self.config.fontsize = fontsize.to_string();
-        self
-    }
-
-    /// Sets the background color of the graph.
-    pub fn bgcolor(mut self, bgcolor: &str) -> Self {
-        self.config.bgcolor = bgcolor.to_string();
         self
     }
 
@@ -168,8 +159,8 @@ impl CfgDot {
         // Start graph definition.
         dot.push_str("digraph CFG {\n");
         dot.push_str(&format!(
-            "    graph [rankdir={}, bgcolor=\"{}\", splines=\"ortho\"];\n",
-            self.config.rankdir, self.config.bgcolor
+            "    graph [rankdir={}, splines=\"ortho\"];\n",
+            self.config.rankdir
         ));
         dot.push_str(&format!(
             "    edge [color=\"{}\"]; \n",
@@ -300,7 +291,7 @@ mod tests {
         assert!(dot_output.contains("graph [rankdir=TB"));
         assert!(dot_output.contains(&format!(
             "N0 [style=filled, fillcolor=\"{}\"",
-            GBF_LIGHT_GRAY
+            GBF_DARK_GRAY
         )));
         assert!(dot_output.contains("Node A"));
         assert!(dot_output.contains("Node B"));
@@ -342,7 +333,6 @@ mod tests {
             .node_shape("record")
             .fontname("Arial")
             .fontsize("14")
-            .bgcolor("#ffffff")
             .fillcolor("#ff0000")
             .build();
         let dot_output = cfg_dot.render(&graph, &resolver);
@@ -352,7 +342,6 @@ mod tests {
         assert!(dot_output.contains("graph [rankdir=LR"));
         assert!(dot_output.contains("edge [color=\"#ff0000\"]"));
         assert!(dot_output.contains("node [shape=\"record\", fontname=\"Arial\", fontsize=\"14\"]"));
-        assert!(dot_output.contains("bgcolor=\"#ffffff\""));
         assert!(dot_output.contains("N0 [style=filled, fillcolor=\"#ff0000\""));
         assert!(dot_output.contains("Node A"));
         assert!(dot_output.contains("Node B"));
@@ -396,7 +385,7 @@ mod tests {
         assert!(dot_output.contains("graph [rankdir=TB"));
         assert!(dot_output.contains(&format!(
             "N0 [style=filled, fillcolor=\"{}\"",
-            GBF_LIGHT_GRAY
+            GBF_DARK_GRAY
         )));
         assert!(dot_output.contains("Node A"));
         assert!(dot_output.contains("Node B"));
@@ -499,7 +488,7 @@ mod tests {
         // Verify the output.
         assert!(dot_output.contains(&format!(
             "N0 [style=filled, fillcolor=\"{}\"",
-            GBF_LIGHT_GRAY
+            GBF_DARK_GRAY
         )));
         assert!(!dot_output.contains("N1")); // Node B should not be rendered.
     }
