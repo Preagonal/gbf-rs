@@ -9,7 +9,11 @@ on:
     branches:
       - main  # Run on pull requests targeting `main`
       - dev   # Run on pull requests targeting `dev`
-
+permissions:
+  id-token: write
+  pages: write
+  contents: read
+  
 jobs:
   build:
     name: Build Next.js Project
