@@ -7,6 +7,7 @@ use crate::function::{Function, FunctionError};
 use crate::opcode::Opcode;
 use crate::utils::GBF_BLUE;
 use petgraph::graph::{DiGraph, NodeIndex};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -20,7 +21,7 @@ use super::execution_frame::ExecutionFrame;
 use super::function_decompiler_context::FunctionDecompilerContext;
 
 /// An error when decompiling a function
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone, Serialize, Deserialize)]
 pub enum FunctionDecompilerError {
     /// Cannot pop a node from the stack
     #[error("Cannot pop a node from the empty stack at BasicBlockId: {0}")]

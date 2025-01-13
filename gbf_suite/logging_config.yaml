@@ -1,0 +1,9 @@
+appenders:
+  console:
+    kind: console
+    encoder:
+      pattern: "{h({d(%Y-%m-%d %H:%M:%S)(utc)} - {l}: {m}{n})}"
+root:
+  level: info
+  appenders:
+    - console

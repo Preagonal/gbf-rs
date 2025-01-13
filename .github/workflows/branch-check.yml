@@ -1,0 +1,22 @@
+name: 'Check Branch'
+
+on:
+  pull_request:
+
+jobs:
+  check_branch:
+    runs-on: ubuntu-latest
+    steps:
+      # Check if PR is targeting `main` and ensure only `dev` is the source branch
+      - name: Check branch for main
+        if: github.base_ref == 'main' && github.head_ref != 'dev'
+        run: |
+          echo "ERROR: You can only merge to main from dev."
+          exit 1
+
+      # Check if PR is targeting `dev` and ensure the source branch starts with `feature/`
+      - name: Check branch for dev
+        if: github.base_ref == 'dev' && startsWith(github.head_ref, 'feature/') == false
+        run: |
+          echo "ERROR: You can only merge to dev from feature/* branches."
+          exit 1

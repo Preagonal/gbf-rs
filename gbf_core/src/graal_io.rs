@@ -2,6 +2,7 @@
 
 use std::io::{self, Read, Write};
 
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 use thiserror::Error;
 
 /// The maximum values for a one-byte Graal-encoded integer.
@@ -50,6 +51,51 @@ pub enum GraalIoError {
     /// An I/O error occurred.
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
+}
+
+// Custom implementation of clone
+impl Clone for GraalIoError {
+    fn clone(&self) -> Self {
+        match self {
+            GraalIoError::NoNullTerminator() => GraalIoError::NoNullTerminator(),
+            GraalIoError::Utf8ConversionFailed(msg) => {
+                GraalIoError::Utf8ConversionFailed(msg.clone())
+            }
+            GraalIoError::ValueExceedsMaximum(value, max) => {
+                GraalIoError::ValueExceedsMaximum(*value, *max)
+            }
+            GraalIoError::Io(err) => GraalIoError::Io(io::Error::new(err.kind(), err.to_string())),
+        }
+    }
+}
+
+// Custom implementation of Serialize
+impl Serialize for GraalIoError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("GraalIoError", 2)?;
+        match self {
+            GraalIoError::NoNullTerminator() => {
+                state.serialize_field("type", "NoNullTerminator")?;
+            }
+            GraalIoError::Utf8ConversionFailed(msg) => {
+                state.serialize_field("type", "Utf8ConversionFailed")?;
+                state.serialize_field("message", msg)?;
+            }
+            GraalIoError::ValueExceedsMaximum(value, max) => {
+                state.serialize_field("type", "ValueExceedsMaximum")?;
+                state.serialize_field("value", value)?;
+                state.serialize_field("max", max)?;
+            }
+            GraalIoError::Io(err) => {
+                state.serialize_field("type", "Io")?;
+                state.serialize_field("error", &err.to_string())?;
+            }
+        }
+        state.end()
+    }
 }
 
 impl<R: Read> GraalReader<R> {

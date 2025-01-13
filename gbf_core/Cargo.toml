@@ -1,6 +1,6 @@
 [package]
 name = "gbf_core"
-version = "0.0.3"
+version = "0.1.0"
 # TODO: Once 2024 edition is stable, switch to it. ETA Feb 2025.
 edition = "2021"
 
@@ -12,4 +12,4 @@ thiserror = "2.0.8"
 gbf_macros = { path = "../gbf_macros" }
 
 [package.metadata]
-msrv = "1.70.0"
+msrv = "1.81.0"

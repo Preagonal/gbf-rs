@@ -120,6 +120,10 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
             Opcode::Ret,
             Box::new(special_one_operand::SpecialOneOperandHandler),
         );
+        handlers.insert(
+            Opcode::Copy,
+            Box::new(special_one_operand::SpecialOneOperandHandler),
+        );
 
         // Variable operand handlers
         handlers.insert(Opcode::Call, Box::new(VariableOperandHandler));

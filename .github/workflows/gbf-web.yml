@@ -1,0 +1,95 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_run:
+    workflows:
+      - Version Check and Enforcement
+    types:
+      - completed
+permissions:
+  id-token: write
+  pages: write
+  contents: read
+
+jobs:
+  build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: Build Next.js Project with Rust Docs and GBF Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 0: Install Graphviz
+      - name: Install Graphviz
+        run: |
+          wget https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/12.2.1/ubuntu_24.04_graphviz-12.2.1-cmake.deb -O graphviz.deb
+          sudo dpkg -i graphviz.deb || sudo apt-get -f install -y
+          rm graphviz.deb
+          dot -V
+        
+      # Step 1: Checkout Repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Configure AWS Credentials (if needed for external storage)
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # Step 3: Install Node.js
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18  # Specify the Node.js version
+
+      # Step 4: Install Rust
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      # Step 5: Run GBF Suite
+      - name: Run GBF Suite
+        env:
+          GBF_SUITE_DIR: ./gbf_core/tests/gs2bc/
+        run: cargo run --package gbf_suite
+
+      # Step 6: Install Dependencies
+      - name: Install Dependencies
+        working-directory: ./gbf_web
+        run: npm install
+
+      # Step 7: Generate Rust Documentation
+      - name: Build Rust Documentation
+        run: cargo doc --no-deps --workspace
+
+      # Step 8: Move Rust Docs to Next.js Public Directory
+      - name: Move Rust Docs to Public Directory
+        run: |
+          mkdir -p ./gbf_web/public/docs
+          cp -R target/doc/* ./gbf_web/public/docs/
+
+      # Step 9: Build Next.js Site
+      - name: Build Next.js Site
+        working-directory: ./gbf_web
+        run: npm run build
+
+      # Step 10: Upload Build Artifacts
+      - name: Upload Build Artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./gbf_web/out
+
+  # Deploy job: Publish to GitHub Pages
+  deploy:
+    environment:
+      name: github-pages
+    runs-on: ubuntu-latest
+    needs: build  # This job depends on the "build" job
+
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
