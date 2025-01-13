@@ -39,10 +39,6 @@ jobs:
         working-directory: ./gbf_web
         run: npm run build
 
-      - name: Export Next.js Static Site
-        working-directory: ./gbf_web
-        run: npm run export
-
       - name: Upload Build Artifacts
         uses: actions/upload-pages-artifact@v3
         with:
