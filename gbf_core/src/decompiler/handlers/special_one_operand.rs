@@ -30,6 +30,12 @@ impl OpcodeHandler for SpecialOneOperandHandler {
                     .push_to_region(ret.into())
                     .build())
             }
+            Opcode::Copy => {
+                let operand = context.pop_expression()?;
+                context.push_one_node(operand.clone().into())?;
+                context.push_one_node(operand.clone().into())?;
+                Ok(ProcessedInstructionBuilder::new().build())
+            }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode(
                 instruction.opcode,
                 context.current_block_id.unwrap(),
