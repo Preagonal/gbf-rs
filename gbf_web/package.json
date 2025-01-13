@@ -1,0 +1,37 @@
+{
+  "name": "gbf_web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.726.1",
+    "@aws-sdk/lib-dynamodb": "^3.726.1",
+    "@aws-sdk/util-dynamodb": "^3.726.1",
+    "@gsap/react": "^2.1.1",
+    "@mantine/code-highlight": "^7.15.3",
+    "@mantine/core": "^7.15.3",
+    "@mantine/form": "^7.15.3",
+    "@mantine/hooks": "^7.15.3",
+    "@tabler/icons-react": "^3.28.1",
+    "next": "15.1.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.4",
+    "postcss": "^8.4.49",
+    "postcss-preset-mantine": "^1.17.0",
+    "postcss-simple-vars": "^7.0.1",
+    "typescript": "^5"
+  }
+}

@@ -1,5 +1,6 @@
 #![deny(missing_docs)]
 
+use serde::Serialize;
 use std::{
     collections::HashMap,
     fmt::{self, Display, Formatter},
@@ -15,7 +16,7 @@ use crate::{
 };
 
 /// Error type for module operations.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, Serialize)]
 pub enum ModuleError {
     /// Error for when a function is not found in the module.
     #[error("Function not found: {0}")]

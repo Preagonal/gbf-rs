@@ -12,7 +12,8 @@ use crate::{
     cfg_dot::RenderableNode,
     instruction::Instruction,
     utils::{
-        Gs2BytecodeAddress, GBF_BLUE, GBF_GREEN, GBF_RED, GBF_YELLOW, OPERAND_TRUNCATE_LENGTH,
+        html_encode, Gs2BytecodeAddress, GBF_BLUE, GBF_GREEN, GBF_RED, GBF_YELLOW,
+        OPERAND_TRUNCATE_LENGTH,
     },
 };
 
@@ -327,6 +328,7 @@ impl RenderableNode for BasicBlock {
                         }
                     })
                     .unwrap_or_else(|| " ".to_string());
+                let operand = html_encode(operand);
 
                 writeln!(
                     &mut label,
@@ -335,7 +337,7 @@ impl RenderableNode for BasicBlock {
 {indent}        <TD ALIGN="LEFT">  </TD>
 {indent}        <TD ALIGN="LEFT"><FONT COLOR="{GBF_YELLOW}">{}</FONT></TD>
 {indent}        <TD ALIGN="LEFT">  </TD>
-{indent}        <TD ALIGN="LEFT"><FONT COLOR="{GBF_BLUE}">{}</FONT></TD>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="{GBF_BLUE}">{} </FONT></TD>
 {indent}    </TR>"##,
                     inst.address,
                     inst.opcode,

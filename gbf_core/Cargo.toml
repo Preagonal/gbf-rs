@@ -12,4 +12,4 @@ thiserror = "2.0.8"
 gbf_macros = { path = "../gbf_macros" }
 
 [package.metadata]
-msrv = "1.70.0"
+msrv = "1.81.0"

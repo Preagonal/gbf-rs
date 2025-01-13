@@ -8,7 +8,7 @@ use thiserror::Error;
 use crate::utils::Gs2BytecodeAddress;
 
 /// Represents an error that can occur when parsing an operand.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone, Serialize, Deserialize)]
 pub enum OperandError {
     /// Invalid conversion
     #[error("Attempted to convert {0} operand to a {1}")]

@@ -5,7 +5,7 @@ use std::{fmt::Display, str::FromStr};
 use thiserror::Error;
 
 /// Error type for invalid opcodes.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize, Deserialize, Clone)]
 pub enum OpcodeError {
     /// Error for when an invalid opcode is encountered.
     #[error("Invalid opcode: {0}")]

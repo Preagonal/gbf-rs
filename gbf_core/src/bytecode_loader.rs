@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Error type for bytecode operations.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, Serialize)]
 pub enum BytecodeLoaderError {
     /// Error for when an invalid section type is encountered.
     #[error("Invalid section type: {0}")]

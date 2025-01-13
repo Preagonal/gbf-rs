@@ -15,7 +15,7 @@ use crate::cfg_dot::{CfgDot, CfgDotConfig, DotRenderableGraph, NodeResolver};
 use crate::utils::{Gs2BytecodeAddress, GBF_BLUE, GBF_GREEN, GBF_RED};
 
 /// Represents an error that can occur when working with functions.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, Serialize, Deserialize)]
 pub enum FunctionError {
     /// The requested `BasicBlock` was not found by its block id.
     #[error("BasicBlock not found by its block id: {0}")]
