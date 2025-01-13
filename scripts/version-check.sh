@@ -11,7 +11,7 @@ get_branch_version() {
     local branch="$1"
     git fetch origin "$branch" > /dev/null 2>&1 || error "Failed to fetch branch: $branch"
     local version
-    version=$(git show "origin/$branch:Cargo.toml" | grep '^version' | sed 's/version = "//;s/"//')
+    version=$(git show "origin/$branch:gbf_core/Cargo.toml" | grep '^version' | sed 's/version = "//;s/"//')
     [[ -z "$version" ]] && error "Failed to fetch version from branch: $branch"
     echo "$version"
 }
