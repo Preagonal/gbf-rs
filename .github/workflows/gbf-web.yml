@@ -13,16 +13,18 @@ permissions:
   id-token: write
   pages: write
   contents: read
-  
+
 jobs:
   build:
-    name: Build Next.js Project
+    name: Build Next.js Project with Rust Docs
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # Step 2: Configure AWS Credentials (if needed for external storage)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -30,19 +32,39 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      # Step 3: Install Node.js
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18  # Specify the Node.js version
 
+      # Step 4: Install Dependencies
       - name: Install Dependencies
         working-directory: ./gbf_web
         run: npm install
 
+      # Step 5: Generate Rust Documentation
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Build Rust Documentation
+        run: cargo doc --no-deps --workspace
+
+      # Step 6: Move Rust Docs to Next.js Public Directory
+      - name: Move Rust Docs to Public Directory
+        run: |
+          mkdir -p ./gbf_web/public/docs
+          cp -R target/doc/* ./gbf_web/public/docs/
+
+      # Step 7: Build Next.js Site
       - name: Build Next.js Site
         working-directory: ./gbf_web
         run: npm run build
 
+      # Step 8: Upload Build Artifacts
       - name: Upload Build Artifacts
         uses: actions/upload-pages-artifact@v3
         with:
