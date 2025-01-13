@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Next.js Project with Rust Docs
+    name: Build Next.js Project with Rust Docs and GBF Suite
     runs-on: ubuntu-latest
 
     steps:
@@ -38,33 +38,40 @@ jobs:
         with:
           node-version: 18  # Specify the Node.js version
 
-      # Step 4: Install Dependencies
-      - name: Install Dependencies
-        working-directory: ./gbf_web
-        run: npm install
-
-      # Step 5: Generate Rust Documentation
+      # Step 4: Install Rust
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           override: true
 
+      # Step 5: Run GBF Suite
+      - name: Run GBF Suite
+        env:
+          GBF_SUITE_DIR: ./gbf_core/tests/gs2bc/
+        run: cargo run --package gbf_suite
+
+      # Step 6: Install Dependencies
+      - name: Install Dependencies
+        working-directory: ./gbf_web
+        run: npm install
+
+      # Step 7: Generate Rust Documentation
       - name: Build Rust Documentation
         run: cargo doc --no-deps --workspace
 
-      # Step 6: Move Rust Docs to Next.js Public Directory
+      # Step 8: Move Rust Docs to Next.js Public Directory
       - name: Move Rust Docs to Public Directory
         run: |
           mkdir -p ./gbf_web/public/docs
           cp -R target/doc/* ./gbf_web/public/docs/
 
-      # Step 7: Build Next.js Site
+      # Step 9: Build Next.js Site
       - name: Build Next.js Site
         working-directory: ./gbf_web
         run: npm run build
 
-      # Step 8: Upload Build Artifacts
+      # Step 10: Upload Build Artifacts
       - name: Upload Build Artifacts
         uses: actions/upload-pages-artifact@v3
         with:
