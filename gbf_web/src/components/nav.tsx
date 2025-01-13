@@ -79,7 +79,7 @@ export function NavigationBar({
                     disabled={!functions || functions.length === 0}
                 />
                 <Button component={Link} href={`${backLink}`}>Back</Button>
-                <ActionIcon color="blue" size={36} radius="xl" component={Link} href="/docs/gbf_core/">
+                <ActionIcon color="blue" size={36} radius="xl" component={Link} href="/docs/gbf_core/" target='_blank'>
                     <IconBook style={{ width: rem(16), height: rem(16) }} />
                 </ActionIcon>
             </Stack>
