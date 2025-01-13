@@ -22,8 +22,9 @@ jobs:
     steps:
       # Step 0: Install Graphviz
       - name: Install Graphviz
-        run: sudo apt-get install graphviz
-        run: dot --version
+        run: |
+          sudo apt-get install graphviz
+          dot --version
         
       # Step 1: Checkout Repository
       - name: Checkout Repository
