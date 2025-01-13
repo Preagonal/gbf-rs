@@ -1,14 +1,11 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches:
-      - main  # Run on pushes to `main`
-      - dev   # Run on pushes to `dev`
-  pull_request:
-    branches:
-      - main  # Run on pull requests targeting `main`
-      - dev   # Run on pull requests targeting `dev`
+  workflow_run:
+    workflows:
+      - Version Check and Enforcement
+    types:
+      - completed
 permissions:
   id-token: write
   pages: write
@@ -16,6 +13,7 @@ permissions:
 
 jobs:
   build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Build Next.js Project with Rust Docs and GBF Suite
     runs-on: ubuntu-latest
 
