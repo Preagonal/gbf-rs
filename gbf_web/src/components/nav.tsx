@@ -1,10 +1,11 @@
 "use client";
 
 import React from 'react';
-import { Box, Button, Select, Stack, Title } from '@mantine/core';
+import { ActionIcon, Box, Button, rem, Select, Stack, Title } from '@mantine/core';
 import Link from 'next/link';
 import { FunctionId, ModuleId } from '@/data/gbf-suite-result-dao';
 import { useRouter } from 'next/navigation';
+import { IconBook } from '@tabler/icons-react';
 
 interface NavigationBarProps {
     version: string | null;
@@ -78,6 +79,9 @@ export function NavigationBar({
                     disabled={!functions || functions.length === 0}
                 />
                 <Button component={Link} href={`${backLink}`}>Back</Button>
+                <ActionIcon color="blue" size={36} radius="xl" component={Link} href="/docs/gbf_core/">
+                    <IconBook style={{ width: rem(16), height: rem(16) }} />
+                </ActionIcon>
             </Stack>
         </Box>
     );
