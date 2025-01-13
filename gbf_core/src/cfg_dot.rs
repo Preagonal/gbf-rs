@@ -159,7 +159,7 @@ impl CfgDot {
         // Start graph definition.
         dot.push_str("digraph CFG {\n");
         dot.push_str(&format!(
-            "    graph [rankdir={}, splines=\"ortho\"];\n",
+            "    graph [rankdir={}, bgcolor=\"transparent\", splines=\"ortho\"];\n",
             self.config.rankdir
         ));
         dot.push_str(&format!(

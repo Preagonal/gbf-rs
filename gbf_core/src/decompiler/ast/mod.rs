@@ -53,7 +53,7 @@ pub mod unary_op;
 pub mod visitors;
 
 /// Represents an error that occurred while converting an AST node.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone, Serialize, Deserialize)]
 pub enum AstNodeError {
     /// Invalid conversion from AstNode to another type.
     #[error("Expected {0}, found {1}")]

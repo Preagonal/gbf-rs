@@ -50,3 +50,23 @@ where
         .map(char::from)
         .collect()
 }
+
+/// Encodes a string for HTML.
+///
+/// # Arguments
+/// * `input` - A value that can be converted into a `String`.
+///
+/// # Returns
+/// A new `String` that is HTML encoded.
+pub fn html_encode<S>(input: S) -> String
+where
+    S: Into<String>,
+{
+    input
+        .into()
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
+}
