@@ -69,6 +69,10 @@ check_main_merge_version() {
 
 # Check version increment when merging into dev
 check_dev_merge_version() {
+    if [ -z "$CURRENT_MAJOR" ] || [ -z "$DEV_MAJOR" ] || [ -z "$CURRENT_MINOR" ] || [ -z "$DEV_MINOR" ] || [ -z "$CURRENT_PATCH" ] || [ -z "$DEV_PATCH" ]; then
+        error "One or more version components are not set."
+    fi
+
     if [ "$CURRENT_MAJOR" -ne "$DEV_MAJOR" ] || [ "$CURRENT_MINOR" -ne "$DEV_MINOR" ]; then
         error "When merging into dev, only the patch version can change, and the major and minor versions must remain the same."
     fi
