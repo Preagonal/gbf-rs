@@ -129,7 +129,18 @@ CURRENT_MINOR="$MINOR"
 CURRENT_PATCH="$PATCH"
 
 # Determine the target branch
-TARGET_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+# Determine the target branch in a GitHub Actions environment
+if [ -n "$GITHUB_BASE_REF" ]; then
+    # In a PR, use GITHUB_BASE_REF to get the target branch
+    TARGET_BRANCH="$GITHUB_BASE_REF"
+else
+    # For direct pushes, fall back to the current branch
+    TARGET_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+fi
+
+echo "Target branch detected: $TARGET_BRANCH"
+
+# Proceed with the existing checks based on the target branch
 if [[ "$TARGET_BRANCH" == "main" ]]; then
     echo "Checking version for merging into main..."
     check_main_merge_version
