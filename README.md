@@ -27,7 +27,7 @@ Add `gbf_core` as a dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-gbf_core = "0.0.3"
+gbf_core = "0.0.4"
 ```
 
 ### Minimum Supported Rust Version
