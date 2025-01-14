@@ -83,7 +83,7 @@ impl PartialEq for MemberAccessNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{emit, new_member_access, new_id, AstNodeError};
+    use crate::decompiler::ast::{emit, new_id, new_member_access, AstNodeError};
 
     #[test]
     fn test_member_access_emit() -> Result<(), AstNodeError> {

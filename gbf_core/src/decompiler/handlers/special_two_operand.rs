@@ -2,7 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::{assignable::AssignableKind, new_member_access, new_array_access, new_assignment},
+        ast::{assignable::AssignableKind, new_array_access, new_assignment, new_member_access},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,

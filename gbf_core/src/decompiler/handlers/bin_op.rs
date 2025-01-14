@@ -2,7 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::{bin_op::BinOpType, new_bin_op, new_id_with_version, new_assignment},
+        ast::{bin_op::BinOpType, new_assignment, new_bin_op, new_id_with_version},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,

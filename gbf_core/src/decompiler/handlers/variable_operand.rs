@@ -3,8 +3,8 @@
 use crate::{
     decompiler::{
         ast::{
-            assignable::AssignableKind, expr::ExprKind, new_array, new_fn_call,
-            new_id_with_version, new_assignment,
+            assignable::AssignableKind, expr::ExprKind, new_array, new_assignment, new_fn_call,
+            new_id_with_version,
         },
         execution_frame::ExecutionFrame,
         function_decompiler::FunctionDecompilerError,
