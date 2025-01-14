@@ -4,10 +4,13 @@ use crate::basic_block::{BasicBlockId, BasicBlockType};
 use crate::cfg_dot::{CfgDot, CfgDotConfig, DotRenderableGraph, NodeResolver};
 use crate::decompiler::region::{Region, RegionId, RegionType};
 use crate::function::{Function, FunctionError};
+use crate::instruction::Instruction;
 use crate::opcode::Opcode;
+use crate::operand::OperandError;
 use crate::utils::GBF_BLUE;
 use petgraph::graph::{DiGraph, NodeIndex};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use std::backtrace::Backtrace;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -21,19 +24,15 @@ use super::execution_frame::ExecutionFrame;
 use super::function_decompiler_context::FunctionDecompilerContext;
 
 /// An error when decompiling a function
-#[derive(Debug, Error, Clone, Serialize, Deserialize)]
+#[derive(Debug, Error, Serialize)]
 pub enum FunctionDecompilerError {
-    /// Cannot pop a node from the stack
-    #[error("Cannot pop a node from the empty stack at BasicBlockId: {0}")]
-    CannotPopNode(BasicBlockId),
-
     /// Encountered FunctionError
     #[error("Encountered FunctionError while decompiling: {0}")]
     FunctionError(#[from] FunctionError),
 
     /// Encountered an error while processing the operand
     #[error("Encountered an error while processing the operand: {0}")]
-    OperandError(#[from] crate::operand::OperandError),
+    OperandError(#[from] OperandError),
 
     /// The current instruction must have an operand
     #[error("The instruction associated with opcode {0:?} must have an operand")]
@@ -44,20 +43,64 @@ pub enum FunctionDecompilerError {
     InvalidNodeType(BasicBlockId, String, String),
 
     /// Encountered AstNodeError
-    #[error("Encountered AstNodeError while decompiling: {0}")]
-    AstNodeError(#[from] super::ast::AstNodeError),
+    #[error("Encountered AstNodeError while decompiling: {source}")]
+    AstNodeError {
+        /// The source of the error
+        #[from]
+        source: super::ast::AstNodeError,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
 
     /// Unimplemented Opcode
-    #[error("Unimplemented Opcode {0:?} in BasicBlockId {1}")]
-    UnimplementedOpcode(Opcode, BasicBlockId),
+    #[error("Unimplemented Opcode.")]
+    UnimplementedOpcode {
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
 
     /// Execution state stack is empty
-    #[error("Execution stack is empty")]
-    ExecutionStackEmpty,
+    #[error("The AST Node stack is empty.")]
+    ExecutionStackEmpty {
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
 
     /// Unexpected execution state
     #[error("Unexpected execution state. Expected {0}, but found {1}")]
     UnexpectedExecutionState(ExecutionFrame, ExecutionFrame),
+
+    /// All other errors
+    #[error("An error occurred while decompiling the function: {message}")]
+    Other {
+        /// Message associated with the error
+        message: String,
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
+}
+
+/// The context for a function decompiler error
+#[derive(Debug, Serialize, Clone)]
+pub struct FunctionDecompilerErrorContext {
+    /// The current block ID when the error occurred
+    pub current_block_id: BasicBlockId,
+    /// The current region ID when the error occurred
+    pub current_region_id: RegionId,
+    /// The current instruction when the error occurred
+    pub current_instruction: Instruction,
+    /// The current AST node stack when the error occurred
+    pub current_ast_node_stack: Vec<ExecutionFrame>,
 }
 
 // TODO: Map instructions to a reference value (for usage with loop variables, etc.)
@@ -81,7 +124,7 @@ pub struct FunctionDecompiler {
     /// Used to convert `RegionId` to `NodeIndex`.
     region_to_graph_node: HashMap<RegionId, NodeIndex>,
     /// The current context for the decompiler
-    context: FunctionDecompilerContext,
+    context: Option<FunctionDecompilerContext>,
     /// The parameters for the function
     function_parameters: AstVec<ExprKind>,
 }
@@ -105,7 +148,7 @@ impl FunctionDecompiler {
             region_graph: DiGraph::new(),
             graph_node_to_region: HashMap::new(),
             region_to_graph_node: HashMap::new(),
-            context: FunctionDecompilerContext::new(),
+            context: None,
             function_parameters: Vec::<ExprKind>::new().into(),
         }
     }
@@ -150,13 +193,6 @@ impl FunctionDecompiler {
         Ok(output)
     }
 
-    /// Add a node to the current region.
-    pub fn add_node_to_current_region(&mut self, node: AstKind) {
-        let current_region_id = self.context.current_region_id.unwrap();
-        let current_region = self.regions.get_mut(current_region_id.index).unwrap();
-        current_region.push_node(node);
-    }
-
     fn generate_regions(&mut self) {
         for block in self.function.iter() {
             // If the block is the end of the module, it is a tail region
@@ -183,6 +219,16 @@ impl FunctionDecompiler {
         // Generate all the regions before doing anything else
         self.generate_regions();
 
+        let entry_region_id = *self
+            .block_to_region
+            .get(&self.function.get_entry_basic_block().id)
+            .expect("Bug: We just made the regions, so not sure why it doesn't exist.");
+
+        let mut ctx = FunctionDecompilerContext::new(
+            self.function.get_entry_basic_block_id(),
+            entry_region_id,
+        );
+
         // Iterate through all the blocks in reverse post order
         let reverse_post_order = self
             .function
@@ -196,7 +242,7 @@ impl FunctionDecompiler {
                 .get(&block_id)
                 .expect("We just made the regions, so not sure why it doesn't exist.");
 
-            self.context.start_block_processing(block_id, region_id)?;
+            ctx.start_block_processing(block_id, region_id)?;
 
             // Connect the block's predecessors in the graph
             self.connect_predecessor_regions(block_id, region_id)?;
@@ -208,15 +254,19 @@ impl FunctionDecompiler {
             };
 
             for instr in instructions {
-                let processed = self.context.process_instruction(&instr)?;
+                let processed = ctx.process_instruction(&instr)?;
                 if let Some(node) = processed.node_to_push {
-                    self.add_node_to_current_region(node);
+                    let current_region_id = ctx.current_region_id;
+                    let current_region = self.regions.get_mut(current_region_id.index).unwrap();
+                    current_region.push_node(node);
                 }
                 if let Some(params) = processed.function_parameters {
                     self.function_parameters = params;
                 }
             }
         }
+
+        self.context = Some(ctx);
 
         Ok(())
     }

@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 
+use std::backtrace::Backtrace;
+
 use crate::{
     decompiler::{
         ast::{assignable::AssignableKind, new_array_access, new_assignment, new_member_access},
@@ -56,10 +58,10 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 context.push_one_node(array_access.into())?;
                 Ok(ProcessedInstructionBuilder::new().build())
             }
-            _ => Err(FunctionDecompilerError::UnimplementedOpcode(
-                instruction.opcode,
-                context.current_block_id.unwrap(),
-            )),
+            _ => Err(FunctionDecompilerError::UnimplementedOpcode {
+                context: context.get_error_context(),
+                backtrace: Backtrace::capture(),
+            }),
         }
     }
 }

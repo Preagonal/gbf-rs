@@ -97,6 +97,17 @@ impl std::fmt::Display for Instruction {
     }
 }
 
+impl Default for Instruction {
+    fn default() -> Self {
+        Self {
+            // TODO: Change this to a more appropriate default opcode
+            opcode: Opcode::ConvertToFloat,
+            address: 0,
+            operand: None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

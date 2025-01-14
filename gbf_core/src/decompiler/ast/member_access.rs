@@ -58,12 +58,7 @@ impl MemberAccessNode {
         expr.remove_ssa_version();
         match expr {
             AssignableKind::Identifier(_) | AssignableKind::MemberAccess(_) => Ok(()),
-            _ => Err(AstNodeError::InvalidOperand(
-                "MemberAccessNode".to_string(),
-                "Unsupported operand type".to_string(),
-                vec!["IdentifierNode".to_string(), "MemberAccessNode".to_string()],
-                format!("{:?}", expr),
-            )),
+            _ => Err(AstNodeError::InvalidOperand),
         }
     }
 }

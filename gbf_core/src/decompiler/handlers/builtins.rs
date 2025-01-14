@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 
+use std::backtrace::Backtrace;
+
 use crate::{
     decompiler::{
         ast::{
@@ -26,7 +28,7 @@ impl OpcodeHandler for BuiltinsHandler {
         context: &mut FunctionDecompilerContext,
         instruction: &Instruction,
     ) -> Result<ProcessedInstruction, FunctionDecompilerError> {
-        let current_block_id = context.current_block_id.expect("Block ID should be set");
+        let current_block_id = context.current_block_id;
 
         let (fn_id, args): (AssignableKind, Vec<_>) = match instruction.opcode {
             Opcode::Char => {
@@ -225,9 +227,12 @@ impl OpcodeHandler for BuiltinsHandler {
                 let last_frame = context
                     .block_ast_node_stack
                     .get_mut(&current_block_id)
-                    .ok_or(FunctionDecompilerError::CannotPopNode(current_block_id))?
+                    .expect("Block AST node stack should exist. This is a bug.")
                     .pop()
-                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty)?;
+                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty {
+                        backtrace: Backtrace::capture(),
+                        context: context.get_error_context(),
+                    })?;
 
                 // Ensure the last frame is a BuildingArray
                 if let ExecutionFrame::BuildingArray(args) = last_frame {
@@ -243,10 +248,10 @@ impl OpcodeHandler for BuiltinsHandler {
                 }
             }
             _ => {
-                return Err(FunctionDecompilerError::UnimplementedOpcode(
-                    instruction.opcode,
-                    context.current_block_id.unwrap(),
-                ))
+                return Err(FunctionDecompilerError::UnimplementedOpcode {
+                    context: context.get_error_context(),
+                    backtrace: Backtrace::capture(),
+                })
             }
         };
 

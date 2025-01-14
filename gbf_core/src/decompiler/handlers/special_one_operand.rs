@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 
+use std::backtrace::Backtrace;
+
 use crate::{
     decompiler::{
         ast::new_return, function_decompiler::FunctionDecompilerError,
@@ -36,10 +38,10 @@ impl OpcodeHandler for SpecialOneOperandHandler {
                 context.push_one_node(operand.clone().into())?;
                 Ok(ProcessedInstructionBuilder::new().build())
             }
-            _ => Err(FunctionDecompilerError::UnimplementedOpcode(
-                instruction.opcode,
-                context.current_block_id.unwrap(),
-            )),
+            _ => Err(FunctionDecompilerError::UnimplementedOpcode {
+                context: context.get_error_context(),
+                backtrace: Backtrace::capture(),
+            }),
         }
     }
 }

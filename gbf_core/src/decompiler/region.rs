@@ -112,6 +112,15 @@ impl<'a> IntoIterator for &'a mut Region {
     }
 }
 
+impl Default for RegionId {
+    fn default() -> Self {
+        Self {
+            index: 0,
+            region_type: RegionType::Linear,
+        }
+    }
+}
+
 impl RenderableNode for Region {
     /// Render the region's node representation for Graphviz with customizable padding.
     ///

@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 
+use std::backtrace::Backtrace;
+
 use crate::{
     decompiler::{
         ast::{
@@ -26,16 +28,24 @@ impl OpcodeHandler for VariableOperandHandler {
         context: &mut FunctionDecompilerContext,
         instruction: &Instruction,
     ) -> Result<ProcessedInstruction, FunctionDecompilerError> {
-        let current_block_id = context.current_block_id.expect("Block ID should be set");
+        let current_block_id = context.current_block_id;
+        let error_context = context.get_error_context();
         match instruction.opcode {
             Opcode::Call => {
                 // Ensure the current execution state stack has a frame to pop
                 let last_frame = context
                     .block_ast_node_stack
                     .get_mut(&current_block_id)
-                    .ok_or(FunctionDecompilerError::CannotPopNode(current_block_id))?
+                    .ok_or(FunctionDecompilerError::Other {
+                        message: "The AST node stack does not contain a vector of execution frames for this basic block.".to_string(),
+                        context: error_context.clone(),
+                        backtrace: Backtrace::capture(),
+                    })?
                     .pop()
-                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty)?;
+                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty {
+                        backtrace: Backtrace::capture(),
+                        context: context.get_error_context(),
+                    })?;
 
                 // Ensure the last frame is a BuildingArray
                 if let ExecutionFrame::BuildingArray(mut args) = last_frame {
@@ -88,9 +98,16 @@ impl OpcodeHandler for VariableOperandHandler {
                 let last_frame = context
                     .block_ast_node_stack
                     .get_mut(&current_block_id)
-                    .ok_or(FunctionDecompilerError::CannotPopNode(current_block_id))?
+                    .ok_or(FunctionDecompilerError::Other {
+                        message: "The AST node stack does not contain a vector of execution frames for this basic block.".to_string(),
+                        context: error_context.clone(),
+                        backtrace: Backtrace::capture(),
+                    })?
                     .pop()
-                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty)?;
+                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty {
+                        backtrace: Backtrace::capture(),
+                        context: error_context.clone(),
+                    })?;
 
                 // Ensure the last frame is a BuildingArray
                 if let ExecutionFrame::BuildingArray(args) = last_frame {
@@ -113,9 +130,16 @@ impl OpcodeHandler for VariableOperandHandler {
                 let last_frame = context
                     .block_ast_node_stack
                     .get_mut(&current_block_id)
-                    .ok_or(FunctionDecompilerError::CannotPopNode(current_block_id))?
+                    .ok_or(FunctionDecompilerError::Other {
+                        message: "The AST node stack does not contain a vector of execution frames for this basic block.".to_string(),
+                        context: error_context.clone(),
+                        backtrace: Backtrace::capture(),
+                    })?
                     .pop()
-                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty)?;
+                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty {
+                        backtrace: Backtrace::capture(),
+                        context: error_context.clone(),
+                    })?;
 
                 // Ensure the last frame is a BuildingArray
                 if let ExecutionFrame::BuildingArray(args) = last_frame {
@@ -132,10 +156,10 @@ impl OpcodeHandler for VariableOperandHandler {
                     last_frame,
                 ))
             }
-            _ => Err(FunctionDecompilerError::UnimplementedOpcode(
-                instruction.opcode,
-                current_block_id,
-            )),
+            _ => Err(FunctionDecompilerError::UnimplementedOpcode {
+                context: context.get_error_context(),
+                backtrace: Backtrace::capture(),
+            }),
         }
     }
 }

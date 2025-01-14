@@ -46,12 +46,7 @@ impl UnaryOperationNode {
     fn validate_operand(expr: &ExprKind) -> Result<(), AstNodeError> {
         // Most expressions are ok except for string literals.
         if let ExprKind::Literal(crate::decompiler::ast::literal::LiteralNode::String(_)) = expr {
-            return Err(AstNodeError::InvalidOperand(
-                "BinaryOperationNode".to_string(),
-                "Unsupported operand type".to_string(),
-                vec!["LiteralNode".to_string()],
-                format!("{:?}", expr),
-            ));
+            return Err(AstNodeError::InvalidOperand);
         }
         Ok(())
     }

@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 
+use std::backtrace::Backtrace;
+
 use crate::{
     decompiler::{
         ast::{bin_op::BinOpType, new_assignment, new_bin_op, new_id_with_version},
@@ -48,10 +50,10 @@ impl OpcodeHandler for BinaryOperationHandler {
             Opcode::Join => BinOpType::Join,
             Opcode::Power => BinOpType::Power,
             _ => {
-                return Err(FunctionDecompilerError::UnimplementedOpcode(
-                    instruction.opcode,
-                    context.current_block_id.unwrap(),
-                ));
+                return Err(FunctionDecompilerError::UnimplementedOpcode {
+                    context: context.get_error_context(),
+                    backtrace: Backtrace::capture(),
+                });
             }
         };
 

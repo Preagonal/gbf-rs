@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![feature(error_generic_member_access)]
 
 //! This crate provides basic block definitions, function definitions, module definitions,
 //! graph definitions, instruction definitions, opcode definitions, and operand definitions.

@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 
+use std::backtrace::Backtrace;
+
 use crate::{
     decompiler::{
         ast::{new_bool, new_float, new_num, new_str},
@@ -44,10 +46,10 @@ impl OpcodeHandler for LiteralHandler {
                         }
                     },
                     _ => {
-                        return Err(FunctionDecompilerError::UnimplementedOpcode(
-                            instruction.opcode,
-                            context.current_block_id.unwrap(),
-                        ));
+                        return Err(FunctionDecompilerError::UnimplementedOpcode {
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        });
                     }
                 }
             };
