@@ -2,7 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::{assignable::AssignableKind, member_access, statement},
+        ast::{assignable::AssignableKind, member_access, new_array_access, statement},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -46,6 +46,15 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 Ok(ProcessedInstructionBuilder::new()
                     .push_to_region(stmt.into())
                     .build())
+            }
+            Opcode::AssignArrayIndex => {
+                let index = context.pop_expression()?;
+                let arr = context.pop_assignable()?;
+
+                let array_access = new_array_access(arr, index);
+
+                context.push_one_node(array_access.into())?;
+                Ok(ProcessedInstructionBuilder::new().build())
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode(
                 instruction.opcode,

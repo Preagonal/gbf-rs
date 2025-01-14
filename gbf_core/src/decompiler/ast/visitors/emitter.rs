@@ -134,6 +134,7 @@ impl AstVisitor for Gs2Emitter {
             ExprKind::BinOp(bin_op) => bin_op.accept(self),
             ExprKind::UnaryOp(unary_op) => unary_op.accept(self),
             ExprKind::FunctionCall(func_call) => func_call.accept(self),
+            ExprKind::Array(array) => array.accept(self),
         }
     }
 
@@ -158,7 +159,35 @@ impl AstVisitor for Gs2Emitter {
                     }
                 }
             }
+            AssignableKind::ArrayAccess(array_access) => array_access.accept(self),
         }
+    }
+
+    fn visit_array(&mut self, node: &crate::decompiler::ast::array::ArrayNode) {
+        self.output.push('{');
+        for (i, elem) in node.elements.iter().enumerate() {
+            elem.accept(self);
+            if i < node.elements.len() - 1 {
+                self.output.push_str(", ");
+            }
+        }
+        self.output.push('}');
+    }
+
+    fn visit_array_access(&mut self, node: &crate::decompiler::ast::array_access::ArrayAccessNode) {
+        // Visit and emit the array
+        node.arr.accept(self);
+        let array_str = self.output.clone(); // Capture emitted array
+        self.output.clear();
+
+        // Visit and emit the index
+        node.index.accept(self);
+        let index_str = self.output.clone(); // Capture emitted index
+        self.output.clear();
+
+        // Combine the array and index with square brackets for array access
+        self.output
+            .push_str(&format!("{}[{}]", array_str, index_str));
     }
 
     fn visit_bin_op(&mut self, node: &BinaryOperationNode) {

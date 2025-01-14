@@ -23,6 +23,8 @@ pub enum ExprKind {
     UnaryOp(UnaryOperationNode),
     /// Represents a function call node in the AST.
     FunctionCall(FunctionCallNode),
+    /// Represents an array node in the AST.
+    Array(super::array::ArrayNode),
 }
 
 impl ExprKind {
@@ -44,6 +46,8 @@ impl PartialEq for ExprKind {
             (ExprKind::Assignable(a1), ExprKind::Assignable(a2)) => a1 == a2,
             (ExprKind::BinOp(b1), ExprKind::BinOp(b2)) => b1 == b2,
             (ExprKind::UnaryOp(u1), ExprKind::UnaryOp(u2)) => u1 == u2,
+            (ExprKind::FunctionCall(f1), ExprKind::FunctionCall(f2)) => f1 == f2,
+            (ExprKind::Array(a1), ExprKind::Array(a2)) => a1 == a2,
             _ => false,
         }
     }

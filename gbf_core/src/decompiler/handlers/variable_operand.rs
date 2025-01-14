@@ -3,7 +3,8 @@
 use crate::{
     decompiler::{
         ast::{
-            assignable::AssignableKind, expr::ExprKind, new_fn_call, new_id_with_version, statement,
+            assignable::AssignableKind, expr::ExprKind, new_array, new_fn_call,
+            new_id_with_version, statement,
         },
         execution_frame::ExecutionFrame,
         function_decompiler::FunctionDecompilerError,
@@ -99,6 +100,30 @@ impl OpcodeHandler for VariableOperandHandler {
                     return Ok(ProcessedInstructionBuilder::new()
                         .function_parameters(args.into())
                         .build());
+                }
+
+                // Handle unexpected execution state
+                Err(FunctionDecompilerError::UnexpectedExecutionState(
+                    ExecutionFrame::BuildingArray(Vec::new()),
+                    last_frame,
+                ))
+            }
+            Opcode::EndArray => {
+                // Ensure the current execution state stack has a frame to pop
+                let last_frame = context
+                    .block_ast_node_stack
+                    .get_mut(&current_block_id)
+                    .ok_or(FunctionDecompilerError::CannotPopNode(current_block_id))?
+                    .pop()
+                    .ok_or(FunctionDecompilerError::ExecutionStackEmpty)?;
+
+                // Ensure the last frame is a BuildingArray
+                if let ExecutionFrame::BuildingArray(args) = last_frame {
+                    // Reverse the arguments to get the correct order
+                    let args = args.into_iter().rev().collect::<Vec<_>>();
+                    let array_node = new_array(args);
+                    context.push_one_node(array_node.into())?;
+                    return Ok(ProcessedInstructionBuilder::new().build());
                 }
 
                 // Handle unexpected execution state

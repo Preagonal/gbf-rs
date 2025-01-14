@@ -17,6 +17,8 @@ use super::{
 
 /// Handles binary operation instructions.
 pub mod bin_op;
+/// Contains built-in handlers for instructions.
+pub mod builtins;
 /// Contains general handlers for instructions.
 pub mod general;
 /// Handles identifier instructions.
@@ -102,8 +104,10 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         // These opcodes do nothing ATM
         handlers.insert(Opcode::ConvertToFloat, Box::new(NopHandler));
         handlers.insert(Opcode::ConvertToObject, Box::new(NopHandler));
+        handlers.insert(Opcode::ConvertToString, Box::new(NopHandler));
         handlers.insert(Opcode::FunctionStart, Box::new(NopHandler));
         handlers.insert(Opcode::IncreaseLoopCounter, Box::new(NopHandler));
+        handlers.insert(Opcode::Jmp, Box::new(NopHandler));
 
         // Two operand handlers
         handlers.insert(
@@ -112,6 +116,10 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         );
         handlers.insert(
             Opcode::Assign,
+            Box::new(special_two_operand::SpecialTwoOperandHandler),
+        );
+        handlers.insert(
+            Opcode::AssignArrayIndex,
             Box::new(special_two_operand::SpecialTwoOperandHandler),
         );
 
@@ -128,6 +136,10 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         // Variable operand handlers
         handlers.insert(Opcode::Call, Box::new(VariableOperandHandler));
         handlers.insert(Opcode::EndParams, Box::new(VariableOperandHandler));
+        handlers.insert(Opcode::EndArray, Box::new(VariableOperandHandler));
+
+        // Builtin handlers
+        handlers.insert(Opcode::ObjPos, Box::new(builtins::BuiltinsHandler));
 
         // Jump handlers
         handlers.insert(Opcode::Jne, Box::new(jump::JumpHandler));

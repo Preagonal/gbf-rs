@@ -35,6 +35,10 @@ pub trait AstVisitor {
     fn visit_meta(&mut self, node: &MetaNode);
     /// Visits a function call node.
     fn visit_function_call(&mut self, node: &super::func_call::FunctionCallNode);
+    /// Visits an array node.
+    fn visit_array(&mut self, node: &super::array::ArrayNode);
+    /// Visits an array access node.
+    fn visit_array_access(&mut self, node: &super::array_access::ArrayAccessNode);
     /// Visits a function node.
     fn visit_function(&mut self, node: &super::function::FunctionNode);
     /// Visits a return node.

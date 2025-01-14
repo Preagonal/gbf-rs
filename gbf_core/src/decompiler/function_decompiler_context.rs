@@ -1,6 +1,7 @@
 #![deny(missing_docs)]
 
 use crate::basic_block::BasicBlockId;
+use crate::decompiler::ast::new_id;
 use crate::instruction::Instruction;
 use crate::opcode::Opcode;
 use std::collections::HashMap;
@@ -8,6 +9,7 @@ use std::collections::HashMap;
 use super::ast::assignable::AssignableKind;
 use super::ast::expr::ExprKind;
 use super::ast::identifier::IdentifierNode;
+use super::ast::literal::LiteralNode;
 use super::ast::ssa::SsaContext;
 use super::ast::AstKind;
 use super::execution_frame::ExecutionFrame;
@@ -167,6 +169,13 @@ impl FunctionDecompilerContext {
         let node = self.pop_expression()?;
         match node {
             ExprKind::Assignable(assignable) => Ok(assignable),
+            ExprKind::Literal(LiteralNode::String(s)) => {
+                log::warn!(
+                    "String literal used as assignable: {}. Technically this is allowed in GS2. God help us all.",
+                    s
+                );
+                Ok(new_id(format!("\"{}\"", &s.clone()).as_str()).into())
+            }
             _ => Err(FunctionDecompilerError::InvalidNodeType(
                 self.current_block_id.unwrap(),
                 "Assignable".to_string(),

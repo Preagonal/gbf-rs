@@ -1,6 +1,7 @@
 #![deny(missing_docs)]
 
 use crate::decompiler::ast::visitors::AstVisitor;
+use array_access::ArrayAccessNode;
 use assignable::AssignableKind;
 use ast_vec::AstVec;
 use bin_op::BinaryOperationNode;
@@ -19,6 +20,10 @@ use thiserror::Error;
 use unary_op::UnaryOperationNode;
 use visitors::{emit_context::EmitContext, emitter::Gs2Emitter};
 
+/// Represents an array
+pub mod array;
+/// Represents an array access node.
+pub mod array_access;
 /// Contains the specifications for any AstNodes that are assignable.
 pub mod assignable;
 /// Holds the macro that generates variants for the AST nodes.
@@ -191,6 +196,23 @@ where
     A: Into<AstVec<ExprKind>>,
 {
     FunctionCallNode::new(name.into(), args.into())
+}
+
+/// Creates a new array node.
+pub fn new_array<A>(elements: A) -> array::ArrayNode
+where
+    A: Into<AstVec<ExprKind>>,
+{
+    array::ArrayNode::new(elements.into())
+}
+
+/// Creates a new array access node.
+pub fn new_array_access<A, I>(array: A, index: I) -> ArrayAccessNode
+where
+    A: Into<Box<AssignableKind>>,
+    I: Into<Box<ExprKind>>,
+{
+    ArrayAccessNode::new(array.into(), index.into())
 }
 
 /// Creates binary operation node.
