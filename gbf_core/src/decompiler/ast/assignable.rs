@@ -26,7 +26,7 @@ impl AssignableKind {
         match self {
             AssignableKind::MemberAccess(m) => m.ssa_version = Some(ssa_version),
             AssignableKind::Identifier(i) => i.ssa_version = Some(ssa_version),
-            AssignableKind::ArrayAccess(_a) => todo!("Not implemented"),
+            AssignableKind::ArrayAccess(a) => a.ssa_version = Some(ssa_version),
         }
     }
 
@@ -44,7 +44,7 @@ impl AssignableKind {
         match self {
             AssignableKind::MemberAccess(m) => m.ssa_version,
             AssignableKind::Identifier(i) => i.ssa_version,
-            AssignableKind::ArrayAccess(_a) => todo!("Not implemented"),
+            AssignableKind::ArrayAccess(a) => a.ssa_version,
         }
     }
 
@@ -53,7 +53,7 @@ impl AssignableKind {
         match self {
             AssignableKind::MemberAccess(m) => m.ssa_version = None,
             AssignableKind::Identifier(i) => i.ssa_version = None,
-            AssignableKind::ArrayAccess(_a) => todo!("Not implemented"),
+            AssignableKind::ArrayAccess(a) => a.ssa_version = None,
         }
     }
 }

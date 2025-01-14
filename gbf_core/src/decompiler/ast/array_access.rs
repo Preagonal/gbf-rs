@@ -4,7 +4,8 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    assignable::AssignableKind, expr::ExprKind, visitors::AstVisitor, AstKind, AstVisitable,
+    assignable::AssignableKind, expr::ExprKind, ssa::SsaVersion, visitors::AstVisitor, AstKind,
+    AstVisitable,
 };
 
 /// Represents a function call
@@ -16,6 +17,9 @@ pub struct ArrayAccessNode {
 
     /// The index to access.
     pub index: Box<ExprKind>,
+
+    /// Represents the SSA version of a variable.
+    pub ssa_version: Option<SsaVersion>,
 }
 
 impl ArrayAccessNode {
@@ -25,7 +29,11 @@ impl ArrayAccessNode {
     /// - `arr`: The array to access.
     /// - `index`: The index to access.
     pub fn new(arr: Box<AssignableKind>, index: Box<ExprKind>) -> Self {
-        Self { arr, index }
+        Self {
+            arr,
+            index,
+            ssa_version: None,
+        }
     }
 }
 
