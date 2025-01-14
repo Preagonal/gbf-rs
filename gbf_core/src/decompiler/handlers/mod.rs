@@ -103,6 +103,7 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::ShortCircuitOr, Box::new(BinaryOperationHandler));
         handlers.insert(Opcode::In, Box::new(BinaryOperationHandler));
         handlers.insert(Opcode::Join, Box::new(BinaryOperationHandler));
+        handlers.insert(Opcode::Power, Box::new(BinaryOperationHandler));
 
         // These opcodes do nothing ATM
         handlers.insert(Opcode::ConvertToFloat, Box::new(NopHandler));

@@ -17,6 +17,7 @@ export default async function Versions() {
                     This was built to track decompiler and CFG progress.
                 </Text>
                 <Text mt="sm">Versions:</Text>
+                {/* TODO: Replace icon with decompiler success if applicable. To do this we need suite result for each module. */}
                 <List mt="sm" icon={
                     <ThemeIcon color="yellow" size={24} radius="xl">
                         <IconExclamationCircle style={{ width: rem(16), height: rem(16) }} />

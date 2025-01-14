@@ -46,6 +46,7 @@ impl OpcodeHandler for BinaryOperationHandler {
             Opcode::ShortCircuitOr => BinOpType::LogicalOr,
             Opcode::In => BinOpType::In,
             Opcode::Join => BinOpType::Join,
+            Opcode::Power => BinOpType::Power,
             _ => {
                 return Err(FunctionDecompilerError::UnimplementedOpcode(
                     instruction.opcode,
