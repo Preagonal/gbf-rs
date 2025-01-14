@@ -2,7 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::{new_float, new_num, new_str},
+        ast::{new_bool, new_float, new_num, new_str},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -38,6 +38,8 @@ impl OpcodeHandler for LiteralHandler {
                     panic!("Invalid operand type for PushNumber opcode: {:?}", operand);
                 }
             },
+            Opcode::PushTrue => new_bool(true),
+            Opcode::PushFalse => new_bool(false),
             _ => {
                 return Err(FunctionDecompilerError::UnimplementedOpcode(
                     instruction.opcode,

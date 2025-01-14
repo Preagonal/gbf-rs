@@ -675,7 +675,7 @@ mod tests {
             loader.instructions[2].operand,
             Some(crate::operand::Operand::new_string("abc"))
         );
-        assert_eq!(loader.instructions[3].opcode, crate::opcode::Opcode::PushPi);
+        assert_eq!(loader.instructions[3].opcode, crate::opcode::Opcode::Pi);
         assert_eq!(loader.instructions[4].opcode, crate::opcode::Opcode::Ret);
     }
 
@@ -1128,7 +1128,7 @@ mod tests {
             loader.instructions[6].operand,
             Some(crate::operand::Operand::new_string("abc"))
         );
-        assert_eq!(loader.instructions[7].opcode, crate::opcode::Opcode::PushPi);
+        assert_eq!(loader.instructions[7].opcode, crate::opcode::Opcode::Pi);
         assert_eq!(loader.instructions[7].operand, None);
         assert_eq!(loader.instructions[8].opcode, crate::opcode::Opcode::Ret);
         assert_eq!(loader.instructions[8].operand, None);

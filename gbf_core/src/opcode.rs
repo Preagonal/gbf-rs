@@ -304,7 +304,7 @@ define_opcodes! {
     PushTrue = 0x18,
     PushFalse = 0x19,
     PushNull = 0x1a,
-    PushPi = 0x1b,
+    Pi = 0x1b,
     // Unknown values: 0x1c  - 0x1d
     Copy = 0x1e,
     Swap = 0x1f,

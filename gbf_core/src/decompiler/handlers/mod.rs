@@ -74,10 +74,13 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::ThisO, Box::new(IdentifierHandler));
         handlers.insert(Opcode::Params, Box::new(IdentifierHandler));
         handlers.insert(Opcode::PushVariable, Box::new(IdentifierHandler));
+        handlers.insert(Opcode::Pi, Box::new(IdentifierHandler));
 
         // These handlers are used to create literal nodes.
         handlers.insert(Opcode::PushString, Box::new(LiteralHandler));
         handlers.insert(Opcode::PushNumber, Box::new(LiteralHandler));
+        handlers.insert(Opcode::PushTrue, Box::new(LiteralHandler));
+        handlers.insert(Opcode::PushFalse, Box::new(LiteralHandler));
 
         // These handlers are used to create binary operation nodes.
         handlers.insert(Opcode::Add, Box::new(BinaryOperationHandler));
@@ -176,6 +179,7 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
 
         // Jump handlers
         handlers.insert(Opcode::Jne, Box::new(jump::JumpHandler));
+        handlers.insert(Opcode::Jeq, Box::new(jump::JumpHandler));
 
         handlers
     })

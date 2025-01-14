@@ -99,7 +99,7 @@ mod tests {
             "00000000: Jmp 0x1\n\
             00000001: PushNumber 0x1\n\
             00000002: PushString abc\n\
-            00000003: PushPi\n\
+            00000003: Pi\n\
             00000004: Ret\n"
         );
 
