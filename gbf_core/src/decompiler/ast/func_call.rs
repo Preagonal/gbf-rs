@@ -44,7 +44,7 @@ impl PartialEq for FunctionCallNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{emit, member_access, new_fn_call, new_id, AstNodeError};
+    use crate::decompiler::ast::{emit, new_member_access, new_fn_call, new_id, AstNodeError};
 
     #[test]
     fn test_call_emit() -> Result<(), AstNodeError> {
@@ -52,7 +52,7 @@ mod tests {
         assert_eq!(emit(call), "echo(hello)");
 
         // foo.bar(baz)
-        let ma = member_access(new_id("foo"), new_id("bar"))?;
+        let ma = new_member_access(new_id("foo"), new_id("bar"))?;
         let call = new_fn_call(ma, vec![new_id("baz")]);
         assert_eq!(emit(call), "foo.bar(baz)");
         Ok(())

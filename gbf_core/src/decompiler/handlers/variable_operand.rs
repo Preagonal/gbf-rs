@@ -4,7 +4,7 @@ use crate::{
     decompiler::{
         ast::{
             assignable::AssignableKind, expr::ExprKind, new_array, new_fn_call,
-            new_id_with_version, statement,
+            new_id_with_version, new_assignment,
         },
         execution_frame::ExecutionFrame,
         function_decompiler::FunctionDecompilerError,
@@ -69,7 +69,7 @@ impl OpcodeHandler for VariableOperandHandler {
                     // Create SSA ID for the function call
                     let var = context.ssa_context.new_ssa_version_for("fn_call");
                     let ssa_id = new_id_with_version("fn_call", var);
-                    let stmt = statement(ssa_id.clone(), function_call_node);
+                    let stmt = new_assignment(ssa_id.clone(), function_call_node);
 
                     return Ok(ProcessedInstructionBuilder::new()
                         .ssa_id(ssa_id.into())

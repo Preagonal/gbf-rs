@@ -2,7 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::{assignable::AssignableKind, member_access, new_array_access, statement},
+        ast::{assignable::AssignableKind, new_member_access, new_array_access, new_assignment},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -27,7 +27,7 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 let rhs = context.pop_assignable()?;
                 let lhs = context.pop_assignable()?;
 
-                let mut ma: AssignableKind = member_access(lhs, rhs)?.into();
+                let mut ma: AssignableKind = new_member_access(lhs, rhs)?.into();
                 let ver = context
                     .ssa_context
                     .current_version_of_or_new(&ma.id_string());
@@ -41,7 +41,7 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 // an assignment bumps the version of the lhs
                 let ver = context.ssa_context.new_ssa_version_for(&lhs.id_string());
                 lhs.set_ssa_version(ver);
-                let stmt = statement(lhs, rhs);
+                let stmt = new_assignment(lhs, rhs);
 
                 Ok(ProcessedInstructionBuilder::new()
                     .push_to_region(stmt.into())

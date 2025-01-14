@@ -85,7 +85,7 @@ impl Region {
     }
 
     /// Returns an iterator over the statements in the region.
-    pub fn iter_statements(&self) -> Iter<AstKind> {
+    pub fn iter_nodes(&self) -> Iter<AstKind> {
         self.nodes.iter()
     }
 }
@@ -165,11 +165,11 @@ impl RenderableNode for Region {
 mod tests {
     use super::*;
     use crate::decompiler::ast::assignable::AssignableKind;
+    use crate::decompiler::ast::assignment::AssignmentNode;
     use crate::decompiler::ast::bin_op::{BinOpType, BinaryOperationNode};
     use crate::decompiler::ast::expr::ExprKind;
     use crate::decompiler::ast::identifier::IdentifierNode;
     use crate::decompiler::ast::literal::LiteralNode;
-    use crate::decompiler::ast::statement::StatementNode;
 
     fn create_identifier(id: &str) -> Box<AssignableKind> {
         Box::new(AssignableKind::Identifier(IdentifierNode::new(
@@ -193,8 +193,8 @@ mod tests {
         ))
     }
 
-    fn create_statement(lhs: Box<AssignableKind>, rhs: Box<ExprKind>) -> StatementNode {
-        StatementNode::new(lhs, rhs).unwrap()
+    fn create_statement(lhs: Box<AssignableKind>, rhs: Box<ExprKind>) -> AssignmentNode {
+        AssignmentNode::new(lhs, rhs).unwrap()
     }
 
     #[test]
@@ -203,7 +203,7 @@ mod tests {
         let mut region = Region::new(region_id);
 
         assert_eq!(region.region_type(), &RegionType::Linear);
-        assert_eq!(region.iter_statements().count(), 0);
+        assert_eq!(region.iter_nodes().count(), 0);
 
         let ast_node1 = create_statement(
             create_identifier("x"),
@@ -215,12 +215,12 @@ mod tests {
             create_subtraction(create_integer_literal(3), create_integer_literal(4)),
         );
 
-        region.push_node(AstKind::Statement(ast_node1.clone()));
-        region.push_node(AstKind::Statement(ast_node2.clone()));
+        region.push_node(ast_node1.clone().into());
+        region.push_node(ast_node2.clone().into());
 
-        let mut iter = region.iter_statements();
-        assert_eq!(iter.next(), Some(&AstKind::Statement(ast_node1)));
-        assert_eq!(iter.next(), Some(&AstKind::Statement(ast_node2)));
+        let mut iter = region.iter_nodes();
+        assert_eq!(iter.next(), Some(&ast_node1.clone().into()));
+        assert_eq!(iter.next(), Some(&ast_node2.clone().into()));
     }
 
     #[test]

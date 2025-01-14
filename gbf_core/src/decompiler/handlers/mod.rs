@@ -139,7 +139,40 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::EndArray, Box::new(VariableOperandHandler));
 
         // Builtin handlers
+        handlers.insert(Opcode::Char, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::Int, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::Random, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::Abs, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::Sin, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::Cos, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::VecX, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::VecY, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::Sleep, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ArcTan, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::MakeVar, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::GetTranslation, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::Min, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::Max, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::WaitFor, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::GetAngle, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::GetDir, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::Format, Box::new(builtins::BuiltinsHandler));
+
+        handlers.insert(Opcode::ObjSubstring, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjTokenize, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjStarts, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjEnds, Box::new(builtins::BuiltinsHandler));
         handlers.insert(Opcode::ObjPos, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjCharAt, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjLength, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjLink, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjTrim, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjSize, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjIndex, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjPositions, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjAddString, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjRemoveString, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjDeleteString, Box::new(builtins::BuiltinsHandler));
 
         // Jump handlers
         handlers.insert(Opcode::Jne, Box::new(jump::JumpHandler));

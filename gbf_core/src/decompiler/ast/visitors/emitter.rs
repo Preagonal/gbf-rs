@@ -5,9 +5,9 @@ use super::{
     AstVisitor,
 };
 use crate::decompiler::ast::meta::MetaNode;
-use crate::decompiler::ast::statement::StatementNode;
 use crate::decompiler::ast::unary_op::UnaryOperationNode;
 use crate::decompiler::ast::{assignable::AssignableKind, expr::ExprKind};
+use crate::decompiler::ast::{assignment::AssignmentNode, statement::StatementKind};
 use crate::decompiler::ast::{
     bin_op::{BinOpType, BinaryOperationNode},
     func_call::FunctionCallNode,
@@ -47,16 +47,32 @@ impl AstVisitor for Gs2Emitter {
             AstKind::Meta(meta) => meta.accept(self),
             AstKind::Statement(stmt) => stmt.accept(self),
             AstKind::Function(func) => func.accept(self),
-            AstKind::Return(ret) => ret.accept(self),
             AstKind::Empty => {}
         }
     }
-    fn visit_statement(&mut self, stmt_node: &StatementNode) {
+
+    fn visit_statement(&mut self, node: &StatementKind) {
         // Step 0: Print the whitespace
         let indent_level = self.context.indent;
         for _ in 0..indent_level {
             self.output.push(' ');
         }
+
+        // Step 1: Visit the statement
+        match node {
+            StatementKind::Assignment(assignment) => {
+                assignment.accept(self);
+            }
+            StatementKind::Return(ret) => {
+                ret.accept(self);
+            }
+        }
+
+        // Step 2: Add a semicolon to the end of the statement
+        self.output.push(';');
+    }
+
+    fn visit_assignment(&mut self, stmt_node: &AssignmentNode) {
         // Step 1: Visit and emit the LHS
         stmt_node.lhs.accept(self);
         let lhs_str = self.output.clone();
@@ -77,15 +93,14 @@ impl AstVisitor for Gs2Emitter {
                         {
                             if *num == 1 {
                                 // Emit increment (++)
-                                self.output.push_str(&format!("{}++;", lhs_str));
+                                self.output.push_str(&format!("{}++", lhs_str));
                                 return;
                             } else {
                                 // Emit compound assignment (+=)
                                 bin_op_node.rhs.accept(self); // Visit the RHS to get the formatted number
                                 let rhs_str = self.output.clone();
                                 self.output.clear();
-                                self.output
-                                    .push_str(&format!("{} += {};", lhs_str, rhs_str));
+                                self.output.push_str(&format!("{} += {}", lhs_str, rhs_str));
                                 return;
                             }
                         }
@@ -97,15 +112,14 @@ impl AstVisitor for Gs2Emitter {
                         {
                             if *num == 1 {
                                 // Emit decrement (--)
-                                self.output.push_str(&format!("{}--;", lhs_str));
+                                self.output.push_str(&format!("{}--", lhs_str));
                                 return;
                             } else {
                                 // Emit compound assignment (-=)
                                 bin_op_node.rhs.accept(self); // Visit the RHS to get the formatted number
                                 let rhs_str = self.output.clone();
                                 self.output.clear();
-                                self.output
-                                    .push_str(&format!("{} -= {};", lhs_str, rhs_str));
+                                self.output.push_str(&format!("{} -= {}", lhs_str, rhs_str));
                                 return;
                             }
                         }
@@ -124,7 +138,7 @@ impl AstVisitor for Gs2Emitter {
         self.output.clear();
 
         self.context = prev_context; // Restore the context
-        self.output.push_str(&format!("{} = {};", lhs_str, rhs_str));
+        self.output.push_str(&format!("{} = {}", lhs_str, rhs_str));
     }
 
     fn visit_expr(&mut self, node: &ExprKind) {
@@ -367,18 +381,10 @@ impl AstVisitor for Gs2Emitter {
     }
 
     fn visit_return(&mut self, node: &ReturnNode) {
-        // return with indentation
-        for _ in 0..self.context.indent {
-            self.output.push(' ');
-        }
-
         // Emit the return keyword
         self.output.push_str("return ");
 
         // Emit the return value
         node.ret.accept(self);
-
-        // Emit the semicolon
-        self.output.push(';');
     }
 }

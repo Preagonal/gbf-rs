@@ -2,7 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::{bin_op::BinOpType, new_bin_op, new_id_with_version, statement},
+        ast::{bin_op::BinOpType, new_bin_op, new_id_with_version, new_assignment},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -57,7 +57,7 @@ impl OpcodeHandler for BinaryOperationHandler {
         let op = new_bin_op(lhs, rhs, op_type)?;
         let var = context.ssa_context.new_ssa_version_for("bin_op");
         let ssa_id = new_id_with_version("bin_op", var);
-        let stmt = statement(ssa_id.clone(), op);
+        let stmt = new_assignment(ssa_id.clone(), op);
 
         Ok(ProcessedInstructionBuilder::new()
             .ssa_id(ssa_id.into())

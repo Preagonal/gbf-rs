@@ -1,9 +1,9 @@
 #![deny(missing_docs)]
 
 use super::{
-    assignable::AssignableKind, bin_op::BinaryOperationNode, expr::ExprKind,
-    identifier::IdentifierNode, literal::LiteralNode, member_access::MemberAccessNode,
-    meta::MetaNode, statement::StatementNode, unary_op::UnaryOperationNode, AstKind,
+    assignable::AssignableKind, assignment::AssignmentNode, bin_op::BinaryOperationNode,
+    expr::ExprKind, identifier::IdentifierNode, literal::LiteralNode,
+    member_access::MemberAccessNode, meta::MetaNode, unary_op::UnaryOperationNode, AstKind,
 };
 
 /// Represents a visitor for the AST.
@@ -16,7 +16,9 @@ pub trait AstVisitor {
     /// Visits an AstNode
     fn visit_node(&mut self, node: &AstKind);
     /// Visits a statement node.
-    fn visit_statement(&mut self, node: &StatementNode);
+    fn visit_statement(&mut self, node: &super::statement::StatementKind);
+    /// Visits a assignment node.
+    fn visit_assignment(&mut self, node: &AssignmentNode);
     /// Visits an expression node.
     fn visit_expr(&mut self, node: &ExprKind);
     /// Visits an assignable expression node.

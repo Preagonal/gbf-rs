@@ -2,7 +2,7 @@
 
 use crate::{
     decompiler::{
-        ast::create_return, function_decompiler::FunctionDecompilerError,
+        ast::new_return, function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext, ProcessedInstruction,
         ProcessedInstructionBuilder,
     },
@@ -25,7 +25,7 @@ impl OpcodeHandler for SpecialOneOperandHandler {
             Opcode::Ret => {
                 let ret_val = context.pop_expression()?;
 
-                let ret = create_return(ret_val);
+                let ret = new_return(ret_val);
                 Ok(ProcessedInstructionBuilder::new()
                     .push_to_region(ret.into())
                     .build())

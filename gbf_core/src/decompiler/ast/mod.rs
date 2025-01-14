@@ -3,6 +3,7 @@
 use crate::decompiler::ast::visitors::AstVisitor;
 use array_access::ArrayAccessNode;
 use assignable::AssignableKind;
+use assignment::AssignmentNode;
 use ast_vec::AstVec;
 use bin_op::BinaryOperationNode;
 use expr::ExprKind;
@@ -15,7 +16,7 @@ use meta::MetaNode;
 use ret::ReturnNode;
 use serde::{Deserialize, Serialize};
 use ssa::SsaVersion;
-use statement::StatementNode;
+use statement::StatementKind;
 use thiserror::Error;
 use unary_op::UnaryOperationNode;
 use visitors::{emit_context::EmitContext, emitter::Gs2Emitter};
@@ -26,6 +27,8 @@ pub mod array;
 pub mod array_access;
 /// Contains the specifications for any AstNodes that are assignable.
 pub mod assignable;
+/// Contains the specifications for any AstNodes that are assignments
+pub mod assignment;
 /// Holds the macro that generates variants for the AST nodes.
 pub mod ast_enum_type;
 /// Represents an AST vector.
@@ -50,7 +53,7 @@ pub mod meta;
 pub mod ret;
 /// Represents SSA versioning for the AST.
 pub mod ssa;
-/// Contains the specifications for any AstNodes that are statements
+/// Represents a statement node in the AST.
 pub mod statement;
 /// Represents unary operations in the AST.
 pub mod unary_op;
@@ -91,17 +94,12 @@ pub trait AstVisitable: Clone {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AstKind {
     /// Represents a statement node in the AST, such as `variable = value;`.
-    Statement(StatementNode),
+    Statement(StatementKind),
     /// Represents a function node in the AST.
     Function(FunctionNode),
     // ControlFlow(ControlFlowNode),
     /// Represents a literal node in the AST.
     Expression(ExprKind),
-    // Allocation(AllocationNode),
-    // Array(ArrayNode),
-    /// Represents a return node in the AST, such as `return 5`.
-    Return(ReturnNode),
-    // Phi(PhiNode),
     /// Represents a metadata node in the AST.
     Meta(MetaNode), // Covers comments or annotations
     /// This node does nothing. It should only be used for debugging purposes.
@@ -115,7 +113,6 @@ impl AstVisitable for AstKind {
             AstKind::Meta(meta) => meta.accept(visitor),
             AstKind::Statement(stmt) => stmt.accept(visitor),
             AstKind::Function(func) => func.accept(visitor),
-            AstKind::Return(ret) => ret.accept(visitor),
             AstKind::Empty => {}
         }
     }
@@ -136,7 +133,7 @@ where
 // = Assignable expressions =
 
 /// Creates a metadata node with a comment
-pub fn comment<N>(node: N, comment: &str) -> MetaNode
+pub fn new_comment<N>(node: N, comment: &str) -> MetaNode
 where
     N: Into<AstKind>,
 {
@@ -149,19 +146,19 @@ where
 }
 
 /// Creates a new AstNode for a statement.
-pub fn statement<L, R>(lhs: L, rhs: R) -> StatementNode
+pub fn new_assignment<L, R>(lhs: L, rhs: R) -> AssignmentNode
 where
     L: Into<Box<AssignableKind>>,
     R: Into<Box<ExprKind>>,
 {
-    StatementNode {
+    AssignmentNode {
         lhs: lhs.into(),
         rhs: rhs.into(),
     }
 }
 
 /// Creates a new return node.
-pub fn create_return<N>(node: N) -> ReturnNode
+pub fn new_return<N>(node: N) -> ReturnNode
 where
     N: Into<Box<ExprKind>>,
 {
@@ -169,7 +166,7 @@ where
 }
 
 /// Creates a new member access node.
-pub fn member_access<L, R>(lhs: L, rhs: R) -> Result<MemberAccessNode, AstNodeError>
+pub fn new_member_access<L, R>(lhs: L, rhs: R) -> Result<MemberAccessNode, AstNodeError>
 where
     L: Into<Box<AssignableKind>>,
     R: Into<Box<AssignableKind>>,

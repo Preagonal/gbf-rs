@@ -133,10 +133,7 @@ impl FunctionDecompiler {
         let entry_region_id = self.block_to_region.get(&entry_block_id).unwrap();
         let entry_region = self.regions.get(entry_region_id.index).unwrap();
 
-        let entry_region_nodes = entry_region
-            .iter_statements()
-            .cloned()
-            .collect::<AstVec<_>>();
+        let entry_region_nodes = entry_region.iter_nodes().cloned().collect::<AstVec<_>>();
 
         let func = AstKind::Function(FunctionNode::new(
             self.function.id.name.clone(),
