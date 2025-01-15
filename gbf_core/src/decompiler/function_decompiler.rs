@@ -26,13 +26,13 @@ use super::function_decompiler_context::FunctionDecompilerContext;
 /// An error when decompiling a function
 #[derive(Debug, Error, Serialize)]
 pub enum FunctionDecompilerError {
-    // TODO: Remove the three #[from] attributes below - we just need to find a better way to chain the ? operator
     /// Encountered FunctionError
     #[error("Encountered FunctionError while decompiling: {source}")]
     FunctionError {
         /// The source of the error
-        #[from]
         source: FunctionError,
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
         /// The backtrace of the error
         #[serde(skip)]
         backtrace: Backtrace,
@@ -42,8 +42,9 @@ pub enum FunctionDecompilerError {
     #[error("Encountered an error while processing the operand: {source}")]
     OperandError {
         /// The source of the error
-        #[from]
         source: OperandError,
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
         /// The backtrace of the error
         #[serde(skip)]
         backtrace: Backtrace,
@@ -53,8 +54,9 @@ pub enum FunctionDecompilerError {
     #[error("Encountered AstNodeError while decompiling: {source}")]
     AstNodeError {
         /// The source of the error
-        #[from]
         source: super::ast::AstNodeError,
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
         /// The backtrace of the error
         #[serde(skip)]
         backtrace: Backtrace,
@@ -125,6 +127,14 @@ pub enum FunctionDecompilerError {
         #[serde(skip)]
         backtrace: Backtrace,
     },
+}
+
+/// A trait to provide details for a function decompiler error
+pub trait FunctionDecompilerErrorDetails {
+    /// Get the context for the error
+    fn context(&self) -> &FunctionDecompilerErrorContext;
+    /// Get the backtrace for the error
+    fn backtrace(&self) -> &Backtrace;
 }
 
 /// The context for a function decompiler error
@@ -273,6 +283,7 @@ impl FunctionDecompiler {
             .map_err(|e| FunctionDecompilerError::FunctionError {
                 source: e,
                 backtrace: Backtrace::capture(),
+                context: ctx.get_error_context(),
             })?;
 
         for block_id in reverse_post_order {
@@ -289,7 +300,13 @@ impl FunctionDecompiler {
 
             // Process instructions in the block
             let instructions: Vec<_> = {
-                let block = self.function.get_basic_block_by_id(block_id)?;
+                let block = self.function.get_basic_block_by_id(block_id).map_err(|e| {
+                    FunctionDecompilerError::FunctionError {
+                        source: e,
+                        backtrace: Backtrace::capture(),
+                        context: ctx.get_error_context(),
+                    }
+                })?;
                 block.iter().cloned().collect()
             };
 
@@ -320,6 +337,7 @@ impl FunctionDecompiler {
             FunctionDecompilerError::FunctionError {
                 source: e,
                 backtrace: Backtrace::capture(),
+                context: self.context.as_ref().unwrap().get_error_context(),
             }
         })?;
         let predecessor_regions: Vec<RegionId> = predecessors
@@ -362,5 +380,35 @@ impl NodeResolver for FunctionDecompiler {
     fn resolve_edge_color(&self, _: NodeIndex, _: NodeIndex) -> String {
         // TODO: Change based on CFG patterns
         GBF_BLUE.to_string()
+    }
+}
+
+impl FunctionDecompilerErrorDetails for FunctionDecompilerError {
+    fn context(&self) -> &FunctionDecompilerErrorContext {
+        match self {
+            FunctionDecompilerError::FunctionError { context, .. } => context,
+            FunctionDecompilerError::OperandError { context, .. } => context,
+            FunctionDecompilerError::AstNodeError { context, .. } => context,
+            FunctionDecompilerError::InstructionMustHaveOperand { context, .. } => context,
+            FunctionDecompilerError::UnexpectedNodeType { context, .. } => context,
+            FunctionDecompilerError::UnimplementedOpcode { context, .. } => context,
+            FunctionDecompilerError::ExecutionStackEmpty { context, .. } => context,
+            FunctionDecompilerError::UnexpectedExecutionState { context, .. } => context,
+            FunctionDecompilerError::Other { context, .. } => context,
+        }
+    }
+
+    fn backtrace(&self) -> &Backtrace {
+        match self {
+            FunctionDecompilerError::FunctionError { backtrace, .. } => backtrace,
+            FunctionDecompilerError::OperandError { backtrace, .. } => backtrace,
+            FunctionDecompilerError::AstNodeError { backtrace, .. } => backtrace,
+            FunctionDecompilerError::InstructionMustHaveOperand { backtrace, .. } => backtrace,
+            FunctionDecompilerError::UnexpectedNodeType { backtrace, .. } => backtrace,
+            FunctionDecompilerError::UnimplementedOpcode { backtrace, .. } => backtrace,
+            FunctionDecompilerError::ExecutionStackEmpty { backtrace, .. } => backtrace,
+            FunctionDecompilerError::UnexpectedExecutionState { backtrace, .. } => backtrace,
+            FunctionDecompilerError::Other { backtrace, .. } => backtrace,
+        }
     }
 }

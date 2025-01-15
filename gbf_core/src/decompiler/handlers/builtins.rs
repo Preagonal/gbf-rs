@@ -117,84 +117,156 @@ impl OpcodeHandler for BuiltinsHandler {
                 let param1 = context.pop_expression()?;
                 let args: Vec<_> = [param1, param2].to_vec();
                 (
-                    new_member_access(context.pop_assignable()?, new_id("substring"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("substring"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjTokenize => {
                 let args: Vec<_> = vec![context.pop_expression()?];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("tokenize"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("tokenize"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjStarts => {
                 let args: Vec<_> = vec![context.pop_expression()?];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("starts"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("starts"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjEnds => {
                 let args: Vec<_> = vec![context.pop_expression()?];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("ends"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("ends"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjPos => {
                 let args: Vec<_> = [context.pop_expression()?].to_vec();
                 (
-                    new_member_access(context.pop_assignable()?, new_id("pos"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("pos"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjCharAt => {
                 let args: Vec<_> = [context.pop_expression()?].to_vec();
                 (
-                    new_member_access(context.pop_assignable()?, new_id("charat"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("charat"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjLength => {
                 let args = vec![];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("length"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("length"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjLink => {
                 let args: Vec<_> = vec![];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("link"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("link"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjTrim => {
                 let args: Vec<_> = vec![];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("trim"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("trim"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjSize => {
                 let args: Vec<_> = vec![];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("size"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("size"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjIndex => {
                 let args: Vec<_> = vec![context.pop_expression()?];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("index"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("index"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
             Opcode::ObjPositions => {
                 let args: Vec<_> = vec![context.pop_expression()?];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("positions"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("positions"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
@@ -202,7 +274,13 @@ impl OpcodeHandler for BuiltinsHandler {
             Opcode::ObjAddString => {
                 let args: Vec<_> = vec![context.pop_expression()?];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("add"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("add"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
@@ -210,7 +288,13 @@ impl OpcodeHandler for BuiltinsHandler {
             Opcode::ObjRemoveString => {
                 let args: Vec<_> = vec![context.pop_expression()?];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("remove"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("remove"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }
@@ -218,7 +302,13 @@ impl OpcodeHandler for BuiltinsHandler {
             Opcode::ObjDeleteString => {
                 let args: Vec<_> = vec![context.pop_expression()?];
                 (
-                    new_member_access(context.pop_assignable()?, new_id("delete"))?.into(),
+                    new_member_access(context.pop_assignable()?, new_id("delete"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
                     args,
                 )
             }

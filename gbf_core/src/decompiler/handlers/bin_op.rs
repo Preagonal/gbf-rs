@@ -57,7 +57,12 @@ impl OpcodeHandler for BinaryOperationHandler {
             }
         };
 
-        let op = new_bin_op(lhs, rhs, op_type)?;
+        let op =
+            new_bin_op(lhs, rhs, op_type).map_err(|e| FunctionDecompilerError::AstNodeError {
+                source: e,
+                context: context.get_error_context(),
+                backtrace: Backtrace::capture(),
+            })?;
         let var = context.ssa_context.new_ssa_version_for("bin_op");
         let ssa_id = new_id_with_version("bin_op", var);
         let stmt = new_assignment(ssa_id.clone(), op);

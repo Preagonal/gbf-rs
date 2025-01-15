@@ -29,7 +29,13 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 let rhs = context.pop_assignable()?;
                 let lhs = context.pop_assignable()?;
 
-                let mut ma: AssignableKind = new_member_access(lhs, rhs)?.into();
+                let mut ma: AssignableKind = new_member_access(lhs, rhs)
+                    .map_err(|e| FunctionDecompilerError::AstNodeError {
+                        source: e,
+                        context: context.get_error_context(),
+                        backtrace: Backtrace::capture(),
+                    })?
+                    .into();
                 let ver = context
                     .ssa_context
                     .current_version_of_or_new(&ma.id_string());
