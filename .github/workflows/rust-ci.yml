@@ -23,6 +23,7 @@ jobs:
         with:
           toolchain: nightly
           override: true
+          components: rustfmt, clippy
 
       - name: Run CI script
         run: IS_CI=true ./scripts/pre-commit.sh
