@@ -26,21 +26,28 @@ use super::function_decompiler_context::FunctionDecompilerContext;
 /// An error when decompiling a function
 #[derive(Debug, Error, Serialize)]
 pub enum FunctionDecompilerError {
+    // TODO: Remove the three #[from] attributes below - we just need to find a better way to chain the ? operator
     /// Encountered FunctionError
-    #[error("Encountered FunctionError while decompiling: {0}")]
-    FunctionError(#[from] FunctionError),
+    #[error("Encountered FunctionError while decompiling: {source}")]
+    FunctionError {
+        /// The source of the error
+        #[from]
+        source: FunctionError,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
 
     /// Encountered an error while processing the operand
-    #[error("Encountered an error while processing the operand: {0}")]
-    OperandError(#[from] OperandError),
-
-    /// The current instruction must have an operand
-    #[error("The instruction associated with opcode {0:?} must have an operand")]
-    InstructionMustHaveOperand(Opcode),
-
-    /// Invalid node type on stack
-    #[error("Invalid AstNode type on stack for BasicBlockId {0}. Expected {1}, found {2}")]
-    InvalidNodeType(BasicBlockId, String, String),
+    #[error("Encountered an error while processing the operand: {source}")]
+    OperandError {
+        /// The source of the error
+        #[from]
+        source: OperandError,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
 
     /// Encountered AstNodeError
     #[error("Encountered AstNodeError while decompiling: {source}")]
@@ -48,6 +55,30 @@ pub enum FunctionDecompilerError {
         /// The source of the error
         #[from]
         source: super::ast::AstNodeError,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
+
+    /// The current instruction must have an operand
+    #[error("The instruction associated with opcode {opcode} must have an operand.")]
+    InstructionMustHaveOperand {
+        /// The opcode associated with the instruction
+        opcode: Opcode,
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
+
+    /// Invalid node type on stack
+    #[error("Unexpected AstNode sub-type on stack. Expected {expected}.")]
+    UnexpectedNodeType {
+        /// The expected node type
+        expected: String,
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
         /// The backtrace of the error
         #[serde(skip)]
         backtrace: Backtrace,
@@ -74,8 +105,14 @@ pub enum FunctionDecompilerError {
     },
 
     /// Unexpected execution state
-    #[error("Unexpected execution state. Expected {0}, but found {1}")]
-    UnexpectedExecutionState(ExecutionFrame, ExecutionFrame),
+    #[error("Unexpected execution state.")]
+    UnexpectedExecutionState {
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
 
     /// All other errors
     #[error("An error occurred while decompiling the function: {message}")]
@@ -233,7 +270,10 @@ impl FunctionDecompiler {
         let reverse_post_order = self
             .function
             .get_reverse_post_order(self.function.get_entry_basic_block().id)
-            .map_err(FunctionDecompilerError::FunctionError)?;
+            .map_err(|e| FunctionDecompilerError::FunctionError {
+                source: e,
+                backtrace: Backtrace::capture(),
+            })?;
 
         for block_id in reverse_post_order {
             // Get the region id for the block
@@ -276,10 +316,12 @@ impl FunctionDecompiler {
         block_id: BasicBlockId,
         region_id: RegionId,
     ) -> Result<(), FunctionDecompilerError> {
-        let predecessors = self
-            .function
-            .get_predecessors(block_id)
-            .map_err(FunctionDecompilerError::FunctionError)?;
+        let predecessors = self.function.get_predecessors(block_id).map_err(|e| {
+            FunctionDecompilerError::FunctionError {
+                source: e,
+                backtrace: Backtrace::capture(),
+            }
+        })?;
         let predecessor_regions: Vec<RegionId> = predecessors
             .iter()
             .map(|pred_id| *self.block_to_region.get(pred_id).unwrap())

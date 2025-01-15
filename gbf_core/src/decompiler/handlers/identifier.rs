@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 
+use std::backtrace::Backtrace;
+
 use crate::{
     decompiler::{
         ast::{assignable::AssignableKind, new_id},
@@ -26,7 +28,11 @@ impl OpcodeHandler for IdentifierHandler {
         // If we have a variable, we need to use the operand as the identifier name.
         let str_operand = if opcode == Opcode::PushVariable {
             let operand = instruction.operand.as_ref().ok_or(
-                FunctionDecompilerError::InstructionMustHaveOperand(Opcode::PushVariable),
+                FunctionDecompilerError::InstructionMustHaveOperand {
+                    opcode: instruction.opcode,
+                    context: context.get_error_context(),
+                    backtrace: Backtrace::capture(),
+                },
             )?;
             operand.to_string()
         } else {

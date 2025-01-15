@@ -241,10 +241,10 @@ impl OpcodeHandler for BuiltinsHandler {
                     (new_id("format").into(), args)
                 } else {
                     // Handle unexpected execution state
-                    return Err(FunctionDecompilerError::UnexpectedExecutionState(
-                        ExecutionFrame::BuildingArray(Vec::new()),
-                        last_frame,
-                    ));
+                    return Err(FunctionDecompilerError::UnexpectedExecutionState {
+                        backtrace: Backtrace::capture(),
+                        context: context.get_error_context(),
+                    });
                 }
             }
             _ => {

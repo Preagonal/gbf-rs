@@ -32,7 +32,11 @@ impl OpcodeHandler for LiteralHandler {
             } else {
                 // For literals, the opcode must contain the literal value as an operand.
                 let operand = instruction.operand.as_ref().ok_or(
-                    FunctionDecompilerError::InstructionMustHaveOperand(instruction.opcode),
+                    FunctionDecompilerError::InstructionMustHaveOperand {
+                        opcode: instruction.opcode,
+                        context: context.get_error_context(),
+                        backtrace: Backtrace::capture(),
+                    },
                 )?;
 
                 match instruction.opcode {

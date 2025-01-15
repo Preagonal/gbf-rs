@@ -51,22 +51,22 @@ impl OpcodeHandler for VariableOperandHandler {
                 if let ExecutionFrame::BuildingArray(mut args) = last_frame {
                     // Ensure there is at least one argument (the function name)
                     if args.is_empty() {
-                        return Err(FunctionDecompilerError::InvalidNodeType(
-                            current_block_id,
-                            "Identifier".to_string(),
-                            "Empty argument list for Call".to_string(),
-                        ));
+                        return Err(FunctionDecompilerError::Other {
+                            message: "The function call ExecutionFrame was empty when it was expected to have the function name.".to_string(),
+                            context: error_context.clone(),
+                            backtrace: Backtrace::capture(),
+                        });
                     }
 
                     // Pop the function name (last argument in the array)
                     let function_name = args.pop().unwrap();
                     let function_name = match function_name {
                         ExprKind::Assignable(AssignableKind::Identifier(ident)) => Ok(ident),
-                        _ => Err(FunctionDecompilerError::InvalidNodeType(
-                            current_block_id,
-                            "Identifier".to_string(),
-                            format!("{:?}", function_name),
-                        )),
+                        _ => Err(FunctionDecompilerError::UnexpectedNodeType {
+                            expected: "Identifier".to_string(),
+                            context: error_context.clone(),
+                            backtrace: Backtrace::capture(),
+                        }),
                     }?;
 
                     // Reverse the remaining arguments to get the correct order
@@ -88,10 +88,10 @@ impl OpcodeHandler for VariableOperandHandler {
                 }
 
                 // Handle unexpected execution state
-                Err(FunctionDecompilerError::UnexpectedExecutionState(
-                    ExecutionFrame::BuildingArray(Vec::new()),
-                    last_frame,
-                ))
+                Err(FunctionDecompilerError::UnexpectedExecutionState {
+                    backtrace: Backtrace::capture(),
+                    context: context.get_error_context(),
+                })
             }
             Opcode::EndParams => {
                 // Ensure the current execution state stack has a frame to pop
@@ -120,10 +120,10 @@ impl OpcodeHandler for VariableOperandHandler {
                 }
 
                 // Handle unexpected execution state
-                Err(FunctionDecompilerError::UnexpectedExecutionState(
-                    ExecutionFrame::BuildingArray(Vec::new()),
-                    last_frame,
-                ))
+                Err(FunctionDecompilerError::UnexpectedExecutionState {
+                    backtrace: Backtrace::capture(),
+                    context: context.get_error_context(),
+                })
             }
             Opcode::EndArray => {
                 // Ensure the current execution state stack has a frame to pop
@@ -151,10 +151,10 @@ impl OpcodeHandler for VariableOperandHandler {
                 }
 
                 // Handle unexpected execution state
-                Err(FunctionDecompilerError::UnexpectedExecutionState(
-                    ExecutionFrame::BuildingArray(Vec::new()),
-                    last_frame,
-                ))
+                Err(FunctionDecompilerError::UnexpectedExecutionState {
+                    backtrace: Backtrace::capture(),
+                    context: context.get_error_context(),
+                })
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {
                 context: context.get_error_context(),

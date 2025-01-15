@@ -184,11 +184,11 @@ impl FunctionDecompilerContext {
         let node = self.pop_one_node()?;
         match node {
             AstKind::Expression(expr) => Ok(expr),
-            _ => Err(FunctionDecompilerError::InvalidNodeType(
-                self.current_block_id,
-                "Expression".to_string(),
-                format!("{:?}", node),
-            )),
+            _ => Err(FunctionDecompilerError::UnexpectedNodeType {
+                expected: "Expression".to_string(),
+                context: self.get_error_context(),
+                backtrace: Backtrace::capture(),
+            }),
         }
     }
 
@@ -204,11 +204,11 @@ impl FunctionDecompilerContext {
                 );
                 Ok(new_id(format!("\"{}\"", &s.clone()).as_str()).into())
             }
-            _ => Err(FunctionDecompilerError::InvalidNodeType(
-                self.current_block_id,
-                "Assignable".to_string(),
-                format!("{:?}", node),
-            )),
+            _ => Err(FunctionDecompilerError::UnexpectedNodeType {
+                expected: "Assignable".to_string(),
+                context: self.get_error_context(),
+                backtrace: Backtrace::capture(),
+            }),
         }
     }
 
@@ -217,11 +217,11 @@ impl FunctionDecompilerContext {
         let node = self.pop_expression()?;
         match node {
             ExprKind::Assignable(AssignableKind::Identifier(ident)) => Ok(ident),
-            _ => Err(FunctionDecompilerError::InvalidNodeType(
-                self.current_block_id,
-                "Identifier".to_string(),
-                format!("{:?}", node),
-            )),
+            _ => Err(FunctionDecompilerError::UnexpectedNodeType {
+                expected: "Identifier".to_string(),
+                context: self.get_error_context(),
+                backtrace: Backtrace::capture(),
+            }),
         }
     }
 
@@ -243,11 +243,11 @@ impl FunctionDecompilerContext {
                         array.push(expr);
                         return Ok(());
                     } else {
-                        return Err(FunctionDecompilerError::InvalidNodeType(
-                            block_id,
-                            "Expression".to_string(),
-                            format!("{:?}", node),
-                        ));
+                        return Err(FunctionDecompilerError::UnexpectedNodeType {
+                            expected: "Expression".to_string(),
+                            context: self.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        });
                     }
                 }
                 ExecutionFrame::StandaloneNode(_) | ExecutionFrame::None => {
