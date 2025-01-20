@@ -16,7 +16,6 @@ use super::ast::AstKind;
 use super::execution_frame::ExecutionFrame;
 use super::function_decompiler::{FunctionDecompilerError, FunctionDecompilerErrorContext};
 use super::handlers::{global_opcode_handlers, OpcodeHandler};
-use super::region::RegionId;
 use super::{ProcessedInstruction, ProcessedInstructionBuilder};
 
 /// Manages the state of the decompiler, including per-block AST stacks and current processing context.
@@ -25,8 +24,6 @@ pub struct FunctionDecompilerContext {
     pub block_ast_node_stack: HashMap<BasicBlockId, Vec<ExecutionFrame>>,
     /// The current basic block being processed.
     pub current_block_id: BasicBlockId,
-    /// The current region being processed.
-    pub current_region_id: RegionId,
     /// The handlers for each opcode.
     pub opcode_handlers: HashMap<Opcode, Box<dyn OpcodeHandler>>,
     /// The SSA Context
@@ -37,11 +34,10 @@ pub struct FunctionDecompilerContext {
 
 impl FunctionDecompilerContext {
     /// Creates a new, empty context. We initialize with the starting block ID and region ID.
-    pub fn new(start_block_id: BasicBlockId, start_region_id: RegionId) -> Self {
+    pub fn new(start_block_id: BasicBlockId) -> Self {
         Self {
             block_ast_node_stack: HashMap::new(),
             current_block_id: start_block_id,
-            current_region_id: start_region_id,
             opcode_handlers: HashMap::new(),
             ssa_context: SsaContext::new(),
             current_instruction: Instruction::default(),
@@ -59,10 +55,8 @@ impl FunctionDecompilerContext {
     pub fn start_block_processing(
         &mut self,
         block_id: BasicBlockId,
-        region_id: RegionId,
     ) -> Result<(), FunctionDecompilerError> {
         self.current_block_id = block_id;
-        self.current_region_id = region_id;
         self.block_ast_node_stack.insert(block_id, Vec::new());
         Ok(())
     }
@@ -120,7 +114,6 @@ impl FunctionDecompilerContext {
     pub fn get_error_context(&self) -> Box<FunctionDecompilerErrorContext> {
         Box::new(FunctionDecompilerErrorContext {
             current_block_id: self.current_block_id,
-            current_region_id: self.current_region_id,
             current_instruction: self.current_instruction.clone(),
             current_ast_node_stack: self
                 .block_ast_node_stack

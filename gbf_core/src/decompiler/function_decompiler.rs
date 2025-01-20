@@ -1,14 +1,10 @@
 #![deny(missing_docs)]
 
-use crate::basic_block::{BasicBlockId, BasicBlockType};
-use crate::cfg_dot::{CfgDot, CfgDotConfig, DotRenderableGraph, NodeResolver};
-use crate::decompiler::region::{Region, RegionId, RegionType};
+use crate::basic_block::BasicBlockId;
 use crate::function::{Function, FunctionError};
 use crate::instruction::Instruction;
 use crate::opcode::Opcode;
 use crate::operand::OperandError;
-use crate::utils::GBF_BLUE;
-use petgraph::graph::{DiGraph, NodeIndex};
 use serde::Serialize;
 use std::backtrace::Backtrace;
 use std::collections::HashMap;
@@ -22,6 +18,8 @@ use super::ast::visitors::emitter::Gs2Emitter;
 use super::ast::{AstKind, AstVisitable};
 use super::execution_frame::ExecutionFrame;
 use super::function_decompiler_context::FunctionDecompilerContext;
+use super::structure_analysis::region::{RegionId, RegionType};
+use super::structure_analysis::StructureAnalysis;
 
 /// An error when decompiling a function
 #[derive(Debug, Error, Serialize)]
@@ -142,8 +140,6 @@ pub trait FunctionDecompilerErrorDetails {
 pub struct FunctionDecompilerErrorContext {
     /// The current block ID when the error occurred
     pub current_block_id: BasicBlockId,
-    /// The current region ID when the error occurred
-    pub current_region_id: RegionId,
     /// The current instruction when the error occurred
     pub current_instruction: Instruction,
     /// The current AST node stack when the error occurred
@@ -160,20 +156,14 @@ pub struct FunctionDecompilerErrorContext {
 pub struct FunctionDecompiler {
     /// Create a copy of the function to analyze
     function: Function,
-    /// Regions vector
-    regions: Vec<Region>,
     /// A conversion from block ids to region ids
     block_to_region: HashMap<BasicBlockId, RegionId>,
-    /// The region graph of the function
-    region_graph: DiGraph<(), ()>,
-    /// Used to convert `NodeIndex` to `RegionId`.
-    graph_node_to_region: HashMap<NodeIndex, RegionId>,
-    /// Used to convert `RegionId` to `NodeIndex`.
-    region_to_graph_node: HashMap<RegionId, NodeIndex>,
     /// The current context for the decompiler
     context: Option<FunctionDecompilerContext>,
     /// The parameters for the function
     function_parameters: AstVec<ExprKind>,
+    /// The structure analysis
+    struct_analysis: StructureAnalysis,
 }
 
 impl FunctionDecompiler {
@@ -190,13 +180,10 @@ impl FunctionDecompiler {
     pub fn new(function: Function) -> Self {
         FunctionDecompiler {
             function,
-            regions: Vec::new(),
             block_to_region: HashMap::new(),
-            region_graph: DiGraph::new(),
-            graph_node_to_region: HashMap::new(),
-            region_to_graph_node: HashMap::new(),
             context: None,
             function_parameters: Vec::<ExprKind>::new().into(),
+            struct_analysis: StructureAnalysis::new(),
         }
     }
 }
@@ -221,7 +208,10 @@ impl FunctionDecompiler {
 
         let entry_block_id = self.function.get_entry_basic_block().id;
         let entry_region_id = self.block_to_region.get(&entry_block_id).unwrap();
-        let entry_region = self.regions.get(entry_region_id.index).unwrap();
+        let entry_region = self
+            .struct_analysis
+            .get_region(*entry_region_id)
+            .expect("[Bug] The entry region should exist.");
 
         let entry_region_nodes = entry_region.iter_nodes().cloned().collect::<AstVec<_>>();
 
@@ -240,41 +230,33 @@ impl FunctionDecompiler {
         Ok(output)
     }
 
-    fn generate_regions(&mut self) {
+    fn generate_regions(&mut self) -> Result<(), FunctionDecompilerError> {
         for block in self.function.iter() {
             // If the block is the end of the module, it is a tail region
-            let region_type = if block.id.block_type == BasicBlockType::ModuleEnd {
+            let successors = self.function.get_successors(block.id).map_err(|e| {
+                FunctionDecompilerError::FunctionError {
+                    source: e,
+                    backtrace: Backtrace::capture(),
+                    context: self.context.as_ref().unwrap().get_error_context(),
+                }
+            })?;
+            let region_type = if successors.is_empty() {
                 RegionType::Tail
             } else {
                 RegionType::Linear
             };
 
-            let new_region_id: RegionId = RegionId::new(self.regions.len(), region_type);
+            let new_region_id = self.struct_analysis.add_region(region_type);
             self.block_to_region.insert(block.id, new_region_id);
-
-            // Add to the graph
-            let node_id = self.region_graph.add_node(());
-            self.graph_node_to_region.insert(node_id, new_region_id);
-            self.region_to_graph_node.insert(new_region_id, node_id);
-
-            // Add to the array of regions
-            self.regions.push(Region::new(new_region_id));
         }
+        Ok(())
     }
 
     fn process_regions(&mut self) -> Result<(), FunctionDecompilerError> {
         // Generate all the regions before doing anything else
-        self.generate_regions();
+        self.generate_regions()?;
 
-        let entry_region_id = *self
-            .block_to_region
-            .get(&self.function.get_entry_basic_block().id)
-            .expect("Bug: We just made the regions, so not sure why it doesn't exist.");
-
-        let mut ctx = FunctionDecompilerContext::new(
-            self.function.get_entry_basic_block_id(),
-            entry_region_id,
-        );
+        let mut ctx = FunctionDecompilerContext::new(self.function.get_entry_basic_block_id());
 
         // Iterate through all the blocks in reverse post order
         let reverse_post_order = self
@@ -291,9 +273,9 @@ impl FunctionDecompiler {
             let region_id = *self
                 .block_to_region
                 .get(&block_id)
-                .expect("We just made the regions, so not sure why it doesn't exist.");
+                .expect("[Bug] We just made the regions, so not sure why it doesn't exist.");
 
-            ctx.start_block_processing(block_id, region_id)?;
+            ctx.start_block_processing(block_id)?;
 
             // Connect the block's predecessors in the graph
             self.connect_predecessor_regions(block_id, region_id)?;
@@ -313,9 +295,12 @@ impl FunctionDecompiler {
             for instr in instructions {
                 let processed = ctx.process_instruction(&instr)?;
                 if let Some(node) = processed.node_to_push {
-                    let current_region_id = ctx.current_region_id;
-                    let current_region = self.regions.get_mut(current_region_id.index).unwrap();
-                    current_region.push_node(node);
+                    let current_region_id = self
+                        .block_to_region
+                        .get(&block_id)
+                        .expect("[Bug] The region should exist.");
+                    self.struct_analysis
+                        .push_to_region(*current_region_id, node);
                 }
                 if let Some(params) = processed.function_parameters {
                     self.function_parameters = params;
@@ -346,10 +331,8 @@ impl FunctionDecompiler {
             .collect();
 
         for pred_region_id in predecessor_regions {
-            let pred_node_id = self.region_to_graph_node.get(&pred_region_id).unwrap();
-            let current_node_id = self.region_to_graph_node.get(&region_id).unwrap();
-            self.region_graph
-                .add_edge(*pred_node_id, *current_node_id, ());
+            self.struct_analysis
+                .connect_regions(pred_region_id, region_id);
         }
 
         Ok(())
@@ -357,31 +340,6 @@ impl FunctionDecompiler {
 }
 
 // == Other Implementations ==
-impl DotRenderableGraph for FunctionDecompiler {
-    /// Convert the Graph to `dot` format.
-    ///
-    /// # Returns
-    /// - A `String` containing the `dot` representation of the graph.
-    fn render_dot(&self, config: CfgDotConfig) -> String {
-        let dot = CfgDot { config };
-        dot.render(&self.region_graph, self)
-    }
-}
-
-impl NodeResolver for FunctionDecompiler {
-    type NodeData = Region;
-
-    fn resolve(&self, node_index: NodeIndex) -> Option<&Self::NodeData> {
-        self.graph_node_to_region
-            .get(&node_index)
-            .and_then(|region_id| self.regions.get(region_id.index))
-    }
-
-    fn resolve_edge_color(&self, _: NodeIndex, _: NodeIndex) -> String {
-        // TODO: Change based on CFG patterns
-        GBF_BLUE.to_string()
-    }
-}
 
 impl FunctionDecompilerErrorDetails for FunctionDecompilerError {
     fn context(&self) -> &FunctionDecompilerErrorContext {

@@ -19,35 +19,34 @@ pub enum RegionType {
     ControlFlow,
     /// A tail (e.g, return)
     Tail,
+    /// A region that is inactive and removed from the graph from structure analysis
+    Inactive,
 }
 
 /// Describes a region
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
 pub struct RegionId {
     /// The index of the region
     pub index: usize,
-    /// The region type
-    pub region_type: RegionType,
 }
 
 impl RegionId {
-    /// Create a new `BasicBlockId`.
+    /// Create a new `RegionId`.
     ///
     /// # Arguments
-    /// - `index`: The index of the basic block in the function.
+    /// - `index`: The index of the region in the graph.
     ///
     /// # Returns
-    /// - A new `BasicBlockId` instance.
+    /// - A new `RegionId` instance.
     ///
     /// Example
     /// ```
     /// use gbf_core::decompiler::region::RegionId;
-    /// use gbf_core::decompiler::region::RegionType;
     ///
-    /// let block = RegionId::new(0, RegionType::Linear);
+    /// let block = RegionId::new(0);
     /// ```
-    pub fn new(index: usize, region_type: RegionType) -> Self {
-        Self { index, region_type }
+    pub fn new(index: usize) -> Self {
+        Self { index }
     }
 }
 
@@ -56,6 +55,8 @@ impl RegionId {
 pub struct Region {
     id: RegionId,
     nodes: Vec<AstKind>,
+    jump_expr: Option<AstKind>,
+    region_type: RegionType,
 }
 
 impl Region {
@@ -63,28 +64,80 @@ impl Region {
     ///
     /// # Arguments
     /// * `id` - The id of the region.
-    pub fn new(id: RegionId) -> Self {
+    pub fn new(id: RegionId, region_type: RegionType) -> Self {
         Self {
             id,
             nodes: Vec::new(),
+            jump_expr: None,
+            region_type,
         }
     }
 
     /// Returns the type of the region.
     pub fn region_type(&self) -> &RegionType {
-        &self.id.region_type
+        &self.region_type
     }
 
     /// Adds a statement to the region.
     ///
     /// # Arguments
-    ///
     /// * `node` - The AST node to add.
     pub fn push_node(&mut self, node: AstKind) {
         self.nodes.push(node);
     }
 
+    /// Adds multiple statements to the region.
+    ///
+    /// # Arguments
+    /// * `nodes` - The AST nodes to add.
+    pub fn push_nodes(&mut self, nodes: Vec<AstKind>) {
+        self.nodes.extend(nodes);
+    }
+
+    /// Gets the nodes in the region.
+    ///
+    /// # Return
+    /// The nodes in the region.
+    pub fn get_nodes(&self) -> &Vec<AstKind> {
+        &self.nodes
+    }
+
+    /// Gets the region type.
+    ///
+    /// # Return
+    /// The region type.
+    pub fn get_region_type(&self) -> RegionType {
+        self.region_type
+    }
+
+    /// Sets the type of the region.
+    ///
+    /// # Arguments
+    /// * `region_type` - The new type of the region.
+    pub fn set_region_type(&mut self, region_type: RegionType) {
+        self.region_type = region_type;
+    }
+
+    /// Gets the jump expression.
+    ///
+    /// # Return
+    /// The jump expression.
+    pub fn get_jump_expr(&self) -> Option<&AstKind> {
+        self.jump_expr.as_ref()
+    }
+
+    /// Sets the jump expression.
+    ///
+    /// # Arguments
+    /// * `jump_expr` - The new optional jump expression.
+    pub fn set_jump_expr(&mut self, jump_expr: Option<AstKind>) {
+        self.jump_expr = jump_expr;
+    }
+
     /// Returns an iterator over the statements in the region.
+    ///
+    /// # Return
+    /// An iterator over the statements in the region.
     pub fn iter_nodes(&self) -> Iter<AstKind> {
         self.nodes.iter()
     }
@@ -109,15 +162,6 @@ impl<'a> IntoIterator for &'a mut Region {
 
     fn into_iter(self) -> Self::IntoIter {
         self.nodes.iter_mut()
-    }
-}
-
-impl Default for RegionId {
-    fn default() -> Self {
-        Self {
-            index: 0,
-            region_type: RegionType::Linear,
-        }
     }
 }
 
@@ -208,8 +252,8 @@ mod tests {
 
     #[test]
     fn test_region_creation_and_instruction_addition() {
-        let region_id = RegionId::new(0, RegionType::Linear);
-        let mut region = Region::new(region_id);
+        let region_id = RegionId::new(0);
+        let mut region = Region::new(region_id, RegionType::Linear);
 
         assert_eq!(region.region_type(), &RegionType::Linear);
         assert_eq!(region.iter_nodes().count(), 0);
@@ -234,8 +278,8 @@ mod tests {
 
     #[test]
     fn test_region_into_iter() {
-        let region_id = RegionId::new(0, RegionType::Linear);
-        let region = Region::new(region_id);
+        let region_id = RegionId::new(0);
+        let region = Region::new(region_id, RegionType::Linear);
         let mut iter = region.into_iter();
         assert_eq!(iter.next(), None);
     }

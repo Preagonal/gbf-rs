@@ -32,6 +32,9 @@ pub const GBF_LIGHT_GRAY: &str = "#cdcdcd";
 /// A constant representing GBF dark gray
 pub const GBF_DARK_GRAY: &str = "#1e1e1e";
 
+/// Max iterations for the structure analysis
+pub const STRUCTURE_ANALYSIS_MAX_ITERATIONS: usize = 1000;
+
 /// Escapes a string using `std::ascii::escape_default`.
 ///
 /// # Arguments

@@ -12,8 +12,8 @@ pub mod function_decompiler;
 pub mod function_decompiler_context;
 /// This provides the handlers for the decompiler
 pub mod handlers;
-/// This provides the region for the decompiler
-pub mod region;
+/// This is responsible for control flow analysis
+pub mod structure_analysis;
 
 #[derive(Debug, Clone, Default)]
 /// Builder for constructing a `ProcessedInstruction`.
