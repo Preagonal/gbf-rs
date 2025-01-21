@@ -45,4 +45,8 @@ pub trait AstVisitor {
     fn visit_function(&mut self, node: &super::function::FunctionNode);
     /// Visits a return node.
     fn visit_return(&mut self, node: &super::ret::ReturnNode);
+    /// Visits a block node.
+    fn visit_block(&mut self, node: &super::block::BlockNode);
+    /// Visits a control flow node
+    fn visit_control_flow(&mut self, node: &super::control_flow::ControlFlowNode);
 }

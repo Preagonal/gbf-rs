@@ -6,6 +6,8 @@ use assignable::AssignableKind;
 use assignment::AssignmentNode;
 use ast_vec::AstVec;
 use bin_op::BinaryOperationNode;
+use block::BlockNode;
+use control_flow::ControlFlowNode;
 use expr::ExprKind;
 use func_call::FunctionCallNode;
 use function::FunctionNode;
@@ -35,6 +37,10 @@ pub mod ast_enum_type;
 pub mod ast_vec;
 /// Represents binary operations in the AST.
 pub mod bin_op;
+/// Represents a "block" of code in the AST.
+pub mod block;
+/// Represents a control flow node in the AST.
+pub mod control_flow;
 /// Contains the specifications for any AstNodes that are expressions
 pub mod expr;
 /// Contains the specifications for any AstNodes that are function calls.
@@ -97,13 +103,14 @@ pub enum AstKind {
     Statement(StatementKind),
     /// Represents a function node in the AST.
     Function(FunctionNode),
-    // ControlFlow(ControlFlowNode),
-    /// Represents a literal node in the AST.
+    /// Represents an expression node in the AST.
     Expression(ExprKind),
     /// Represents a metadata node in the AST.
     Meta(MetaNode), // Covers comments or annotations
-    /// This node does nothing. It should only be used for debugging purposes.
-    Empty,
+    /// Represenst a block of code in the AST.
+    Block(BlockNode),
+    /// Represents a control flow node in the AST.
+    ControlFlow(ControlFlowNode),
 }
 
 impl AstVisitable for AstKind {
@@ -113,13 +120,13 @@ impl AstVisitable for AstKind {
             AstKind::Meta(meta) => meta.accept(visitor),
             AstKind::Statement(stmt) => stmt.accept(visitor),
             AstKind::Function(func) => func.accept(visitor),
-            AstKind::Empty => {}
+            AstKind::Block(block) => block.accept(visitor),
+            AstKind::ControlFlow(control_flow) => control_flow.accept(visitor),
         }
     }
 }
 
 /// Emits a node into a string.
-// TODO: We may want to implement reference instead of copy
 pub fn emit<N>(node: N) -> String
 where
     N: Into<AstKind>,
@@ -256,4 +263,14 @@ pub fn new_float(value: &str) -> LiteralNode {
 /// Creates a new ExprNode for a literal boolean.
 pub fn new_bool(value: bool) -> LiteralNode {
     LiteralNode::Boolean(value)
+}
+
+// == Functions ==
+/// Creates a new function node.
+pub fn new_fn<P, V>(name: Option<String>, params: P, body: V) -> FunctionNode
+where
+    P: Into<AstVec<ExprKind>>,
+    V: Into<AstVec<AstKind>>,
+{
+    FunctionNode::new(name, params.into(), body)
 }

@@ -4,14 +4,14 @@ use super::{
     emit_context::{EmitContext, EmitVerbosity, IndentStyle},
     AstVisitor,
 };
-use crate::decompiler::ast::meta::MetaNode;
-use crate::decompiler::ast::unary_op::UnaryOperationNode;
 use crate::decompiler::ast::{assignable::AssignableKind, expr::ExprKind};
 use crate::decompiler::ast::{assignment::AssignmentNode, statement::StatementKind};
 use crate::decompiler::ast::{
     bin_op::{BinOpType, BinaryOperationNode},
     func_call::FunctionCallNode,
 };
+use crate::decompiler::ast::{block::BlockNode, meta::MetaNode};
+use crate::decompiler::ast::{control_flow::ControlFlowNode, unary_op::UnaryOperationNode};
 use crate::decompiler::ast::{function::FunctionNode, literal::LiteralNode};
 use crate::decompiler::ast::{member_access::MemberAccessNode, ret::ReturnNode};
 use crate::decompiler::ast::{AstKind, AstVisitable};
@@ -47,17 +47,12 @@ impl AstVisitor for Gs2Emitter {
             AstKind::Meta(meta) => meta.accept(self),
             AstKind::Statement(stmt) => stmt.accept(self),
             AstKind::Function(func) => func.accept(self),
-            AstKind::Empty => {}
+            AstKind::Block(block) => block.accept(self),
+            AstKind::ControlFlow(control_flow) => control_flow.accept(self),
         }
     }
 
     fn visit_statement(&mut self, node: &StatementKind) {
-        // Step 0: Print the whitespace
-        let indent_level = self.context.indent;
-        for _ in 0..indent_level {
-            self.output.push(' ');
-        }
-
         // Step 1: Visit the statement
         match node {
             StatementKind::Assignment(assignment) => {
@@ -343,7 +338,7 @@ impl AstVisitor for Gs2Emitter {
         if name.is_none() {
             // Just emit the function body if there is no name since we're
             // in the entry point function
-            for stmt in node.body() {
+            for stmt in node.body().instructions.iter() {
                 stmt.accept(self);
                 self.output.push('\n');
             }
@@ -362,22 +357,8 @@ impl AstVisitor for Gs2Emitter {
         }
         self.output.push(')');
 
-        // Check if we we are using allman or k&r style
-        if self.context.indent_style == IndentStyle::Allman {
-            self.output.push_str("\n{\n");
-        } else {
-            self.output.push_str(" {\n");
-        }
-
-        // Emit the function body, indented
-        let old_context = self.context;
-        self.context = self.context.with_indent();
-        for stmt in node.body() {
-            stmt.accept(self);
-            self.output.push('\n');
-        }
-        self.context = old_context;
-        self.output.push_str("}\n");
+        // Emit the function body, which is a block.
+        node.body().accept(self);
     }
 
     fn visit_return(&mut self, node: &ReturnNode) {
@@ -386,5 +367,63 @@ impl AstVisitor for Gs2Emitter {
 
         // Emit the return value
         node.ret.accept(self);
+    }
+
+    fn visit_block(&mut self, node: &BlockNode) {
+        // Emit opening brace
+        if self.context.indent_style == IndentStyle::Allman {
+            self.output.push('\n');
+            self.emit_indent(); // Use a helper to handle indentation
+            self.output.push_str("{\n");
+        } else {
+            self.output.push_str(" {\n"); // Opening brace on the same line
+        }
+
+        // Adjust the context for increased indentation
+        let old_context = self.context;
+        self.context = self.context.with_indent();
+
+        // Emit block instructions
+        if node.instructions.is_empty() {
+            // Handle empty block (e.g., `{}` or `{\n}`)
+            self.emit_indent();
+        } else {
+            for stmt in node.instructions.iter() {
+                self.emit_indent();
+                stmt.accept(self);
+                self.output.push('\n'); // Newline after each statement
+            }
+        }
+
+        // Restore the previous context
+        self.context = old_context;
+
+        // Emit closing brace
+        self.emit_indent(); // Align closing brace with the block's indentation level
+        self.output.push('}');
+    }
+
+    fn visit_control_flow(&mut self, node: &ControlFlowNode) {
+        // Emit the control flow name
+        self.output.push_str(node.name());
+
+        // Emit the condition if it exists
+        if let Some(condition) = node.condition() {
+            self.output.push_str(" (");
+            condition.accept(self);
+            self.output.push_str(") ");
+        }
+
+        // Emit the body
+        node.body().accept(self);
+    }
+}
+
+impl Gs2Emitter {
+    /// Emits the current level of indentation based on the context.
+    fn emit_indent(&mut self) {
+        for _ in 0..self.context.indent {
+            self.output.push(' ');
+        }
     }
 }

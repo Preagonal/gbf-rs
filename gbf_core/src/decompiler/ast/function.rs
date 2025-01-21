@@ -3,7 +3,7 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{ast_vec::AstVec, expr::ExprKind, AstKind, AstVisitable};
+use super::{ast_vec::AstVec, block::BlockNode, expr::ExprKind, AstKind, AstVisitable};
 
 /// Represents a metadata node in the AST
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
@@ -11,26 +11,28 @@ use super::{ast_vec::AstVec, expr::ExprKind, AstKind, AstVisitable};
 pub struct FunctionNode {
     name: Option<String>,
     params: AstVec<ExprKind>,
-    body: AstVec<AstKind>,
+    body: BlockNode,
 }
 
 impl FunctionNode {
     /// Creates a new `FunctionNode` with the given `params` and `body`.
     ///
     /// # Arguments
+    /// - `name` - The name of the function.
     /// - `params` - The parameters of the function.
     /// - `body` - The body of the function.
     ///
     /// # Returns
     /// A new `FunctionNode`.
-    pub fn new<N>(name: N, params: AstVec<ExprKind>, body: AstVec<AstKind>) -> Self
+    pub fn new<N, V>(name: N, params: AstVec<ExprKind>, body: V) -> Self
     where
         N: Into<Option<String>>,
+        V: Into<AstVec<AstKind>>,
     {
         Self {
             name: name.into(),
             params,
-            body,
+            body: BlockNode::new(body),
         }
     }
 
@@ -40,7 +42,7 @@ impl FunctionNode {
     }
 
     /// Returns the body of the function.
-    pub fn body(&self) -> &Vec<AstKind> {
+    pub fn body(&self) -> &BlockNode {
         &self.body
     }
 
