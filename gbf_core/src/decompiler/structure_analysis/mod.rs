@@ -192,7 +192,7 @@ impl StructureAnalysis {
 
     /// Executes the control flow analysis.
     pub fn execute(&mut self) -> Result<(), StructureAnalysisError> {
-        let iterations = 0;
+        let mut iterations = 0;
 
         // while the region count is still above 1
         while self.region_graph.node_count() > 1 {
@@ -228,6 +228,8 @@ impl StructureAnalysis {
                     }
                 }
             }
+
+            iterations += 1;
         }
 
         Ok(())

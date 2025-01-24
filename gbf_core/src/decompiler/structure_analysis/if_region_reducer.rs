@@ -167,4 +167,32 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_if_reduce_single_condition_two_ret() -> Result<(), StructureAnalysisError> {
+        let mut structure_analysis = StructureAnalysis::new();
+
+        let entry_region = structure_analysis.add_region(RegionType::ControlFlow);
+        let region_1 = structure_analysis.add_region(RegionType::Tail);
+        let region_2 = structure_analysis.add_region(RegionType::Tail);
+
+        // push nodes to the regions
+        structure_analysis
+            .push_to_region(entry_region, new_assignment(new_id("foo"), new_id("bar")));
+        // set condition for the region
+        structure_analysis
+            .get_region_mut(entry_region)?
+            .set_jump_expr(Some(new_id("foo").into()));
+        structure_analysis.push_to_region(region_1, new_assignment(new_id("foo2"), new_id("bar2")));
+        structure_analysis.push_to_region(region_2, new_assignment(new_id("foo3"), new_id("bar3")));
+        structure_analysis.connect_regions(entry_region, region_1, ControlFlowEdgeType::Branch)?;
+        structure_analysis.connect_regions(
+            entry_region,
+            region_2,
+            ControlFlowEdgeType::Fallthrough,
+        )?;
+        structure_analysis.execute()?;
+        assert_eq!(structure_analysis.region_graph.node_count(), 1);
+        Ok(())
+    }
 }
