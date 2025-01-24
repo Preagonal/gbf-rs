@@ -7,7 +7,7 @@ use assignment::AssignmentNode;
 use ast_vec::AstVec;
 use bin_op::BinaryOperationNode;
 use block::BlockNode;
-use control_flow::ControlFlowNode;
+use control_flow::{ControlFlowNode, ControlFlowType};
 use expr::ExprKind;
 use func_call::FunctionCallNode;
 use function::FunctionNode;
@@ -282,7 +282,7 @@ where
     C: Into<ExprKind>,
     T: Into<AstVec<AstKind>>,
 {
-    ControlFlowNode::new("if", Some(condition), then_block.into())
+    ControlFlowNode::new(ControlFlowType::If, Some(condition), then_block.into())
 }
 
 /// Creates a new else statement
@@ -290,5 +290,14 @@ pub fn new_else<T>(else_block: T) -> ControlFlowNode
 where
     T: Into<AstVec<AstKind>>,
 {
-    ControlFlowNode::new("else", None::<ExprKind>, else_block.into())
+    ControlFlowNode::new(ControlFlowType::Else, None::<ExprKind>, else_block.into())
+}
+
+/// Creates a new else if statement
+pub fn new_else_if<C, T>(condition: C, then_block: T) -> ControlFlowNode
+where
+    C: Into<ExprKind>,
+    T: Into<AstVec<AstKind>>,
+{
+    ControlFlowNode::new(ControlFlowType::ElseIf, Some(condition), then_block.into())
 }

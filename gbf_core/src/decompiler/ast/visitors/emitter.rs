@@ -4,7 +4,9 @@ use super::{
     emit_context::{EmitContext, EmitVerbosity, IndentStyle},
     AstVisitor,
 };
-use crate::decompiler::ast::{assignable::AssignableKind, expr::ExprKind};
+use crate::decompiler::ast::{
+    assignable::AssignableKind, control_flow::ControlFlowType, expr::ExprKind,
+};
 use crate::decompiler::ast::{assignment::AssignmentNode, statement::StatementKind};
 use crate::decompiler::ast::{
     bin_op::{BinOpType, BinaryOperationNode},
@@ -405,7 +407,13 @@ impl AstVisitor for Gs2Emitter {
 
     fn visit_control_flow(&mut self, node: &ControlFlowNode) {
         // Emit the control flow name
-        self.output.push_str(node.name());
+        let name = match node.ty() {
+            ControlFlowType::If => "if",
+            ControlFlowType::Else => "else",
+            ControlFlowType::ElseIf => "else if",
+        };
+
+        self.output.push_str(name);
 
         // Emit the condition if it exists
         if let Some(condition) = node.condition() {

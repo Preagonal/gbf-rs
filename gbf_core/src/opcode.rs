@@ -321,9 +321,9 @@ define_opcodes! {
     NewObject = 0x2a,
     ConvertToVariable = 0x2b,
     ShortCircuitEnd = 0x2c,
-    SetLoopVariable = 0x2d,
-    GetLoopVariable = 0x2e,
-    MarkLoopVariable = 0x2f,
+    SetRegister = 0x2d,
+    GetRegister = 0x2e,
+    MarkRegisterVariable = 0x2f,
     // Unknown values: 0x30 - 0x31
     Assign = 0x32,
     EndParams = 0x33,

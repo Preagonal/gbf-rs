@@ -4,7 +4,7 @@ use std::backtrace::Backtrace;
 
 use crate::{
     decompiler::{
-        ast::{bin_op::BinOpType, new_assignment, new_bin_op, new_id_with_version},
+        ast::{bin_op::BinOpType, new_bin_op},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -63,13 +63,11 @@ impl OpcodeHandler for BinaryOperationHandler {
                 context: context.get_error_context(),
                 backtrace: Backtrace::capture(),
             })?;
-        let var = context.ssa_context.new_ssa_version_for("bin_op");
-        let ssa_id = new_id_with_version("bin_op", var);
-        let stmt = new_assignment(ssa_id.clone(), op);
+        // let var = context.ssa_context.new_ssa_version_for("bin_op");
+        // let ssa_id = new_id_with_version("bin_op", var);
+        // let stmt = new_assignment(ssa_id.clone(), op);
+        context.push_one_node(op.into())?;
 
-        Ok(ProcessedInstructionBuilder::new()
-            .ssa_id(ssa_id.into())
-            .push_to_region(stmt.into())
-            .build())
+        Ok(ProcessedInstructionBuilder::new().build())
     }
 }

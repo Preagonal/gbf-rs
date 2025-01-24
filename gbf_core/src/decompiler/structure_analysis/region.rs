@@ -54,7 +54,6 @@ impl RegionId {
 /// Represents a region in the control-flow graph.
 #[derive(Debug, Clone)]
 pub struct Region {
-    id: RegionId,
     nodes: Vec<AstKind>,
     jump_expr: Option<ExprKind>,
     region_type: RegionType,
@@ -65,9 +64,8 @@ impl Region {
     ///
     /// # Arguments
     /// * `id` - The id of the region.
-    pub fn new(id: RegionId, region_type: RegionType) -> Self {
+    pub fn new(region_type: RegionType) -> Self {
         Self {
-            id,
             nodes: Vec::new(),
             jump_expr: None,
             region_type,
@@ -258,8 +256,7 @@ mod tests {
 
     #[test]
     fn test_region_creation_and_instruction_addition() {
-        let region_id = RegionId::new(0);
-        let mut region = Region::new(region_id, RegionType::Linear);
+        let mut region = Region::new(RegionType::Linear);
 
         assert_eq!(region.region_type(), &RegionType::Linear);
         assert_eq!(region.iter_nodes().count(), 0);
@@ -284,8 +281,7 @@ mod tests {
 
     #[test]
     fn test_region_into_iter() {
-        let region_id = RegionId::new(0);
-        let region = Region::new(region_id, RegionType::Linear);
+        let region = Region::new(RegionType::Linear);
         let mut iter = region.into_iter();
         assert_eq!(iter.next(), None);
     }

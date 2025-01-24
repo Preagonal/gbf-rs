@@ -30,6 +30,8 @@ pub struct FunctionDecompilerContext {
     pub ssa_context: SsaContext,
     /// The current instruction being processed.
     pub current_instruction: Instruction,
+    /// Register mapping for the current function
+    pub register_mapping: HashMap<usize, AssignableKind>,
 }
 
 impl FunctionDecompilerContext {
@@ -41,6 +43,7 @@ impl FunctionDecompilerContext {
             opcode_handlers: HashMap::new(),
             ssa_context: SsaContext::new(),
             current_instruction: Instruction::default(),
+            register_mapping: HashMap::new(),
         }
     }
 

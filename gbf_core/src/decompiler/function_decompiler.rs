@@ -36,6 +36,18 @@ pub enum FunctionDecompilerError {
         backtrace: Backtrace,
     },
 
+    /// Register not found
+    #[error("Register not found: {register_id}")]
+    RegisterNotFound {
+        /// The register ID that was not found
+        register_id: usize,
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
+
     /// Encountered an error while processing the operand
     #[error("Encountered an error while processing the operand: {source}")]
     OperandError {
@@ -442,6 +454,7 @@ impl FunctionDecompilerErrorDetails for FunctionDecompilerError {
             FunctionDecompilerError::UnexpectedExecutionState { context, .. } => context,
             FunctionDecompilerError::Other { context, .. } => context,
             FunctionDecompilerError::StructureAnalysisError { context, .. } => context,
+            FunctionDecompilerError::RegisterNotFound { context, .. } => context,
         }
     }
 
@@ -457,6 +470,7 @@ impl FunctionDecompilerErrorDetails for FunctionDecompilerError {
             FunctionDecompilerError::UnexpectedExecutionState { backtrace, .. } => backtrace,
             FunctionDecompilerError::Other { backtrace, .. } => backtrace,
             FunctionDecompilerError::StructureAnalysisError { backtrace, .. } => backtrace,
+            FunctionDecompilerError::RegisterNotFound { backtrace, .. } => backtrace,
         }
     }
 }

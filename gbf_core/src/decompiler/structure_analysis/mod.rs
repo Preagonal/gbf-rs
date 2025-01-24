@@ -120,7 +120,7 @@ impl StructureAnalysis {
     /// Adds a new region to the control flow graph.
     pub fn add_region(&mut self, region_type: RegionType) -> RegionId {
         let region_id = RegionId::new(self.regions.len());
-        self.regions.push(Region::new(region_id, region_type));
+        self.regions.push(Region::new(region_type));
         self.region_graph.add_node(region_id);
         region_id
     }

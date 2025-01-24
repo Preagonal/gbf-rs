@@ -112,6 +112,7 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::FunctionStart, Box::new(NopHandler));
         handlers.insert(Opcode::IncreaseLoopCounter, Box::new(NopHandler));
         handlers.insert(Opcode::Jmp, Box::new(NopHandler));
+        handlers.insert(Opcode::MarkRegisterVariable, Box::new(NopHandler));
 
         // Two operand handlers
         handlers.insert(
@@ -134,6 +135,14 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         );
         handlers.insert(
             Opcode::Copy,
+            Box::new(special_one_operand::SpecialOneOperandHandler),
+        );
+        handlers.insert(
+            Opcode::SetRegister,
+            Box::new(special_one_operand::SpecialOneOperandHandler),
+        );
+        handlers.insert(
+            Opcode::GetRegister,
             Box::new(special_one_operand::SpecialOneOperandHandler),
         );
 
