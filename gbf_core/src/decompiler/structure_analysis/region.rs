@@ -1,6 +1,7 @@
 #![deny(missing_docs)]
 
 use crate::cfg_dot::RenderableNode;
+use crate::decompiler::ast::expr::ExprKind;
 use crate::decompiler::ast::visitors::emit_context::{EmitContextBuilder, EmitVerbosity};
 use crate::decompiler::ast::visitors::emitter::Gs2Emitter;
 use crate::decompiler::ast::visitors::AstVisitor;
@@ -55,7 +56,7 @@ impl RegionId {
 pub struct Region {
     id: RegionId,
     nodes: Vec<AstKind>,
-    jump_expr: Option<AstKind>,
+    jump_expr: Option<ExprKind>,
     region_type: RegionType,
 }
 
@@ -118,11 +119,16 @@ impl Region {
         self.region_type = region_type;
     }
 
+    /// Remove the jump expression from the region.
+    pub fn remove_jump_expr(&mut self) {
+        self.jump_expr = None;
+    }
+
     /// Gets the jump expression.
     ///
     /// # Return
     /// The jump expression.
-    pub fn get_jump_expr(&self) -> Option<&AstKind> {
+    pub fn get_jump_expr(&self) -> Option<&ExprKind> {
         self.jump_expr.as_ref()
     }
 
@@ -130,7 +136,7 @@ impl Region {
     ///
     /// # Arguments
     /// * `jump_expr` - The new optional jump expression.
-    pub fn set_jump_expr(&mut self, jump_expr: Option<AstKind>) {
+    pub fn set_jump_expr(&mut self, jump_expr: Option<ExprKind>) {
         self.jump_expr = jump_expr;
     }
 

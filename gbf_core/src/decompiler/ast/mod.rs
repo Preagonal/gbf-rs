@@ -274,3 +274,21 @@ where
 {
     FunctionNode::new(name, params.into(), body)
 }
+
+// == Conditionals ==
+/// Creates a new if statement
+pub fn new_if<C, T>(condition: C, then_block: T) -> ControlFlowNode
+where
+    C: Into<ExprKind>,
+    T: Into<AstVec<AstKind>>,
+{
+    ControlFlowNode::new("if", Some(condition), then_block.into())
+}
+
+/// Creates a new else statement
+pub fn new_else<T>(else_block: T) -> ControlFlowNode
+where
+    T: Into<AstVec<AstKind>>,
+{
+    ControlFlowNode::new("else", None::<ExprKind>, else_block.into())
+}

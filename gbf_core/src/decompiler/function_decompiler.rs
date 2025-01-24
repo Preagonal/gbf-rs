@@ -19,7 +19,7 @@ use super::ast::{AstKind, AstVisitable};
 use super::execution_frame::ExecutionFrame;
 use super::function_decompiler_context::FunctionDecompilerContext;
 use super::structure_analysis::region::{RegionId, RegionType};
-use super::structure_analysis::StructureAnalysis;
+use super::structure_analysis::{ControlFlowEdgeType, StructureAnalysis, StructureAnalysisError};
 
 /// An error when decompiling a function
 #[derive(Debug, Error, Serialize)]
@@ -107,6 +107,18 @@ pub enum FunctionDecompilerError {
     /// Unexpected execution state
     #[error("Unexpected execution state.")]
     UnexpectedExecutionState {
+        /// The context of the error
+        context: Box<FunctionDecompilerErrorContext>,
+        /// The backtrace of the error
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
+
+    /// Structure analysis error
+    #[error("A structure analysis error occurred while decompiling the function: {source}")]
+    StructureAnalysisError {
+        /// The source of the error
+        source: Box<StructureAnalysisError>,
         /// The context of the error
         context: Box<FunctionDecompilerErrorContext>,
         /// The backtrace of the error
@@ -208,11 +220,21 @@ impl FunctionDecompiler {
 
         let entry_block_id = self.function.get_entry_basic_block().id;
         let entry_region_id = self.block_to_region.get(&entry_block_id).unwrap();
-        let entry_region = self
-            .struct_analysis
-            .get_region(*entry_region_id)
-            .expect("[Bug] The entry region should exist.");
 
+        self.struct_analysis.execute().map_err(|e| {
+            FunctionDecompilerError::StructureAnalysisError {
+                source: Box::new(e),
+                context: self.context.as_ref().unwrap().get_error_context(),
+                backtrace: Backtrace::capture(),
+            }
+        })?;
+        let entry_region = {
+            let region = self
+                .struct_analysis
+                .get_region(*entry_region_id)
+                .expect("[Bug] The entry region should exist.");
+            region.clone()
+        };
         let entry_region_nodes = entry_region.iter_nodes().cloned().collect::<AstVec<_>>();
 
         let func = AstKind::Function(FunctionNode::new(
@@ -302,8 +324,34 @@ impl FunctionDecompiler {
                     self.struct_analysis
                         .push_to_region(*current_region_id, node);
                 }
+
                 if let Some(params) = processed.function_parameters {
                     self.function_parameters = params;
+                }
+
+                if let Some(jmp) = &processed.jump_condition {
+                    // Get the jump target from the instruction
+                    // let jump_target = instr
+                    //     .clone()
+                    //     .operand
+                    //     .and_then(|operand| operand.get_number_value().ok())
+                    //     .ok_or_else(|| FunctionDecompilerError::Other {
+                    //         message: "Jump instruction operand is missing or not a number"
+                    //             .to_string(),
+                    //         context: ctx.get_error_context(),
+                    //         backtrace: Backtrace::capture(),
+                    //     })?;
+                    let current_region_id = self
+                        .block_to_region
+                        .get(&block_id)
+                        .expect("[Bug] The region should exist.");
+                    let region = self
+                        .struct_analysis
+                        .get_region_mut(*current_region_id)
+                        .expect("[Bug] The region should exist.");
+
+                    region.set_jump_expr(Some(jmp.clone()));
+                    region.set_region_type(RegionType::ControlFlow);
                 }
             }
         }
@@ -317,7 +365,8 @@ impl FunctionDecompiler {
         &mut self,
         block_id: BasicBlockId,
         region_id: RegionId,
-    ) -> Result<(), FunctionDecompilerError> {
+    ) -> Result<Vec<(RegionId, ControlFlowEdgeType)>, FunctionDecompilerError> {
+        // Step 1: Get the predecessors of the current block
         let predecessors = self.function.get_predecessors(block_id).map_err(|e| {
             FunctionDecompilerError::FunctionError {
                 source: e,
@@ -325,17 +374,56 @@ impl FunctionDecompiler {
                 context: self.context.as_ref().unwrap().get_error_context(),
             }
         })?;
-        let predecessor_regions: Vec<RegionId> = predecessors
+
+        // Step 2: Map each predecessor to its region ID and determine the edge type
+        let predecessor_regions: Vec<(RegionId, ControlFlowEdgeType)> = predecessors
             .iter()
-            .map(|pred_id| *self.block_to_region.get(pred_id).unwrap())
+            .map(|pred_id| {
+                let pred_region_id = *self.block_to_region.get(pred_id).unwrap();
+
+                // Get the predecessor block
+                let pred_block = self
+                    .function
+                    .get_basic_block_by_id(*pred_id)
+                    .expect("Predecessor block not found");
+
+                // Get the last instruction of the predecessor block
+                // TODO: This is a bug if the block is empty; maybe in this case we should
+                // just get the address of the block?
+                let pred_last_instruction = pred_block.last().expect("Empty block");
+
+                // Get the target block address
+                let target_block = self
+                    .function
+                    .get_basic_block_by_id(block_id)
+                    .expect("Target block not found");
+                let target_address = target_block.id.address;
+
+                // Determine the edge type based on control flow
+                let edge_type = if pred_last_instruction.address + 1 != target_address {
+                    // The target address is NOT the next address, so it's a branch
+                    ControlFlowEdgeType::Branch
+                } else {
+                    ControlFlowEdgeType::Fallthrough
+                };
+
+                (pred_region_id, edge_type)
+            })
             .collect();
 
-        for pred_region_id in predecessor_regions {
+        // Step 3: Connect the predecessor regions to the target region in the graph
+        for (pred_region_id, edge_type) in &predecessor_regions {
             self.struct_analysis
-                .connect_regions(pred_region_id, region_id);
+                .connect_regions(*pred_region_id, region_id, *edge_type)
+                .map_err(|e| FunctionDecompilerError::StructureAnalysisError {
+                    source: Box::new(e),
+                    context: self.context.as_ref().unwrap().get_error_context(),
+                    backtrace: Backtrace::capture(),
+                })?;
         }
 
-        Ok(())
+        // Step 4: Return the vector of predecessor regions and their edge types
+        Ok(predecessor_regions)
     }
 }
 
@@ -353,6 +441,7 @@ impl FunctionDecompilerErrorDetails for FunctionDecompilerError {
             FunctionDecompilerError::ExecutionStackEmpty { context, .. } => context,
             FunctionDecompilerError::UnexpectedExecutionState { context, .. } => context,
             FunctionDecompilerError::Other { context, .. } => context,
+            FunctionDecompilerError::StructureAnalysisError { context, .. } => context,
         }
     }
 
@@ -367,6 +456,7 @@ impl FunctionDecompilerErrorDetails for FunctionDecompilerError {
             FunctionDecompilerError::ExecutionStackEmpty { backtrace, .. } => backtrace,
             FunctionDecompilerError::UnexpectedExecutionState { backtrace, .. } => backtrace,
             FunctionDecompilerError::Other { backtrace, .. } => backtrace,
+            FunctionDecompilerError::StructureAnalysisError { backtrace, .. } => backtrace,
         }
     }
 }

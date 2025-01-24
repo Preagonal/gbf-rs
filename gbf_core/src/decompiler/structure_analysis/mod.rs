@@ -1,7 +1,8 @@
 #![deny(missing_docs)]
 
-use std::{backtrace::Backtrace, collections::HashMap};
+use std::backtrace::Backtrace;
 
+use if_region_reducer::IfRegionReducer;
 use linear_region_reducer::LinearRegionReducer;
 use petgraph::{
     graph::{DiGraph, NodeIndex},
@@ -19,6 +20,8 @@ use super::ast::AstKind;
 
 use thiserror::Error;
 
+/// A module representing a region that is an if
+pub mod if_region_reducer;
 /// A module that contains the logic for reducing a linear region.
 pub mod linear_region_reducer;
 /// A module representing a region in the control flow graph.
@@ -67,6 +70,14 @@ pub enum StructureAnalysisError {
         backtrace: Backtrace,
     },
 
+    /// When we've expected a condition in this region, but it's not there.
+    #[error("Expected condition not found")]
+    ExpectedConditionNotFound {
+        /// The error backtrace.
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
+
     /// Other errors.
     #[error("A structure analysis error occurred: {message}")]
     Other {
@@ -79,17 +90,22 @@ pub enum StructureAnalysisError {
     },
 }
 
+/// The type of control flow edge in the CFG.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ControlFlowEdgeType {
+    /// A branch
+    Branch,
+    /// A fallthrough
+    Fallthrough,
+}
+
 /// This module is responsible for control flow analysis.
 #[derive(Default)]
 pub struct StructureAnalysis {
     /// Regions vector
     regions: Vec<Region>,
     /// The region graph of the function
-    region_graph: DiGraph<(), ()>,
-    /// Used to convert `NodeIndex` to `RegionId`.
-    graph_node_to_region: HashMap<NodeIndex, RegionId>,
-    /// Used to convert `RegionId` to `NodeIndex`.
-    region_to_graph_node: HashMap<RegionId, NodeIndex>,
+    region_graph: DiGraph<RegionId, ControlFlowEdgeType>,
 }
 
 impl StructureAnalysis {
@@ -98,8 +114,6 @@ impl StructureAnalysis {
         Self {
             regions: Vec::new(),
             region_graph: DiGraph::new(),
-            graph_node_to_region: HashMap::new(),
-            region_to_graph_node: HashMap::new(),
         }
     }
 
@@ -107,17 +121,21 @@ impl StructureAnalysis {
     pub fn add_region(&mut self, region_type: RegionType) -> RegionId {
         let region_id = RegionId::new(self.regions.len());
         self.regions.push(Region::new(region_id, region_type));
-        let node_index = self.region_graph.add_node(());
-        self.graph_node_to_region.insert(node_index, region_id);
-        self.region_to_graph_node.insert(region_id, node_index);
+        self.region_graph.add_node(region_id);
         region_id
     }
 
     /// Connect two regions in the control flow graph.
-    pub fn connect_regions(&mut self, from: RegionId, to: RegionId) {
-        let from_node = self.region_to_graph_node[&from];
-        let to_node = self.region_to_graph_node[&to];
-        self.region_graph.add_edge(from_node, to_node, ());
+    pub fn connect_regions(
+        &mut self,
+        from: RegionId,
+        to: RegionId,
+        edge_type: ControlFlowEdgeType,
+    ) -> Result<(), StructureAnalysisError> {
+        let from_node = self.get_node_index(from)?;
+        let to_node = self.get_node_index(to)?;
+        self.region_graph.add_edge(from_node, to_node, edge_type);
+        Ok(())
     }
 
     /// Gets a region by its ID.
@@ -130,35 +148,46 @@ impl StructureAnalysis {
             })
     }
 
+    /// Gets a mutable region by its ID.
+    pub fn get_region_mut(
+        &mut self,
+        region_id: RegionId,
+    ) -> Result<&mut Region, StructureAnalysisError> {
+        self.regions
+            .get_mut(region_id.index)
+            .ok_or(StructureAnalysisError::RegionNotFound {
+                region_id,
+                backtrace: Backtrace::capture(),
+            })
+    }
+
     /// Gets the entry region id
-    pub fn get_entry_region(&self) -> Result<RegionId, StructureAnalysisError> {
-        // TODO: Find a more robust method for finding the entry region. This is
-        // TODO: a costly operation, and not robust. We will introduce some debug
-        // TODO: assertions to ensure that this function returns the entry region
+    pub fn get_entry_region(&self) -> RegionId {
+        // TODO: Find a more robust method for finding the entry region. Our assumption
+        // is that the entry region is the region with index 0.
+        RegionId::new(0)
+    }
 
-        // Iterate through the regions in the map until we find the entry region.
-        for (region_id, _) in self.region_to_graph_node.iter() {
-            if region_id.index == 0 {
-                let region_id = *region_id;
+    /// Gets the node index of a region.
+    pub fn get_node_index(&self, region_id: RegionId) -> Result<NodeIndex, StructureAnalysisError> {
+        self.region_graph
+            .node_indices()
+            .find(|&idx| self.region_graph[idx] == region_id)
+            .ok_or(StructureAnalysisError::RegionNotFound {
+                region_id,
+                backtrace: Backtrace::capture(),
+            })
+    }
 
-                // debug assertion - basically, ensure no predecessors
-                debug_assert_eq!(
-                    self.region_graph
-                        .neighbors_directed(
-                            self.region_to_graph_node[&region_id],
-                            petgraph::Direction::Incoming
-                        )
-                        .count(),
-                    0
-                );
-
-                return Ok(region_id);
-            }
-        }
-
-        Err(StructureAnalysisError::EntryRegionNotFound {
-            backtrace: Backtrace::capture(),
-        })
+    /// Gets the region ID of a node index.
+    pub fn get_region_id(&self, node_index: NodeIndex) -> Result<RegionId, StructureAnalysisError> {
+        self.region_graph
+            .node_weight(node_index)
+            .cloned()
+            .ok_or(StructureAnalysisError::Other {
+                message: "Node index not found".to_string(),
+                backtrace: Backtrace::capture(),
+            })
     }
 
     /// Executes the control flow analysis.
@@ -174,27 +203,25 @@ impl StructureAnalysis {
                 });
             }
 
-            let old_node_count = self.regions.len();
+            // TODO: We will use the old node count in our post reduction check
+            let _old_node_count = self.regions.len();
 
             // Get the nodes in post order
-            let entry_region_id = self.get_entry_region()?;
-            let mut dfs = DfsPostOrder::new(
-                &self.region_graph,
-                self.region_to_graph_node[&entry_region_id],
-            );
+            let entry_region_id = self.get_entry_region();
+            let entry_region_node_index = self.get_node_index(entry_region_id)?;
+
+            let mut dfs = DfsPostOrder::new(&self.region_graph, entry_region_node_index);
 
             // Iterate through the nodes in post order
             while let Some(node) = dfs.next(&self.region_graph) {
-                let mut reduce_iterations = 0;
-                let mut did_reduce = true;
-
+                let region_id = self.get_region_id(node)?;
+                // If the region is inactive, skip it
+                if self.regions[region_id.index].get_region_type() == RegionType::Inactive {
+                    continue;
+                }
                 loop {
                     // Reduce the region
-                    did_reduce = self.reduce_acyclic_region(self.graph_node_to_region[&node])?;
-
-                    if did_reduce {
-                        reduce_iterations += 1;
-                    }
+                    let did_reduce = self.reduce_acyclic_region(region_id)?;
 
                     if !did_reduce {
                         break;
@@ -225,21 +252,39 @@ impl StructureAnalysis {
     ///
     /// # Returns
     /// - An `Option` containing the successor node index and region ID if there is only one successor.
-    pub fn get_single_successor(&self, region_id: RegionId) -> Option<RegionId> {
-        let region_node = self.region_to_graph_node[&region_id];
-        let successors: Vec<NodeIndex> = self
-            .region_graph
-            .neighbors_directed(region_node, petgraph::Direction::Outgoing)
-            .collect();
+    pub fn get_single_successor(
+        &self,
+        region_id: RegionId,
+    ) -> Result<Option<RegionId>, StructureAnalysisError> {
+        let successors = self.get_successors(region_id)?;
 
         if successors.len() != 1 {
-            return None;
+            return Ok(None);
         }
 
-        let successor_node = successors[0];
-        let successor_region_id = self.graph_node_to_region[&successor_node];
+        Ok(Some(successors[0].0))
+    }
 
-        successor_region_id.into()
+    /// Get the single linear successor of a region, if the region type is linear.
+    ///
+    /// # Arguments
+    /// - `region_id`: The region ID to get the successor of.
+    ///
+    /// # Returns
+    /// - An `Option` containing the successor node index and region ID if there is only one linear successor.
+    pub fn get_single_linear_successor(
+        &self,
+        region_id: RegionId,
+    ) -> Result<Option<RegionId>, StructureAnalysisError> {
+        // Get the region type
+        let region_type = self.regions[region_id.index].get_region_type();
+
+        // If the region type is not linear, return None
+        if region_type != RegionType::Linear {
+            return Ok(None);
+        }
+
+        self.get_single_successor(region_id)
     }
 
     /// Check if a node has a single predecessor.
@@ -249,12 +294,13 @@ impl StructureAnalysis {
     ///
     /// # Returns
     /// - `true` if the node has a single predecessor, `false` otherwise.
-    pub fn has_single_predecessor(&self, id: RegionId) -> bool {
-        let node_index = self.region_to_graph_node[&id];
-        self.region_graph
+    pub fn has_single_predecessor(&self, id: RegionId) -> Result<bool, StructureAnalysisError> {
+        let node_index = self.get_node_index(id)?;
+        Ok(self
+            .region_graph
             .neighbors_directed(node_index, petgraph::Direction::Incoming)
             .count()
-            == 1
+            == 1)
     }
 
     /// Remove an edge between two regions.
@@ -271,8 +317,8 @@ impl StructureAnalysis {
         from_region_id: RegionId,
         to_region_id: RegionId,
     ) -> Result<(), StructureAnalysisError> {
-        let region_node = self.region_to_graph_node[&from_region_id];
-        let successor_node = self.region_to_graph_node[&to_region_id];
+        let region_node = self.get_node_index(from_region_id)?;
+        let successor_node = self.get_node_index(to_region_id)?;
         let edge_index = self
             .region_graph
             .find_edge(region_node, successor_node)
@@ -281,7 +327,7 @@ impl StructureAnalysis {
                 backtrace: Backtrace::capture(),
             })?;
         // Remove the edge between the two nodes
-        self.region_graph.remove_edge(edge_index);
+        debug_assert!(self.region_graph.remove_edge(edge_index).is_some());
 
         Ok(())
     }
@@ -293,11 +339,30 @@ impl StructureAnalysis {
     ///
     /// # Returns
     /// - A vector of region IDs representing the successors of the region.
-    pub fn get_successors(&self, region_id: RegionId) -> Vec<RegionId> {
-        let region_node = self.region_to_graph_node[&region_id];
+    pub fn get_successors(
+        &self,
+        region_id: RegionId,
+    ) -> Result<Vec<(RegionId, ControlFlowEdgeType)>, StructureAnalysisError> {
+        let region_node = self.get_node_index(region_id)?;
         self.region_graph
             .neighbors_directed(region_node, petgraph::Direction::Outgoing)
-            .map(|node| self.graph_node_to_region[&node])
+            .map(|node| {
+                let region_id = self.get_region_id(node)?;
+                let edge = self
+                    .region_graph
+                    .find_edge(region_node, node)
+                    .ok_or_else(|| StructureAnalysisError::Other {
+                        message: "Edge not found".to_string(),
+                        backtrace: Backtrace::capture(),
+                    })?;
+                let edge_weight = self.region_graph.edge_weight(edge).ok_or_else(|| {
+                    StructureAnalysisError::Other {
+                        message: "Edge weight not found".to_string(),
+                        backtrace: Backtrace::capture(),
+                    }
+                })?;
+                Ok((region_id, *edge_weight))
+            })
             .collect()
     }
 
@@ -308,11 +373,14 @@ impl StructureAnalysis {
     ///
     /// # Returns
     /// - A vector of region IDs representing the predecessors of the region.
-    pub fn get_predecessors(&self, region_id: RegionId) -> Vec<RegionId> {
-        let region_node = self.region_to_graph_node[&region_id];
+    pub fn get_predecessors(
+        &self,
+        region_id: RegionId,
+    ) -> Result<Vec<RegionId>, StructureAnalysisError> {
+        let region_node = self.get_node_index(region_id)?;
         self.region_graph
             .neighbors_directed(region_node, petgraph::Direction::Incoming)
-            .map(|node| self.graph_node_to_region[&node])
+            .map(|node| self.get_region_id(node))
             .collect()
     }
 
@@ -320,9 +388,14 @@ impl StructureAnalysis {
     ///
     /// # Arguments
     /// - `region_id`: The region ID of the region to remove.
-    pub fn remove_node(&mut self, region_id: RegionId) {
-        let node_index = self.region_to_graph_node[&region_id];
-        self.region_graph.remove_node(node_index);
+    pub fn remove_node(&mut self, region_id: RegionId) -> Result<(), StructureAnalysisError> {
+        let node_index = self.get_node_index(region_id)?;
+        debug_assert!(self.region_graph.remove_node(node_index).is_some());
+
+        // set the region to inactive
+        self.regions[region_id.index].set_region_type(RegionType::Inactive);
+
+        Ok(())
     }
 }
 
@@ -341,11 +414,14 @@ impl StructureAnalysis {
                     region_id,
                     backtrace: Backtrace::capture(),
                 })?;
-
         Ok(match region.get_region_type() {
             RegionType::Linear => LinearRegionReducer.reduce_region(self, region_id)?,
             RegionType::Tail => false,
-            _ => todo!("Implement other region types"),
+            RegionType::Inactive => Err(StructureAnalysisError::Other {
+                message: "Inactive region".to_string(),
+                backtrace: Backtrace::capture(),
+            })?,
+            RegionType::ControlFlow => IfRegionReducer.reduce_region(self, region_id)?,
         })
     }
 }
@@ -366,9 +442,8 @@ impl NodeResolver for StructureAnalysis {
     type NodeData = Region;
 
     fn resolve(&self, node_index: NodeIndex) -> Option<&Self::NodeData> {
-        self.graph_node_to_region
-            .get(&node_index)
-            .and_then(|region_id| self.regions.get(region_id.index))
+        let region_id = self.get_region_id(node_index).ok()?;
+        self.regions.get(region_id.index)
     }
 
     fn resolve_edge_color(&self, _: NodeIndex, _: NodeIndex) -> String {
@@ -379,40 +454,54 @@ impl NodeResolver for StructureAnalysis {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::decompiler::ast::{new_assignment, new_id};
 
-    use super::*;
-
     #[test]
-    fn test_linear_reduce() -> Result<(), StructureAnalysisError> {
+    fn test_remove_edge() -> Result<(), StructureAnalysisError> {
         let mut structure_analysis = StructureAnalysis::new();
 
         let entry_region = structure_analysis.add_region(RegionType::Linear);
         let region_1 = structure_analysis.add_region(RegionType::Linear);
-        let region_2 = structure_analysis.add_region(RegionType::Linear);
-        let region_3 = structure_analysis.add_region(RegionType::Tail);
+        let region_2 = structure_analysis.add_region(RegionType::Tail);
 
         // push nodes to the regions
         structure_analysis
             .push_to_region(entry_region, new_assignment(new_id("foo"), new_id("bar")));
+        // set condition for the region
+        structure_analysis
+            .get_region_mut(entry_region)?
+            .set_jump_expr(Some(new_id("foo").into()));
         structure_analysis.push_to_region(region_1, new_assignment(new_id("foo2"), new_id("bar2")));
         structure_analysis.push_to_region(region_1, new_assignment(new_id("foo3"), new_id("bar3")));
         structure_analysis.push_to_region(region_2, new_assignment(new_id("foo4"), new_id("bar4")));
         structure_analysis.push_to_region(region_2, new_assignment(new_id("foo5"), new_id("bar5")));
-        structure_analysis.push_to_region(region_3, new_assignment(new_id("foo6"), new_id("bar6")));
-        structure_analysis.connect_regions(entry_region, region_1);
-        structure_analysis.connect_regions(region_1, region_2);
-        structure_analysis.connect_regions(region_2, region_3);
+        structure_analysis.connect_regions(
+            entry_region,
+            region_1,
+            ControlFlowEdgeType::Fallthrough,
+        )?;
+        structure_analysis.connect_regions(entry_region, region_2, ControlFlowEdgeType::Branch)?;
+        structure_analysis.connect_regions(region_1, region_2, ControlFlowEdgeType::Fallthrough)?;
+
+        // print graph
+
+        // remove edge from entry_region to region_1
+        structure_analysis.remove_edge(entry_region, region_1)?;
+        // remove edge from region_1 to region_2
+        structure_analysis.remove_edge(region_1, region_2)?;
+        // remove node region_1
+        structure_analysis.remove_node(region_1)?;
+        // get successors of entry_region
+        let successors = structure_analysis.get_successors(entry_region)?;
+        // check if the entry region has only one successor
+        assert_eq!(successors.len(), 1);
+        // ensure successors[0] is region_2
+        assert_eq!(successors[0].0, region_2);
+        // do structure analysis
         structure_analysis.execute()?;
-
+        // check if the region graph has only one node
         assert_eq!(structure_analysis.region_graph.node_count(), 1);
-
-        let region = structure_analysis.get_entry_region()?;
-        let region = structure_analysis.get_region(region)?;
-        assert_eq!(region.get_nodes().len(), 6);
-
-        // ensure that the final region is a tail region
-        assert_eq!(region.get_region_type(), RegionType::Tail);
 
         Ok(())
     }
