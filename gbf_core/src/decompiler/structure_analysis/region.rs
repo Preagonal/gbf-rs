@@ -39,13 +39,6 @@ impl RegionId {
     ///
     /// # Returns
     /// - A new `RegionId` instance.
-    ///
-    /// Example
-    /// ```
-    /// use gbf_core::decompiler::region::RegionId;
-    ///
-    /// let block = RegionId::new(0);
-    /// ```
     pub fn new(index: usize) -> Self {
         Self { index }
     }
