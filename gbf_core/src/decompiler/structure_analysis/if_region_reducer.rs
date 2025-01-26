@@ -124,9 +124,9 @@ impl RegionReducer for IfRegionReducer {
         if let Some(successor) = branch_linear_successor {
             if successor == fallthrough_region_id {
                 // Branch linear successor aligns with fallthrough region
-                let fallthrough_statements =
-                    IfRegionReducer::get_region_nodes(analysis, fallthrough_region_id)?;
-                let cond = new_if(jump_expr, fallthrough_statements);
+                let branch_statements =
+                    IfRegionReducer::get_region_nodes(analysis, branch_region_id)?;
+                let cond = new_if(jump_expr, branch_statements);
 
                 Self::merge_conditional(analysis, region_id, vec![cond])?;
                 Self::cleanup_region(analysis, branch_region_id, region_id, successor)?;
@@ -137,9 +137,9 @@ impl RegionReducer for IfRegionReducer {
         if let Some(successor) = fallthrough_linear_successor {
             if successor == branch_region_id {
                 // Fallthrough linear successor aligns with branch region
-                let branch_statements =
-                    IfRegionReducer::get_region_nodes(analysis, branch_region_id)?;
-                let cond = new_if(jump_expr, branch_statements);
+                let fallthrough_statements =
+                    IfRegionReducer::get_region_nodes(analysis, fallthrough_region_id)?;
+                let cond = new_if(jump_expr, fallthrough_statements);
 
                 Self::merge_conditional(analysis, region_id, vec![cond])?;
                 Self::cleanup_region(analysis, fallthrough_region_id, region_id, successor)?;
