@@ -127,8 +127,15 @@ fn process_module(path: &path::Path) -> Result<GbfModuleResult, Box<dyn error::E
 
     let mut module_decompile_success = true;
 
+    log::info!("Processing module: {}", module_name);
+
     for function in module.iter() {
         let name = function.id.name.clone();
+
+        log::info!(
+            "Processing function: {}",
+            name.clone().unwrap_or("entry".to_string())
+        );
 
         let dot = function.render_dot(CfgDotConfig::default());
         let svg = convert_graphviz_to_svg(&dot);
@@ -153,7 +160,7 @@ fn process_module(path: &path::Path) -> Result<GbfModuleResult, Box<dyn error::E
         function_results.push(GbfFunctionResult {
             gbf_version: VERSION.to_string(),
             module_id: module_id.clone(),
-            function_name: name,
+            function_name: name.clone(),
             function_address: function.id.address,
             svg_cfg: SvgRef::Text(svg),
             decompile_result,

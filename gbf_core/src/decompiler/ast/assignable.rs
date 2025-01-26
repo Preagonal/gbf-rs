@@ -4,8 +4,8 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    emit, expr::ExprKind, identifier::IdentifierNode, member_access::MemberAccessNode,
-    ssa::SsaVersion, visitors::AstVisitor, AstKind, AstVisitable,
+    array_access::ArrayAccessNode, emit, expr::ExprKind, identifier::IdentifierNode,
+    member_access::MemberAccessNode, ssa::SsaVersion, visitors::AstVisitor, AstKind, AstVisitable,
 };
 
 /// Represents an assignable expression node in the AST.
@@ -16,6 +16,8 @@ pub enum AssignableKind {
     MemberAccess(MemberAccessNode),
     /// Represents an identifier node in the AST.
     Identifier(IdentifierNode),
+    /// Represents an array access node in the AST.
+    ArrayAccess(ArrayAccessNode),
 }
 
 impl AssignableKind {
@@ -24,6 +26,7 @@ impl AssignableKind {
         match self {
             AssignableKind::MemberAccess(m) => m.ssa_version = Some(ssa_version),
             AssignableKind::Identifier(i) => i.ssa_version = Some(ssa_version),
+            AssignableKind::ArrayAccess(a) => a.ssa_version = Some(ssa_version),
         }
     }
 
@@ -32,6 +35,7 @@ impl AssignableKind {
         match self {
             AssignableKind::MemberAccess(m) => emit(m.clone()),
             AssignableKind::Identifier(i) => emit(i.clone()),
+            AssignableKind::ArrayAccess(a) => emit(a.clone()),
         }
     }
 
@@ -40,6 +44,7 @@ impl AssignableKind {
         match self {
             AssignableKind::MemberAccess(m) => m.ssa_version,
             AssignableKind::Identifier(i) => i.ssa_version,
+            AssignableKind::ArrayAccess(a) => a.ssa_version,
         }
     }
 
@@ -48,6 +53,7 @@ impl AssignableKind {
         match self {
             AssignableKind::MemberAccess(m) => m.ssa_version = None,
             AssignableKind::Identifier(i) => i.ssa_version = None,
+            AssignableKind::ArrayAccess(a) => a.ssa_version = None,
         }
     }
 }

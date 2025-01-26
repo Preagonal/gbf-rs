@@ -1,4 +1,6 @@
 #![deny(missing_docs)]
+#![feature(error_generic_member_access)]
+#![feature(backtrace_frames)]
 
 //! This crate provides basic block definitions, function definitions, module definitions,
 //! graph definitions, instruction definitions, opcode definitions, and operand definitions.
@@ -99,7 +101,7 @@ mod tests {
             "00000000: Jmp 0x1\n\
             00000001: PushNumber 0x1\n\
             00000002: PushString abc\n\
-            00000003: PushPi\n\
+            00000003: Pi\n\
             00000004: Ret\n"
         );
 

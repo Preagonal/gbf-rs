@@ -83,21 +83,21 @@ impl PartialEq for MetaNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{comment, emit, new_id, statement};
+    use crate::decompiler::ast::{emit, new_assignment, new_comment, new_id};
 
     #[test]
     fn test_comment_emit() {
-        let statement = statement(new_id("foo"), new_id("bar"));
-        let comment = comment(statement, "Sets foo to bar");
+        let statement = new_assignment(new_id("foo"), new_id("bar"));
+        let comment = new_comment(statement, "Sets foo to bar");
         assert_eq!(emit(comment), "// Sets foo to bar\nfoo = bar;");
     }
 
     #[test]
     fn test_comment_equality() {
-        let statement = statement(new_id("foo"), new_id("bar"));
-        let comment1 = comment(statement.clone(), "Sets foo to bar");
-        let comment2 = comment(statement.clone(), "Sets foo to bar");
-        let comment3 = comment(statement.clone(), "Sets foo to baz");
+        let statement = new_assignment(new_id("foo"), new_id("bar"));
+        let comment1 = new_comment(statement.clone(), "Sets foo to bar");
+        let comment2 = new_comment(statement.clone(), "Sets foo to bar");
+        let comment3 = new_comment(statement.clone(), "Sets foo to baz");
 
         assert_eq!(comment1, comment2);
         assert_ne!(comment1, comment3);

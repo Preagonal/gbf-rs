@@ -32,11 +32,20 @@ export class GbfDataAnalyzer {
     }
 
     public getAllVersions(): string[] {
-        return Array.from(this.dataMap.keys());
+        return Array.from(this.dataMap.keys()).sort((a, b) => {
+            const semverCompare = (v1: string, v2: string): number => {
+                const parse = (v: string) => v.split('.').map(Number);
+                const [a1, a2, a3] = parse(v1);
+                const [b1, b2, b3] = parse(v2);
+                return a1 - b1 || a2 - b2 || a3 - b3;
+            };
+            return semverCompare(b, a); // reverse order
+        });
     }
 
     public getModulesByVersion(version: string): ModuleResult[] {
-        return this.dataMap.get(version) || [];
+        const modules = this.dataMap.get(version) || [];
+        return modules.sort((a, b) => a.moduleId.fileName.localeCompare(b.moduleId.fileName));
     }
 
     public getModuleById(version: string, moduleId: string): ModuleResult | undefined {

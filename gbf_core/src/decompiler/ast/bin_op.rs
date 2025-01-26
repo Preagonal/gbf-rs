@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 
 use super::AstKind;
 use super::{expr::ExprKind, AstNodeError};
-use crate::decompiler::ast::literal::LiteralNode;
 use crate::decompiler::ast::AstVisitable;
 use crate::define_ast_enum_type;
 
@@ -31,6 +30,7 @@ define_ast_enum_type! {
         ShiftRight => ">>",
         In => "in",
         Join => "@",
+        Power => "^"
     }
 }
 
@@ -64,23 +64,7 @@ impl BinaryOperationNode {
         rhs: Box<ExprKind>,
         op_type: BinOpType,
     ) -> Result<Self, AstNodeError> {
-        Self::validate_operand(&lhs)?;
-        Self::validate_operand(&rhs)?;
-
         Ok(Self { lhs, rhs, op_type })
-    }
-
-    fn validate_operand(expr: &ExprKind) -> Result<(), AstNodeError> {
-        // Most expressions are ok except for string literals.
-        if let ExprKind::Literal(LiteralNode::String(_)) = expr {
-            return Err(AstNodeError::InvalidOperand(
-                "BinaryOperationNode".to_string(),
-                "Unsupported operand type".to_string(),
-                vec!["LiteralNode".to_string()],
-                format!("{:?}", expr),
-            ));
-        }
-        Ok(())
     }
 }
 
@@ -99,7 +83,7 @@ impl AstVisitable for BinaryOperationNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{emit, new_bin_op, new_id, new_str};
+    use crate::decompiler::ast::{emit, new_bin_op, new_id};
 
     use super::*;
 
@@ -133,19 +117,6 @@ mod tests {
         assert_eq!(a, b);
         assert_ne!(a, c);
         assert_ne!(a, d);
-        Ok(())
-    }
-
-    #[test]
-    fn test_bin_op_validate_operand() -> Result<(), AstNodeError> {
-        let a = new_bin_op(new_id("a"), new_id("b"), BinOpType::Add);
-        let b = new_bin_op(new_id("a"), new_str("string"), BinOpType::Add);
-        let c = new_bin_op(new_str("string"), new_id("b"), BinOpType::Add);
-
-        assert!(a.is_ok());
-        assert!(b.is_err());
-        assert!(c.is_err());
-
         Ok(())
     }
 }

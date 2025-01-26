@@ -18,7 +18,7 @@ pub enum SvgRef {
     Key(String),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct GbfFunctionResult {
     /// The GBF version used to decomplie the module.
     pub gbf_version: String,
@@ -45,7 +45,7 @@ pub struct GbfFunctionResult {
     pub decompile_time: Duration,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct GbfModuleResult {
     /// The GBF version used to decomplie the module.
     pub gbf_version: String,
@@ -66,7 +66,7 @@ pub struct GbfModuleResult {
     pub decompile_success: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct GbfSuiteResult {
     /// The GBF version used to decomplie the module.
     pub gbf_version: String,

@@ -1,8 +1,10 @@
 #![deny(missing_docs)]
 
+use std::backtrace::Backtrace;
+
 use crate::{
     decompiler::{
-        ast::{assignable::AssignableKind, member_access, statement},
+        ast::{assignable::AssignableKind, new_array_access, new_assignment, new_member_access},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -27,7 +29,13 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 let rhs = context.pop_assignable()?;
                 let lhs = context.pop_assignable()?;
 
-                let mut ma: AssignableKind = member_access(lhs, rhs)?.into();
+                let mut ma: AssignableKind = new_member_access(lhs, rhs)
+                    .map_err(|e| FunctionDecompilerError::AstNodeError {
+                        source: e,
+                        context: context.get_error_context(),
+                        backtrace: Backtrace::capture(),
+                    })?
+                    .into();
                 let ver = context
                     .ssa_context
                     .current_version_of_or_new(&ma.id_string());
@@ -41,16 +49,25 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 // an assignment bumps the version of the lhs
                 let ver = context.ssa_context.new_ssa_version_for(&lhs.id_string());
                 lhs.set_ssa_version(ver);
-                let stmt = statement(lhs, rhs);
+                let stmt = new_assignment(lhs, rhs);
 
                 Ok(ProcessedInstructionBuilder::new()
                     .push_to_region(stmt.into())
                     .build())
             }
-            _ => Err(FunctionDecompilerError::UnimplementedOpcode(
-                instruction.opcode,
-                context.current_block_id.unwrap(),
-            )),
+            Opcode::AssignArrayIndex => {
+                let index = context.pop_expression()?;
+                let arr = context.pop_assignable()?;
+
+                let array_access = new_array_access(arr, index);
+
+                context.push_one_node(array_access.into())?;
+                Ok(ProcessedInstructionBuilder::new().build())
+            }
+            _ => Err(FunctionDecompilerError::UnimplementedOpcode {
+                context: context.get_error_context(),
+                backtrace: Backtrace::capture(),
+            }),
         }
     }
 }

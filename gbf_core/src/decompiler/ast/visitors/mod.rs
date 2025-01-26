@@ -1,9 +1,9 @@
 #![deny(missing_docs)]
 
 use super::{
-    assignable::AssignableKind, bin_op::BinaryOperationNode, expr::ExprKind,
-    identifier::IdentifierNode, literal::LiteralNode, member_access::MemberAccessNode,
-    meta::MetaNode, statement::StatementNode, unary_op::UnaryOperationNode, AstKind,
+    assignable::AssignableKind, assignment::AssignmentNode, bin_op::BinaryOperationNode,
+    expr::ExprKind, identifier::IdentifierNode, literal::LiteralNode,
+    member_access::MemberAccessNode, meta::MetaNode, unary_op::UnaryOperationNode, AstKind,
 };
 
 /// Represents a visitor for the AST.
@@ -16,7 +16,9 @@ pub trait AstVisitor {
     /// Visits an AstNode
     fn visit_node(&mut self, node: &AstKind);
     /// Visits a statement node.
-    fn visit_statement(&mut self, node: &StatementNode);
+    fn visit_statement(&mut self, node: &super::statement::StatementKind);
+    /// Visits a assignment node.
+    fn visit_assignment(&mut self, node: &AssignmentNode);
     /// Visits an expression node.
     fn visit_expr(&mut self, node: &ExprKind);
     /// Visits an assignable expression node.
@@ -35,8 +37,16 @@ pub trait AstVisitor {
     fn visit_meta(&mut self, node: &MetaNode);
     /// Visits a function call node.
     fn visit_function_call(&mut self, node: &super::func_call::FunctionCallNode);
+    /// Visits an array node.
+    fn visit_array(&mut self, node: &super::array::ArrayNode);
+    /// Visits an array access node.
+    fn visit_array_access(&mut self, node: &super::array_access::ArrayAccessNode);
     /// Visits a function node.
     fn visit_function(&mut self, node: &super::function::FunctionNode);
     /// Visits a return node.
     fn visit_return(&mut self, node: &super::ret::ReturnNode);
+    /// Visits a block node.
+    fn visit_block(&mut self, node: &super::block::BlockNode);
+    /// Visits a control flow node
+    fn visit_control_flow(&mut self, node: &super::control_flow::ControlFlowNode);
 }

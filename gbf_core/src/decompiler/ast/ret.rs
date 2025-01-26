@@ -3,11 +3,13 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{expr::ExprKind, visitors::AstVisitor, AstKind, AstVisitable};
+use super::{
+    expr::ExprKind, statement::StatementKind, visitors::AstVisitor, AstKind, AstVisitable,
+};
 
 /// Represents a return node in the AST, such as `return 5`.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
-#[convert_to(AstKind::Return)]
+#[convert_to(StatementKind::Return, AstKind::Statement)]
 pub struct ReturnNode {
     /// The value to return.
     pub ret: Box<ExprKind>,

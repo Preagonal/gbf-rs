@@ -4,14 +4,16 @@ use super::{
     emit_context::{EmitContext, EmitVerbosity, IndentStyle},
     AstVisitor,
 };
-use crate::decompiler::ast::meta::MetaNode;
-use crate::decompiler::ast::statement::StatementNode;
-use crate::decompiler::ast::unary_op::UnaryOperationNode;
-use crate::decompiler::ast::{assignable::AssignableKind, expr::ExprKind};
+use crate::decompiler::ast::{
+    assignable::AssignableKind, control_flow::ControlFlowType, expr::ExprKind,
+};
+use crate::decompiler::ast::{assignment::AssignmentNode, statement::StatementKind};
 use crate::decompiler::ast::{
     bin_op::{BinOpType, BinaryOperationNode},
     func_call::FunctionCallNode,
 };
+use crate::decompiler::ast::{block::BlockNode, meta::MetaNode};
+use crate::decompiler::ast::{control_flow::ControlFlowNode, unary_op::UnaryOperationNode};
 use crate::decompiler::ast::{function::FunctionNode, literal::LiteralNode};
 use crate::decompiler::ast::{member_access::MemberAccessNode, ret::ReturnNode};
 use crate::decompiler::ast::{AstKind, AstVisitable};
@@ -47,16 +49,27 @@ impl AstVisitor for Gs2Emitter {
             AstKind::Meta(meta) => meta.accept(self),
             AstKind::Statement(stmt) => stmt.accept(self),
             AstKind::Function(func) => func.accept(self),
-            AstKind::Return(ret) => ret.accept(self),
-            AstKind::Empty => {}
+            AstKind::Block(block) => block.accept(self),
+            AstKind::ControlFlow(control_flow) => control_flow.accept(self),
         }
     }
-    fn visit_statement(&mut self, stmt_node: &StatementNode) {
-        // Step 0: Print the whitespace
-        let indent_level = self.context.indent;
-        for _ in 0..indent_level {
-            self.output.push(' ');
+
+    fn visit_statement(&mut self, node: &StatementKind) {
+        // Step 1: Visit the statement
+        match node {
+            StatementKind::Assignment(assignment) => {
+                assignment.accept(self);
+            }
+            StatementKind::Return(ret) => {
+                ret.accept(self);
+            }
         }
+
+        // Step 2: Add a semicolon to the end of the statement
+        self.output.push(';');
+    }
+
+    fn visit_assignment(&mut self, stmt_node: &AssignmentNode) {
         // Step 1: Visit and emit the LHS
         stmt_node.lhs.accept(self);
         let lhs_str = self.output.clone();
@@ -77,15 +90,14 @@ impl AstVisitor for Gs2Emitter {
                         {
                             if *num == 1 {
                                 // Emit increment (++)
-                                self.output.push_str(&format!("{}++;", lhs_str));
+                                self.output.push_str(&format!("{}++", lhs_str));
                                 return;
                             } else {
                                 // Emit compound assignment (+=)
                                 bin_op_node.rhs.accept(self); // Visit the RHS to get the formatted number
                                 let rhs_str = self.output.clone();
                                 self.output.clear();
-                                self.output
-                                    .push_str(&format!("{} += {};", lhs_str, rhs_str));
+                                self.output.push_str(&format!("{} += {}", lhs_str, rhs_str));
                                 return;
                             }
                         }
@@ -97,15 +109,14 @@ impl AstVisitor for Gs2Emitter {
                         {
                             if *num == 1 {
                                 // Emit decrement (--)
-                                self.output.push_str(&format!("{}--;", lhs_str));
+                                self.output.push_str(&format!("{}--", lhs_str));
                                 return;
                             } else {
                                 // Emit compound assignment (-=)
                                 bin_op_node.rhs.accept(self); // Visit the RHS to get the formatted number
                                 let rhs_str = self.output.clone();
                                 self.output.clear();
-                                self.output
-                                    .push_str(&format!("{} -= {};", lhs_str, rhs_str));
+                                self.output.push_str(&format!("{} -= {}", lhs_str, rhs_str));
                                 return;
                             }
                         }
@@ -124,7 +135,7 @@ impl AstVisitor for Gs2Emitter {
         self.output.clear();
 
         self.context = prev_context; // Restore the context
-        self.output.push_str(&format!("{} = {};", lhs_str, rhs_str));
+        self.output.push_str(&format!("{} = {}", lhs_str, rhs_str));
     }
 
     fn visit_expr(&mut self, node: &ExprKind) {
@@ -134,6 +145,7 @@ impl AstVisitor for Gs2Emitter {
             ExprKind::BinOp(bin_op) => bin_op.accept(self),
             ExprKind::UnaryOp(unary_op) => unary_op.accept(self),
             ExprKind::FunctionCall(func_call) => func_call.accept(self),
+            ExprKind::Array(array) => array.accept(self),
         }
     }
 
@@ -158,7 +170,35 @@ impl AstVisitor for Gs2Emitter {
                     }
                 }
             }
+            AssignableKind::ArrayAccess(array_access) => array_access.accept(self),
         }
+    }
+
+    fn visit_array(&mut self, node: &crate::decompiler::ast::array::ArrayNode) {
+        self.output.push('{');
+        for (i, elem) in node.elements.iter().enumerate() {
+            elem.accept(self);
+            if i < node.elements.len() - 1 {
+                self.output.push_str(", ");
+            }
+        }
+        self.output.push('}');
+    }
+
+    fn visit_array_access(&mut self, node: &crate::decompiler::ast::array_access::ArrayAccessNode) {
+        // Visit and emit the array
+        node.arr.accept(self);
+        let array_str = self.output.clone(); // Capture emitted array
+        self.output.clear();
+
+        // Visit and emit the index
+        node.index.accept(self);
+        let index_str = self.output.clone(); // Capture emitted index
+        self.output.clear();
+
+        // Combine the array and index with square brackets for array access
+        self.output
+            .push_str(&format!("{}[{}]", array_str, index_str));
     }
 
     fn visit_bin_op(&mut self, node: &BinaryOperationNode) {
@@ -300,7 +340,7 @@ impl AstVisitor for Gs2Emitter {
         if name.is_none() {
             // Just emit the function body if there is no name since we're
             // in the entry point function
-            for stmt in node.body() {
+            for stmt in node.body().instructions.iter() {
                 stmt.accept(self);
                 self.output.push('\n');
             }
@@ -319,37 +359,79 @@ impl AstVisitor for Gs2Emitter {
         }
         self.output.push(')');
 
-        // Check if we we are using allman or k&r style
-        if self.context.indent_style == IndentStyle::Allman {
-            self.output.push_str("\n{\n");
-        } else {
-            self.output.push_str(" {\n");
-        }
-
-        // Emit the function body, indented
-        let old_context = self.context;
-        self.context = self.context.with_indent();
-        for stmt in node.body() {
-            stmt.accept(self);
-            self.output.push('\n');
-        }
-        self.context = old_context;
-        self.output.push_str("}\n");
+        // Emit the function body, which is a block.
+        node.body().accept(self);
     }
 
     fn visit_return(&mut self, node: &ReturnNode) {
-        // return with indentation
-        for _ in 0..self.context.indent {
-            self.output.push(' ');
-        }
-
         // Emit the return keyword
         self.output.push_str("return ");
 
         // Emit the return value
         node.ret.accept(self);
+    }
 
-        // Emit the semicolon
-        self.output.push(';');
+    fn visit_block(&mut self, node: &BlockNode) {
+        // Emit opening brace
+        if self.context.indent_style == IndentStyle::Allman {
+            self.output.push('\n');
+            self.emit_indent(); // Use a helper to handle indentation
+            self.output.push_str("{\n");
+        } else {
+            self.output.push_str(" {\n"); // Opening brace on the same line
+        }
+
+        // Adjust the context for increased indentation
+        let old_context = self.context;
+        self.context = self.context.with_indent();
+
+        // Emit block instructions
+        if node.instructions.is_empty() {
+            // Handle empty block (e.g., `{}` or `{\n}`)
+            self.emit_indent();
+        } else {
+            for stmt in node.instructions.iter() {
+                self.emit_indent();
+                stmt.accept(self);
+                self.output.push('\n'); // Newline after each statement
+            }
+        }
+
+        // Restore the previous context
+        self.context = old_context;
+
+        // Emit closing brace
+        self.emit_indent(); // Align closing brace with the block's indentation level
+        self.output.push('}');
+    }
+
+    fn visit_control_flow(&mut self, node: &ControlFlowNode) {
+        // Emit the control flow name
+        let name = match node.ty() {
+            ControlFlowType::If => "if",
+            ControlFlowType::Else => "else",
+            ControlFlowType::ElseIf => "else if",
+        };
+
+        self.output.push_str(name);
+
+        // Emit the condition if it exists
+        if let Some(condition) = node.condition() {
+            self.output.push_str(" (");
+            condition.accept(self);
+            self.output.push_str(") ");
+        }
+
+        // Emit the body
+        node.body().accept(self);
+    }
+}
+
+impl Gs2Emitter {
+    /// Emits the current level of indentation based on the context.
+    fn emit_indent(&mut self) {
+        for _ in 0..self.context.indent {
+            self.output.push(' ');
+        }
     }
 }

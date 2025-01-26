@@ -58,12 +58,7 @@ impl MemberAccessNode {
         expr.remove_ssa_version();
         match expr {
             AssignableKind::Identifier(_) | AssignableKind::MemberAccess(_) => Ok(()),
-            _ => Err(AstNodeError::InvalidOperand(
-                "MemberAccessNode".to_string(),
-                "Unsupported operand type".to_string(),
-                vec!["IdentifierNode".to_string(), "MemberAccessNode".to_string()],
-                format!("{:?}", expr),
-            )),
+            _ => Err(AstNodeError::InvalidOperand),
         }
     }
 }
@@ -83,19 +78,19 @@ impl PartialEq for MemberAccessNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{emit, member_access, new_id, AstNodeError};
+    use crate::decompiler::ast::{emit, new_id, new_member_access, AstNodeError};
 
     #[test]
     fn test_member_access_emit() -> Result<(), AstNodeError> {
-        let member = member_access(new_id("object"), new_id("field"))?;
+        let member = new_member_access(new_id("object"), new_id("field"))?;
         assert_eq!(emit(member), "object.field");
         Ok(())
     }
 
     #[test]
     fn test_member_access_nested_emit() -> Result<(), AstNodeError> {
-        let member = member_access(
-            member_access(new_id("object"), new_id("field"))?,
+        let member = new_member_access(
+            new_member_access(new_id("object"), new_id("field"))?,
             new_id("other"),
         )?;
         assert_eq!(emit(member), "object.field.other");
@@ -104,11 +99,11 @@ mod tests {
 
     #[test]
     fn test_member_access_equality() -> Result<(), AstNodeError> {
-        let member1 = member_access(new_id("object"), new_id("field"))?;
-        let member2 = member_access(new_id("object"), new_id("field"))?;
+        let member1 = new_member_access(new_id("object"), new_id("field"))?;
+        let member2 = new_member_access(new_id("object"), new_id("field"))?;
         assert_eq!(member1, member2);
 
-        let member3 = member_access(new_id("object"), new_id("other"))?;
+        let member3 = new_member_access(new_id("object"), new_id("other"))?;
         assert_ne!(member1, member3);
         Ok(())
     }

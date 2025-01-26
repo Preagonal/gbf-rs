@@ -1,8 +1,10 @@
 #![deny(missing_docs)]
 
+use std::backtrace::Backtrace;
+
 use crate::{
     decompiler::{
-        ast::{bin_op::BinOpType, new_bin_op, new_id_with_version, statement},
+        ast::{bin_op::BinOpType, new_bin_op},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -46,22 +48,26 @@ impl OpcodeHandler for BinaryOperationHandler {
             Opcode::ShortCircuitOr => BinOpType::LogicalOr,
             Opcode::In => BinOpType::In,
             Opcode::Join => BinOpType::Join,
+            Opcode::Power => BinOpType::Power,
             _ => {
-                return Err(FunctionDecompilerError::UnimplementedOpcode(
-                    instruction.opcode,
-                    context.current_block_id.unwrap(),
-                ));
+                return Err(FunctionDecompilerError::UnimplementedOpcode {
+                    context: context.get_error_context(),
+                    backtrace: Backtrace::capture(),
+                });
             }
         };
 
-        let op = new_bin_op(lhs, rhs, op_type)?;
-        let var = context.ssa_context.new_ssa_version_for("bin_op");
-        let ssa_id = new_id_with_version("bin_op", var);
-        let stmt = statement(ssa_id.clone(), op);
+        let op =
+            new_bin_op(lhs, rhs, op_type).map_err(|e| FunctionDecompilerError::AstNodeError {
+                source: e,
+                context: context.get_error_context(),
+                backtrace: Backtrace::capture(),
+            })?;
+        // let var = context.ssa_context.new_ssa_version_for("bin_op");
+        // let ssa_id = new_id_with_version("bin_op", var);
+        // let stmt = new_assignment(ssa_id.clone(), op);
+        context.push_one_node(op.into())?;
 
-        Ok(ProcessedInstructionBuilder::new()
-            .ssa_id(ssa_id.into())
-            .push_to_region(stmt.into())
-            .build())
+        Ok(ProcessedInstructionBuilder::new().build())
     }
 }

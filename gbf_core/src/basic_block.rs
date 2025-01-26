@@ -221,6 +221,17 @@ impl fmt::Display for BasicBlockId {
     }
 }
 
+impl Default for BasicBlockId {
+    /// Create a default `BasicBlockId`.
+    fn default() -> Self {
+        Self {
+            index: 0,
+            block_type: BasicBlockType::Normal,
+            address: 0,
+        }
+    }
+}
+
 /// Implement Deref
 impl Deref for BasicBlock {
     type Target = Vec<Instruction>;

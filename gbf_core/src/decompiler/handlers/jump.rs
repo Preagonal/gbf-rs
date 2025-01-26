@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 
+use std::backtrace::Backtrace;
+
 use crate::{
     decompiler::{
         function_decompiler::FunctionDecompilerError,
@@ -29,10 +31,10 @@ impl OpcodeHandler for JumpHandler {
                     .jump_condition(condition)
                     .build())
             }
-            _ => Err(FunctionDecompilerError::UnimplementedOpcode(
-                instruction.opcode,
-                context.current_block_id.unwrap(),
-            )),
+            _ => Err(FunctionDecompilerError::UnimplementedOpcode {
+                context: context.get_error_context(),
+                backtrace: Backtrace::capture(),
+            }),
         }
     }
 }
