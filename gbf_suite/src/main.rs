@@ -13,7 +13,7 @@ use consts::{ExitCode, GBF_SUITE_INPUT_DIR_ENV_VAR};
 use gbf_core::{
     cfg_dot::{CfgDotConfig, DotRenderableGraph},
     decompiler::{
-        ast::visitors::emit_context::{EmitContext, EmitContextBuilder},
+        ast::visitors::emit_context::EmitContextBuilder,
         function_decompiler::{FunctionDecompilerBuilder, FunctionDecompilerErrorDetails},
     },
     module::ModuleBuilder,

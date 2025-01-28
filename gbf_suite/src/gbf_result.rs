@@ -87,7 +87,7 @@ impl GbfModuleDao {
     }
 
     pub fn pk_val(&self) -> String {
-        format!("{}", self.gbf_version)
+        self.gbf_version.to_string()
     }
 }
 
