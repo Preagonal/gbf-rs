@@ -8,10 +8,14 @@ import {
     Select,
     Loader,
     Alert,
+    ActionIcon,
+    rem,
 } from "@mantine/core";
 import { useRouter, usePathname } from "next/navigation";
-import { IconAlertCircle } from "@tabler/icons-react";
+import { IconAlertCircle, IconBook } from "@tabler/icons-react";
 import "./nav.css"; // Import the CSS file
+import Link from "next/link";
+import { DOCS_LINK } from "@/consts";
 
 interface GbfVersion {
     gbfVersion: string;
@@ -206,16 +210,16 @@ export function NavigationBar() {
                 </Button>
 
                 {/* DOCS LINK */}
-                {/* <ActionIcon
+                <ActionIcon
                     color="blue"
                     size={36}
                     radius="xl"
                     component={Link}
-                    href="/docs/gbf_core/"
+                    href={DOCS_LINK}
                     target="_blank"
                 >
                     <IconBook style={{ width: rem(16), height: rem(16) }} />
-                </ActionIcon> */}
+                </ActionIcon>
             </div>
 
             {/* Error Alerts */}

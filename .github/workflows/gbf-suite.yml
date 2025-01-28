@@ -1,14 +1,10 @@
-name: Deploy to GitHub Pages
+name: Run GBF Suite, Build Documentation, and Deploy to GitHub Pages
 
 on:
   push:
     branches:
       - main  # Run on pushes to `main`
       - dev   # Run on pushes to `dev`
-  pull_request:
-    branches:
-      - main  # Run on pull requests targeting `main`
-      - dev   # Run on pull requests targeting `dev`
 permissions:
   id-token: write
   pages: write
@@ -16,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Next.js Project with Rust Docs and GBF Suite
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
@@ -32,36 +28,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Step 4: Install Rust
+      # Step 3: Install Rust
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           override: true
 
-      # Step 5: Run GBF Suite
+      # Step 4: Run GBF Suite
       - name: Run GBF Suite
         env:
           GBF_SUITE_DIR: ./gbf_core/tests/gs2bc/
         run: cargo run --package gbf_suite
-
-      # Step 7: Generate Rust Documentation
-      - name: Build Rust Documentation
-        run: cargo doc --no-deps --workspace
-
-      # Step 10: Upload Build Artifacts
-      - name: Upload Build Artifacts
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: target/doc
-
-  # Deploy job: Publish to GitHub Pages
-  deploy:
-    environment:
-      name: github-pages
-    runs-on: ubuntu-latest
-    needs: build  # This job depends on the "build" job
-
-    steps:
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4

@@ -1,0 +1,47 @@
+name: Deploy docs to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main  # Run on pushes to `main`
+      - dev   # Run on pushes to `dev`
+permissions:
+  id-token: write
+  pages: write
+  contents: read
+
+jobs:
+  build:
+    name: Build Rust docs
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout Repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Install Rust
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      # Step 3: Generate Rust Documentation
+      - name: Build Rust Documentation
+        run: cargo doc --no-deps --workspace
+
+      # Step 4: Upload Build Artifacts
+      - name: Upload Build Artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/doc
+  deploy:
+    environment:
+      name: github-pages
+    runs-on: ubuntu-latest
+    needs: build  # This job depends on the "build" job
+
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
