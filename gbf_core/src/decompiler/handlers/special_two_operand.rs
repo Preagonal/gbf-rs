@@ -65,6 +65,7 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 Ok(ProcessedInstructionBuilder::new().build())
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {
+                opcode: instruction.opcode,
                 context: context.get_error_context(),
                 backtrace: Backtrace::capture(),
             }),

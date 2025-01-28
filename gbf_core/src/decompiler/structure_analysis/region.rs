@@ -6,7 +6,7 @@ use crate::decompiler::ast::visitors::emit_context::{EmitContextBuilder, EmitVer
 use crate::decompiler::ast::visitors::emitter::Gs2Emitter;
 use crate::decompiler::ast::visitors::AstVisitor;
 use crate::decompiler::ast::AstKind;
-use crate::utils::GBF_YELLOW;
+use crate::utils::{html_encode, GBF_GREEN, GBF_YELLOW};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::slice::Iter;
@@ -182,6 +182,22 @@ impl RenderableNode for Region {
         )
         .unwrap();
 
+        // Write the region type as the label.
+        let region_type_str = match self.region_type {
+            RegionType::Linear => "Linear",
+            RegionType::ControlFlow => "ControlFlow",
+            RegionType::Tail => "Tail",
+            RegionType::Inactive => "Inactive",
+        };
+        writeln!(
+            &mut label,
+            r#"{indent}<TR><TD ALIGN="LEFT"><FONT COLOR="{GBF_GREEN}">RegionType: {}</FONT></TD></TR><TR><TD> </TD></TR>"#,
+            region_type_str,
+            GBF_GREEN = GBF_GREEN,
+            indent = indent
+        )
+        .unwrap();
+
         // Render each statement as a table row with indentation.
         for node in &self.nodes {
             // Build a new EmitContext with debug
@@ -193,12 +209,39 @@ impl RenderableNode for Region {
             emitter.visit_node(node);
             let result = emitter.output();
 
+            // split the result by newlines
+            let result = result.split('\n').collect::<Vec<&str>>();
+
+            for line in result {
+                writeln!(
+                    &mut label,
+                    r#"{indent}<TR><TD ALIGN="LEFT"><FONT COLOR="{GBF_YELLOW}">{}</FONT></TD></TR>"#,
+                    html_encode(line),
+                    GBF_YELLOW = GBF_YELLOW,
+                    indent = indent
+                )
+                .unwrap();
+            }
+        }
+
+        // If the region has a condition, render it.
+        if let Some(jump_expr) = &self.jump_expr {
+            // Build a new EmitContext with debug
+            let context = EmitContextBuilder::default()
+                .verbosity(EmitVerbosity::Pretty)
+                .include_ssa_versions(true)
+                .build();
+            let mut emitter = Gs2Emitter::new(context);
+            emitter.visit_expr(jump_expr);
+            let result = emitter.output();
+
             writeln!(
                 &mut label,
-                r##"{indent}    <TR>
-{indent}        <TD ALIGN="LEFT"><FONT COLOR="{GBF_YELLOW}">{}</FONT></TD>
+                r##"{indent}    <TR><TD> </TD></TR><TR>
+{indent}        <TD ALIGN="LEFT"><FONT COLOR="{GBF_GREEN}">JumpExpr: {}</FONT></TD>
 {indent}    </TR>"##,
-                result,
+                html_encode(result),
+                GBF_GREEN = GBF_GREEN,
                 indent = indent
             )
             .unwrap();

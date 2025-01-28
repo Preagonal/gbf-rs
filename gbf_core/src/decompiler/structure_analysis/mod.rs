@@ -13,7 +13,7 @@ use serde::Serialize;
 
 use crate::{
     cfg_dot::{CfgDot, CfgDotConfig, DotRenderableGraph, NodeResolver},
-    utils::{GBF_BLUE, STRUCTURE_ANALYSIS_MAX_ITERATIONS},
+    utils::{GBF_GREEN, GBF_RED, GBF_YELLOW},
 };
 
 use super::ast::AstKind;
@@ -60,11 +60,10 @@ pub enum StructureAnalysisError {
     },
 
     /// When we have reached the maximum number of iterations.
-    #[error(
-        "Maximum number of iterations reached: {0}",
-        STRUCTURE_ANALYSIS_MAX_ITERATIONS
-    )]
+    #[error("Maximum number of iterations reached: {max_iterations}")]
     MaxIterationsReached {
+        /// The maximum number of iterations.
+        max_iterations: usize,
         /// The error backtrace.
         #[serde(skip)]
         backtrace: Backtrace,
@@ -90,6 +89,19 @@ pub enum StructureAnalysisError {
     },
 }
 
+impl StructureAnalysisError {
+    /// Gets the backtrace of the error.
+    pub fn backtrace(&self) -> &Backtrace {
+        match self {
+            StructureAnalysisError::RegionNotFound { backtrace, .. } => backtrace,
+            StructureAnalysisError::EntryRegionNotFound { backtrace } => backtrace,
+            StructureAnalysisError::MaxIterationsReached { backtrace, .. } => backtrace,
+            StructureAnalysisError::ExpectedConditionNotFound { backtrace } => backtrace,
+            StructureAnalysisError::Other { backtrace, .. } => backtrace,
+        }
+    }
+}
+
 /// The type of control flow edge in the CFG.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ControlFlowEdgeType {
@@ -106,14 +118,29 @@ pub struct StructureAnalysis {
     regions: Vec<Region>,
     /// The region graph of the function
     region_graph: DiGraph<RegionId, ControlFlowEdgeType>,
+    /// If we should run in debug mode
+    debug_mode: bool,
+    /// The debug snapshots, if debug mode is enabled
+    snapshots: Vec<String>,
+    /// The maximum number of iterations for the structure analysis
+    max_iterations: usize,
+    /// The region to highlight, if any, for the snapshot
+    region_to_highlight: Option<RegionId>,
+    /// If we marked a region to reduce
+    is_marked: bool,
 }
 
 impl StructureAnalysis {
     /// Creates a new `StructureAnalysis` instance.
-    pub fn new() -> Self {
+    pub fn new(debug_mode: bool, structure_max_iterations: usize) -> Self {
         Self {
             regions: Vec::new(),
             region_graph: DiGraph::new(),
+            debug_mode,
+            snapshots: Vec::new(),
+            max_iterations: structure_max_iterations,
+            region_to_highlight: None,
+            is_marked: false,
         }
     }
 
@@ -192,13 +219,17 @@ impl StructureAnalysis {
 
     /// Executes the control flow analysis.
     pub fn execute(&mut self) -> Result<(), StructureAnalysisError> {
+        // Before we start, capture a snapshot of the CFG
+        self.capture_snapshot(None);
+
         let mut iterations = 0;
 
         // while the region count is still above 1
         while self.region_graph.node_count() > 1 {
             // if we have reached the maximum number of iterations
-            if iterations > STRUCTURE_ANALYSIS_MAX_ITERATIONS {
+            if iterations > self.max_iterations {
                 return Err(StructureAnalysisError::MaxIterationsReached {
+                    max_iterations: self.max_iterations,
                     backtrace: Backtrace::capture(),
                 });
             }
@@ -220,11 +251,16 @@ impl StructureAnalysis {
                     continue;
                 }
                 loop {
+                    // Indicate that the region has not been reduced yet
+                    self.is_marked = false;
+
                     // Reduce the region
                     let did_reduce = self.reduce_acyclic_region(region_id)?;
 
                     if !did_reduce {
                         break;
+                    } else {
+                        debug_assert!(self.is_marked);
                     }
                 }
             }
@@ -399,6 +435,43 @@ impl StructureAnalysis {
 
         Ok(())
     }
+
+    /// Gets the debug snapshots, where each snapshot is a Graphviz representation of the CFG.
+    pub fn get_snapshots(&self) -> Result<&Vec<String>, StructureAnalysisError> {
+        if !self.debug_mode {
+            return Err(StructureAnalysisError::Other {
+                message: "Debug mode is not enabled".to_string(),
+                backtrace: Backtrace::capture(),
+            });
+        }
+
+        Ok(&self.snapshots)
+    }
+
+    /// This function should always be called before reducing a region.
+    pub fn before_reduce(&mut self, region_id: RegionId) {
+        self.capture_region_snapshot(region_id);
+        self.is_marked = true;
+    }
+
+    /// Capture a snapshot of the CFG.
+    pub fn capture_snapshot(&mut self, region_to_highlight: Option<RegionId>) {
+        if !self.debug_mode {
+            return;
+        }
+        self.region_to_highlight = region_to_highlight;
+        let dot = self.render_dot(CfgDotConfig::default());
+        self.snapshots.push(dot);
+        self.region_to_highlight = None;
+    }
+
+    /// Capture a snapshot of the CFG.
+    ///
+    /// # Arguments
+    /// - `region_to_highlight`: The region to highlight in the snapshot (e.g. region being manipulated)
+    pub fn capture_region_snapshot(&mut self, region_to_highlight: RegionId) {
+        self.capture_snapshot(Some(region_to_highlight));
+    }
 }
 
 // Private impls
@@ -448,9 +521,28 @@ impl NodeResolver for StructureAnalysis {
         self.regions.get(region_id.index)
     }
 
-    fn resolve_edge_color(&self, _: NodeIndex, _: NodeIndex) -> String {
-        // TODO: Change based on CFG patterns
-        GBF_BLUE.to_string()
+    fn resolve_edge_color(&self, n1: NodeIndex, n2: NodeIndex) -> String {
+        // Get the edge weight
+        let edge = self.region_graph.find_edge(n1, n2);
+        if let Some(edge) = edge {
+            match self.region_graph.edge_weight(edge) {
+                Some(ControlFlowEdgeType::Branch) => GBF_GREEN.to_string(),
+                Some(ControlFlowEdgeType::Fallthrough) => GBF_RED.to_string(),
+                None => GBF_RED.to_string(),
+            }
+        } else {
+            GBF_YELLOW.to_string()
+        }
+    }
+
+    fn resolve_border_color(&self, index: NodeIndex) -> Option<String> {
+        let region_id = self.get_region_id(index).ok()?;
+
+        if self.region_to_highlight == Some(region_id) {
+            Some(GBF_GREEN.to_string())
+        } else {
+            None
+        }
     }
 }
 
@@ -461,7 +553,7 @@ mod tests {
 
     #[test]
     fn test_remove_edge() -> Result<(), StructureAnalysisError> {
-        let mut structure_analysis = StructureAnalysis::new();
+        let mut structure_analysis = StructureAnalysis::new(false, 100);
 
         let entry_region = structure_analysis.add_region(RegionType::Linear);
         let region_1 = structure_analysis.add_region(RegionType::Linear);

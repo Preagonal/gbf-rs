@@ -21,6 +21,11 @@ pub trait NodeResolver {
 
     /// Resolves the color of the edge between two nodes.
     fn resolve_edge_color(&self, source: NodeIndex, target: NodeIndex) -> String;
+
+    /// Resolves the color of the node's border, if any.
+    fn resolve_border_color(&self, _: NodeIndex) -> Option<String> {
+        None
+    }
 }
 
 /// Trait to print the graph in DOT format. The must also implement `NodeResolver`.
@@ -51,7 +56,7 @@ impl Default for CfgDotConfig {
         Self {
             rankdir: "TB".to_string(),
             edge_color: "#ffffff".to_string(),
-            node_shape: "plaintext".to_string(),
+            node_shape: "box".to_string(),
             fontname: "Courier".to_string(),
             fontsize: "12".to_string(),
             fillcolor: GBF_DARK_GRAY.to_string(),
@@ -175,11 +180,20 @@ impl CfgDot {
         for (node_index, _node_data) in graph.node_references() {
             // Attempt to resolve the node data. If it's `None`, skip it.
             if let Some(data) = resolver.resolve(node_index) {
+                let border_color = resolver.resolve_border_color(node_index);
                 // Start building up the node's DOT string line-by-line.
+                let border_color_str = border_color.clone().unwrap_or("none".to_string());
+                let border_width = if border_color.is_some() {
+                    ", penwidth=2"
+                } else {
+                    ""
+                };
                 dot.push_str(&format!(
-                    "    N{} [style=filled, fillcolor=\"{}\", label=<\n{}\n    >];\n",
+                    "    N{} [style=filled, fillcolor=\"{}\", color=\"{}\"{}, label=<\n{}\n    >];\n",
                     node_index.index(),
                     self.config.fillcolor,
+                    border_color_str,
+                    border_width,
                     data.render_node(8)
                 ));
             }

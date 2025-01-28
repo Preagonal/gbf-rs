@@ -1,0 +1,51 @@
+/* navbar.css */
+
+/* Container with dark background and padding */
+.navbar-container {
+  background-color: #444;
+  padding: 1rem;
+}
+
+/* Flex wrapper for the content */
+.navbar-flex {
+  display: flex;
+  flex-wrap: wrap; /* allows items to go to next line if there's no space */
+  gap: 1rem;       /* default gap for larger screens */
+  align-items: center;
+}
+
+/* Title gets a minimum width so it doesn't shrink too small */
+.navbar-title {
+  min-width: 80px;
+}
+
+/* For the narrower version select */
+.navbar-version {
+  max-width: 150px;
+}
+
+/* Modules and function selects can grow to fill space */
+.navbar-module,
+.navbar-function {
+  flex: 1 1 150px;
+  min-width: 150px;
+}
+
+/* 
+  On smaller screens (below 48em), 
+  stack items vertically and use a smaller gap to reduce tall blank space 
+*/
+@media (max-width: 48em) {
+  .navbar-flex {
+    flex-direction: column;
+    align-items: stretch; /* so selects expand to full width if desired */
+    gap: 0.75rem;         /* smaller gap so there's not a huge space */
+  }
+
+  .navbar-version,
+  .navbar-module,
+  .navbar-function {
+    max-width: 100%; /* let them fill the container width */
+    flex: none;      /* disable flex growth for a simple stacked layout */
+  }
+}

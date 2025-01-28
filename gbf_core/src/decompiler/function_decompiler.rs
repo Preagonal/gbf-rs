@@ -5,6 +5,7 @@ use crate::function::{Function, FunctionError};
 use crate::instruction::Instruction;
 use crate::opcode::Opcode;
 use crate::operand::OperandError;
+use crate::utils::STRUCTURE_ANALYSIS_MAX_ITERATIONS;
 use serde::Serialize;
 use std::backtrace::Backtrace;
 use std::collections::HashMap;
@@ -97,8 +98,10 @@ pub enum FunctionDecompilerError {
     },
 
     /// Unimplemented Opcode
-    #[error("Unimplemented Opcode.")]
+    #[error("Unimplemented Opcode: {opcode}")]
     UnimplementedOpcode {
+        /// The opcode that is unimplemented
+        opcode: Opcode,
         /// The context of the error
         context: Box<FunctionDecompilerErrorContext>,
         /// The backtrace of the error
@@ -157,6 +160,8 @@ pub trait FunctionDecompilerErrorDetails {
     fn context(&self) -> &FunctionDecompilerErrorContext;
     /// Get the backtrace for the error
     fn backtrace(&self) -> &Backtrace;
+    /// Get the type for the error
+    fn error_type(&self) -> String;
 }
 
 /// The context for a function decompiler error
@@ -170,11 +175,53 @@ pub struct FunctionDecompilerErrorContext {
     pub current_ast_node_stack: Vec<ExecutionFrame>,
 }
 
-// TODO: Map instructions to a reference value (for usage with loop variables, etc.)
-// TODO: We should call loop variables instruction references (InstrRef)
-// TODO: We should have an AST pass that identifies variables with identifiers that are
-// TODO: the same, and wrap them in an InstrRef (for MemberAccess & Identifier) since
-// TODO: this will help further analysis
+/// The builder for a function decompiler
+pub struct FunctionDecompilerBuilder {
+    function: Function,
+    emit_context: EmitContext,
+    structure_debug_mode: bool,
+    structure_analysis_max_iterations: usize,
+}
+
+impl FunctionDecompilerBuilder {
+    /// Create a new function decompiler builder
+    pub fn new(function: Function) -> Self {
+        FunctionDecompilerBuilder {
+            function,
+            emit_context: EmitContext::default(),
+            structure_debug_mode: false,
+            structure_analysis_max_iterations: STRUCTURE_ANALYSIS_MAX_ITERATIONS,
+        }
+    }
+
+    /// Set the emit context for the function decompiler
+    pub fn emit_context(mut self, emit_context: EmitContext) -> Self {
+        self.emit_context = emit_context;
+        self
+    }
+
+    /// Set the structure debug mode for the function decompiler. These keeps track
+    /// of the structure of the function as it is being analyzed with StructureAnalysis.
+    pub fn structure_debug_mode(mut self, structure_debug_mode: bool) -> Self {
+        self.structure_debug_mode = structure_debug_mode;
+        self
+    }
+
+    /// Sets the maximum number of iterations for the structure analysis
+    pub fn structure_analysis_max_iterations(mut self, max_iterations: usize) -> Self {
+        self.structure_analysis_max_iterations = max_iterations;
+        self
+    }
+
+    /// Build the function decompiler
+    pub fn build(self) -> FunctionDecompiler {
+        FunctionDecompiler::new(
+            self.function,
+            self.structure_debug_mode,
+            self.structure_analysis_max_iterations,
+        )
+    }
+}
 
 /// A struct to hold the state of a function decompiler
 pub struct FunctionDecompiler {
@@ -188,6 +235,8 @@ pub struct FunctionDecompiler {
     function_parameters: AstVec<ExprKind>,
     /// The structure analysis
     struct_analysis: StructureAnalysis,
+    /// Whether the analysis has been run
+    did_run_analysis: bool,
 }
 
 impl FunctionDecompiler {
@@ -195,19 +244,26 @@ impl FunctionDecompiler {
     ///
     /// # Arguments
     /// - `function`: The function to analyze and decompile.
+    /// - `structure_debug_mode`: Whether to enable debug mode for the structure analysis.
+    /// - `structure_max_iterations`: The maximum number of iterations for the structure analysis.
     ///
     /// # Returns
     /// - A newly constructed `FunctionDecompiler` instance.
     ///
     /// # Errors
     /// - `FunctionDecompilerError` if there is an error while decompiling the function.
-    pub fn new(function: Function) -> Self {
+    fn new(
+        function: Function,
+        structure_debug_mode: bool,
+        structure_max_iterations: usize,
+    ) -> Self {
         FunctionDecompiler {
             function,
             block_to_region: HashMap::new(),
             context: None,
             function_parameters: Vec::<ExprKind>::new().into(),
-            struct_analysis: StructureAnalysis::new(),
+            struct_analysis: StructureAnalysis::new(structure_debug_mode, structure_max_iterations),
+            did_run_analysis: false,
         }
     }
 }
@@ -233,6 +289,7 @@ impl FunctionDecompiler {
         let entry_block_id = self.function.get_entry_basic_block().id;
         let entry_region_id = self.block_to_region.get(&entry_block_id).unwrap();
 
+        self.did_run_analysis = true;
         self.struct_analysis.execute().map_err(|e| {
             FunctionDecompilerError::StructureAnalysisError {
                 source: Box::new(e),
@@ -262,6 +319,18 @@ impl FunctionDecompiler {
         output.push('\n');
 
         Ok(output)
+    }
+
+    /// Get the structure analysis snapshots
+    pub fn get_structure_analysis_snapshots(&self) -> Result<Vec<String>, FunctionDecompilerError> {
+        self.struct_analysis
+            .get_snapshots()
+            .map_err(|e| FunctionDecompilerError::StructureAnalysisError {
+                source: Box::new(e),
+                context: self.context.as_ref().unwrap().get_error_context(),
+                backtrace: Backtrace::capture(),
+            })
+            .cloned()
     }
 
     fn generate_regions(&mut self) -> Result<(), FunctionDecompilerError> {
@@ -469,8 +538,34 @@ impl FunctionDecompilerErrorDetails for FunctionDecompilerError {
             FunctionDecompilerError::ExecutionStackEmpty { backtrace, .. } => backtrace,
             FunctionDecompilerError::UnexpectedExecutionState { backtrace, .. } => backtrace,
             FunctionDecompilerError::Other { backtrace, .. } => backtrace,
-            FunctionDecompilerError::StructureAnalysisError { backtrace, .. } => backtrace,
+            FunctionDecompilerError::StructureAnalysisError { source, .. } => source.backtrace(),
             FunctionDecompilerError::RegisterNotFound { backtrace, .. } => backtrace,
+        }
+    }
+
+    fn error_type(&self) -> String {
+        match self {
+            FunctionDecompilerError::FunctionError { .. } => "FunctionError".to_string(),
+            FunctionDecompilerError::OperandError { .. } => "OperandError".to_string(),
+            FunctionDecompilerError::AstNodeError { .. } => "AstNodeError".to_string(),
+            FunctionDecompilerError::InstructionMustHaveOperand { .. } => {
+                "InstructionMustHaveOperand".to_string()
+            }
+            FunctionDecompilerError::UnexpectedNodeType { .. } => "UnexpectedNodeType".to_string(),
+            FunctionDecompilerError::UnimplementedOpcode { .. } => {
+                "UnimplementedOpcode".to_string()
+            }
+            FunctionDecompilerError::ExecutionStackEmpty { .. } => {
+                "ExecutionStackEmpty".to_string()
+            }
+            FunctionDecompilerError::UnexpectedExecutionState { .. } => {
+                "UnexpectedExecutionState".to_string()
+            }
+            FunctionDecompilerError::Other { .. } => "Other".to_string(),
+            FunctionDecompilerError::StructureAnalysisError { .. } => {
+                "StructureAnalysisError".to_string()
+            }
+            FunctionDecompilerError::RegisterNotFound { .. } => "RegisterNotFound".to_string(),
         }
     }
 }

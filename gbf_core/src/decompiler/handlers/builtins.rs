@@ -339,6 +339,7 @@ impl OpcodeHandler for BuiltinsHandler {
             }
             _ => {
                 return Err(FunctionDecompilerError::UnimplementedOpcode {
+                    opcode: instruction.opcode,
                     context: context.get_error_context(),
                     backtrace: Backtrace::capture(),
                 })
