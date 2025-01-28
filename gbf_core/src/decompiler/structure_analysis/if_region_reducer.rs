@@ -123,6 +123,9 @@ impl RegionReducer for IfRegionReducer {
         // Step 4: Handle the different cases
         if let Some(successor) = branch_linear_successor {
             if successor == fallthrough_region_id {
+                // Call the before_reduce hook
+                analysis.before_reduce(region_id);
+
                 // Branch linear successor aligns with fallthrough region
                 let branch_statements =
                     IfRegionReducer::get_region_nodes(analysis, branch_region_id)?;
@@ -136,6 +139,9 @@ impl RegionReducer for IfRegionReducer {
 
         if let Some(successor) = fallthrough_linear_successor {
             if successor == branch_region_id {
+                // Call the before_reduce hook
+                analysis.before_reduce(region_id);
+
                 // Fallthrough linear successor aligns with branch region
                 let fallthrough_statements =
                     IfRegionReducer::get_region_nodes(analysis, fallthrough_region_id)?;
@@ -152,6 +158,9 @@ impl RegionReducer for IfRegionReducer {
         {
             // Create if / else statement
             if branch_successor == fallthrough_successor {
+                // Call the before_reduce hook
+                analysis.before_reduce(region_id);
+
                 // Both linear successors are the same
                 let branch_statements =
                     IfRegionReducer::get_region_nodes(analysis, branch_region_id)?;
@@ -191,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_if_reduce() -> Result<(), StructureAnalysisError> {
-        let mut structure_analysis = StructureAnalysis::new();
+        let mut structure_analysis = StructureAnalysis::new(false, 100);
 
         let entry_region = structure_analysis.add_region(RegionType::ControlFlow);
         let region_1 = structure_analysis.add_region(RegionType::Linear);
@@ -260,7 +269,7 @@ mod tests {
 
     #[test]
     fn test_if_else_case() -> Result<(), StructureAnalysisError> {
-        let mut structure_analysis = StructureAnalysis::new();
+        let mut structure_analysis = StructureAnalysis::new(false, 100);
 
         let entry_region = structure_analysis.add_region(RegionType::ControlFlow);
         let region_1 = structure_analysis.add_region(RegionType::Linear);

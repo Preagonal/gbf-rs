@@ -71,6 +71,9 @@ impl RegionReducer for LinearRegionReducer {
             return Ok(false);
         }
 
+        // Call the before_reduce hook
+        analysis.before_reduce(region_id);
+
         self.merge_regions(analysis, succ, region_id)?;
 
         analysis.remove_edge(region_id, succ)?;
@@ -90,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_linear_reduce() -> Result<(), StructureAnalysisError> {
-        let mut structure_analysis = StructureAnalysis::new();
+        let mut structure_analysis = StructureAnalysis::new(false, 100);
 
         let entry_region = structure_analysis.add_region(RegionType::Linear);
         let region_1 = structure_analysis.add_region(RegionType::Linear);

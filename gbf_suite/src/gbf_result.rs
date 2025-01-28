@@ -1,56 +1,74 @@
 use std::time::Duration;
 
-use gbf_core::{
-    decompiler::function_decompiler::FunctionDecompilerError, module::ModuleError,
-    utils::Gs2BytecodeAddress,
-};
+use gbf_core::utils::Gs2BytecodeAddress;
 use serde::{Deserialize, Serialize};
 
+/// The dynamodb entry for a GraphViz dot file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SvgCfgType {
-    SvgText,
-    SvgUrl,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SvgRef {
-    Text(String),
-    Key(String),
-}
-
-#[derive(Debug, Serialize)]
-pub struct GbfFunctionResult {
-    /// The GBF version used to decomplie the module.
-    pub gbf_version: String,
-
-    /// The module ID of the module this function belongs to.
-    pub module_id: String,
-
-    /// The name of the function.
-    pub function_name: Option<String>,
-
-    /// The address of the function (can be used as a unique identifier).
-    pub function_address: Gs2BytecodeAddress,
-
-    /// The SVG representation of the CFG.
-    pub svg_cfg: SvgRef,
-
-    /// If the decompilation was successful.
-    pub decompile_success: bool,
-
-    /// The decompilation result.
-    pub decompile_result: Result<String, FunctionDecompilerError>,
-
-    /// The time it took to decompile the function.
-    pub decompile_time: Duration,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GbfModuleResult {
-    /// The GBF version used to decomplie the module.
+pub struct GbfGraphvizStructureAnalaysisDao {
+    /// The version of the GBF used to generate the dot file.
     pub gbf_version: String,
 
     /// The module ID of the module (SHA256 hash of the module).
+    pub module_id: String,
+
+    /// The function address of the function (can be used as a unique identifier).
+    pub function_address: Gs2BytecodeAddress,
+
+    /// The structure analysis step.
+    pub structure_analysis_step: usize,
+
+    /// The S3 key of the dot file.
+    pub dot_key: String,
+}
+
+impl GbfGraphvizStructureAnalaysisDao {
+    pub fn pk_key(&self) -> String {
+        "gbf_version#module_id#function_address".to_string()
+    }
+
+    pub fn pk_val(&self) -> String {
+        format!(
+            "{}#{}#{}",
+            self.gbf_version, self.module_id, self.function_address
+        )
+    }
+
+    pub fn dot_url(&self, bucket: &str) -> String {
+        format!("https://{}.s3.amazonaws.com/{}", bucket, self.dot_key)
+    }
+}
+
+/// The dynamodb entry for a GBF suite result.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GbfVersionDao {
+    /// The version of the GBF used.
+    pub gbf_version: String,
+
+    /// The total time it took to run the entire suite.
+    pub total_time: Duration,
+
+    /// Timestamp (e.g., "2025-01-28T12:34:56Z" or an epoch).
+    pub suite_timestamp: u64, // or String for ISO8601
+}
+
+impl GbfVersionDao {
+    pub fn pk_key(&self) -> String {
+        "gbf_version".to_string()
+    }
+
+    pub fn pk_val(&self) -> String {
+        self.gbf_version.clone()
+    }
+}
+
+/// The dynamodb entry for a GBF function result.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GbfModuleDao {
+    /// GBF version used to decompile the module.
+    pub gbf_version: String,
+
+    /// The module ID of the module (SHA256).
     pub module_id: String,
 
     /// The file name of the module.
@@ -59,24 +77,100 @@ pub struct GbfModuleResult {
     /// The time it took to load the module.
     pub module_load_time: Duration,
 
-    /// The list of functions in the module.
-    pub functions: Result<Vec<GbfFunctionResult>, ModuleError>,
-
-    /// If the decompilation was successful.
+    /// If the module's decompilation was successful.
     pub decompile_success: bool,
 }
 
-#[derive(Debug, Serialize)]
-pub struct GbfSuiteResult {
-    /// The GBF version used to decomplie the module.
+impl GbfModuleDao {
+    pub fn pk_key(&self) -> String {
+        "gbf_version".to_string()
+    }
+
+    pub fn pk_val(&self) -> String {
+        format!("{}", self.gbf_version)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GbfFunctionDao {
+    /// The GBF version used to decompile the function.
     pub gbf_version: String,
 
-    /// The time it took to run the entire suite.
+    /// The module ID to which this function belongs.
+    pub module_id: String,
+
+    /// The function address (unique within the module).
+    pub function_address: Gs2BytecodeAddress,
+
+    /// The name of the function, if known.
+    pub function_name: Option<String>,
+
+    /// Whether the function was decompiled successfully.
+    pub decompile_success: bool,
+
+    /// The result of the decompilation attempt (could be an error).
+    pub decompile_result: Option<String>,
+
+    /// How long it took to decompile this function.
     pub total_time: Duration,
 
-    /// The list of module results.
-    pub modules: Vec<GbfModuleResult>,
+    /// The S3 key of the dot file.
+    pub dot_key: String,
+}
 
-    /// If decompliation was successful.
-    pub decompile_success: bool,
+impl GbfFunctionDao {
+    pub fn pk_key(&self) -> String {
+        "gbf_version#module_id".to_string()
+    }
+
+    pub fn pk_val(&self) -> String {
+        format!("{}#{}", self.gbf_version, self.module_id)
+    }
+
+    pub fn dot_url(&self, bucket: &str) -> String {
+        format!("https://{}.s3.amazonaws.com/{}", bucket, self.dot_key)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GbfFunctionErrorDao {
+    /// GBF version
+    pub gbf_version: String,
+
+    /// Module ID
+    pub module_id: String,
+
+    /// The function address that encountered the error.
+    pub function_address: Gs2BytecodeAddress,
+
+    /// The type of error (e.g. structure analysis, parse error, etc.)
+    pub error_type: String,
+
+    /// A human-readable message or summary.
+    pub message: String,
+
+    /// A structured backtrace
+    pub backtrace: GbfSimplifiedBacktrace,
+}
+
+impl GbfFunctionErrorDao {
+    pub fn pk_key(&self) -> String {
+        "gbf_version#module_id".to_string()
+    }
+
+    pub fn pk_val(&self) -> String {
+        format!("{}#{}", self.gbf_version, self.module_id)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GbfSimplifiedBacktrace {
+    pub frames: Vec<GbfSimplifiedBacktraceFrame>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GbfSimplifiedBacktraceFrame {
+    pub function: String,
+    pub file: String,
+    pub line: u32,
 }

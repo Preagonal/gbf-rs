@@ -157,6 +157,7 @@ impl OpcodeHandler for VariableOperandHandler {
                 })
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {
+                opcode: instruction.opcode,
                 context: context.get_error_context(),
                 backtrace: Backtrace::capture(),
             }),

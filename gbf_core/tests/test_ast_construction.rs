@@ -1,6 +1,6 @@
 use common::{load_bytecode, load_expected_output};
 use gbf_core::decompiler::{
-    ast::visitors::emit_context::EmitContext, function_decompiler::FunctionDecompiler,
+    ast::visitors::emit_context::EmitContext, function_decompiler::FunctionDecompilerBuilder,
 };
 pub mod common;
 
@@ -22,7 +22,7 @@ fn load_simple_gs2() {
     let entry_function = module.get_entry_function();
 
     // Decompile the entry function
-    let mut decompiler = FunctionDecompiler::new(entry_function.clone());
+    let mut decompiler = FunctionDecompilerBuilder::new(entry_function.clone()).build();
     let decompiled = decompiler.decompile(EmitContext::default());
 
     // For now, assert that the decompiler did not fail

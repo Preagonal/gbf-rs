@@ -1,0 +1,55 @@
+// lib/dynamodb/suite-repo.ts
+import { DYNAMO_DB_REGION, GBF_AWS_DYNAMO_VERSION_TABLE, MAX_DYNAMO_DB_BATCH_SIZE } from '@/consts';
+import { GbfVersionDao } from '@/dao/gbf-version-dao';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+
+const client = new DynamoDBClient({ region: DYNAMO_DB_REGION });
+const docClient = DynamoDBDocumentClient.from(client);
+
+/**
+ * Maps the dynamodb response to a GbfVersionDao.
+ */
+interface DynamoDBItem {
+    gbf_version: string;
+    total_time: number;
+    suite_timestamp: number;
+}
+
+function mapToGbfVersionDao(item: unknown): GbfVersionDao {
+    const dynamoDBItem = item as DynamoDBItem;
+    return new GbfVersionDao({
+        gbfVersion: dynamoDBItem.gbf_version,
+        totalTimeMillis: dynamoDBItem.total_time,
+        suiteTimestamp: dynamoDBItem.suite_timestamp,
+    });
+}
+
+/**
+ * Fetches all suites from the GbfSuiteResult table.
+ */
+export async function fetchAllVersions(): Promise<GbfVersionDao[]> {
+    const params = {
+        TableName: GBF_AWS_DYNAMO_VERSION_TABLE,
+        Limit: MAX_DYNAMO_DB_BATCH_SIZE,
+    };
+    const command = new ScanCommand(params);
+    const results = await docClient.send(command);
+    return results.Items?.map(mapToGbfVersionDao) || [];
+}
+
+/**
+ * Fetches a single suite by version.
+ */
+export async function fetchSuiteByVersion(version: string): Promise<GbfVersionDao | null> {
+    const params = {
+        TableName: GBF_AWS_DYNAMO_VERSION_TABLE,
+        KeyConditionExpression: 'gbf_version = :version',
+        ExpressionAttributeValues: {
+            ':version': version,
+        },
+    };
+    const command = new QueryCommand(params);
+    const results = await docClient.send(command);
+    return results.Items?.map(mapToGbfVersionDao)[0] || null;
+}

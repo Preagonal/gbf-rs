@@ -114,6 +114,7 @@ impl OpcodeHandler for SpecialOneOperandHandler {
                 Ok(processed_instruction)
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {
+                opcode: instruction.opcode,
                 context: context.get_error_context(),
                 backtrace: Backtrace::capture(),
             }),
