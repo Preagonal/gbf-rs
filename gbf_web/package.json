@@ -17,6 +17,7 @@
     "@mantine/core": "^7.15.3",
     "@mantine/form": "^7.15.3",
     "@mantine/hooks": "^7.15.3",
+    "@netlify/plugin-nextjs": "^5.9.4",
     "@tabler/icons-react": "^3.28.1",
     "@viz-js/viz": "^3.11.0",
     "next": "15.1.6",
