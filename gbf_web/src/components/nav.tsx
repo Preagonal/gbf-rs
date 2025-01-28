@@ -78,7 +78,7 @@ export function NavigationBar() {
         setVersionsLoading(true);
         setVersionsError(null);
 
-        fetch("/gbf-rs/api/versions")
+        fetch("/api/versions")
             .then((res) => {
                 if (!res.ok) {
                     throw new Error(`Failed to fetch versions: ${res.status}`);
@@ -106,7 +106,7 @@ export function NavigationBar() {
         setModulesLoading(true);
         setModulesError(null);
 
-        fetch(`/gbf-rs/api/modules?version=${currentVersion}`)
+        fetch(`/api/modules?version=${currentVersion}`)
             .then((res) => {
                 if (!res.ok) {
                     throw new Error(`Failed to fetch modules: ${res.status}`);
@@ -136,7 +136,7 @@ export function NavigationBar() {
         setFunctionsLoading(true);
         setFunctionsError(null);
 
-        fetch(`/gbf-rs/api/functions?version=${currentVersion}&module=${currentModule}`)
+        fetch(`/api/functions?version=${currentVersion}&module=${currentModule}`)
             .then((res) => {
                 if (!res.ok) {
                     throw new Error(`Failed to fetch functions: ${res.status}`);
