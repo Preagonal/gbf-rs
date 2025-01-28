@@ -1,11 +1,8 @@
 // lib/dynamodb/suite-repo.ts
-import { DYNAMO_DB_REGION, GBF_AWS_DYNAMO_MODULE_TABLE } from '@/consts';
+import { GBF_AWS_DYNAMO_MODULE_TABLE } from '@/consts';
 import { GbfModuleDao } from '@/dao/gbf-module-dao';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
-
-const client = new DynamoDBClient({ region: DYNAMO_DB_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
+import { QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DYNAMO_CLIENT } from './dynamo';
 
 /**
  * Maps the dynamodb response to a GbfVersionDao.
@@ -41,7 +38,7 @@ export async function fetchAllModules(version: string): Promise<GbfModuleDao[]> 
         },
     };
     const command = new QueryCommand(params);
-    const results = await docClient.send(command);
+    const results = await DYNAMO_CLIENT.send(command);
     return results.Items?.map(mapToGbfModuleDao) || [];
 }
 
@@ -58,6 +55,6 @@ export async function fetchModuleByVersionAndId(version: string, moduleId: strin
         },
     };
     const command = new QueryCommand(params);
-    const results = await docClient.send(command);
+    const results = await DYNAMO_CLIENT.send(command);
     return results.Items?.map(mapToGbfModuleDao)[0] || null;
 }

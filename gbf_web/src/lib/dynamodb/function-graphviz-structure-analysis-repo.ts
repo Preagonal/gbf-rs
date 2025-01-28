@@ -1,11 +1,8 @@
 // lib/dynamodb/suite-repo.ts
-import { DYNAMO_DB_REGION, GBF_AWS_DYNAMO_GRAPHVIZ_TABLE } from '@/consts';
+import { GBF_AWS_DYNAMO_GRAPHVIZ_TABLE } from '@/consts';
 import { GbfGraphvizStructureAnalysisDao } from '@/dao/gbf-graphviz-structure-analysis-dao';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
-
-const client = new DynamoDBClient({ region: DYNAMO_DB_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
+import { QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DYNAMO_CLIENT } from './dynamo';
 
 /**
  * Maps the dynamodb response to a GbfFunctionDao.
@@ -45,6 +42,6 @@ export async function fetchAllGraphvizStructureAnalysis(version: string, moduleI
         SortBy: 'structure_analysis_step',
     };
     const command = new QueryCommand(params);
-    const results = await docClient.send(command);
+    const results = await DYNAMO_CLIENT.send(command);
     return results.Items?.map(mapToGbfGraphvizStructureAnalaysisDao) || [];
 }
