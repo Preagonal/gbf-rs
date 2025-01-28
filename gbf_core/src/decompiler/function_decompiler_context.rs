@@ -96,6 +96,7 @@ impl FunctionDecompilerContext {
             handlers
                 .get(&instr.opcode)
                 .ok_or(FunctionDecompilerError::UnimplementedOpcode {
+                    opcode: instr.opcode,
                     context: self.get_error_context(),
                     backtrace: Backtrace::capture(),
                 })?;

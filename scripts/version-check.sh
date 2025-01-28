@@ -95,12 +95,14 @@ MAIN_VERSION=$(get_branch_version main)
 DEV_VERSION=$(get_branch_version dev)
 CURRENT_VERSION=$(get_local_version ./gbf_core/Cargo.toml)
 MACROS_VERSION=$(get_local_version ./gbf_macros/Cargo.toml)
+SUITE_VERSION=$(get_local_version ./gbf_suite/Cargo.toml)
 README_VERSION=$(get_readme_version)
 
 echo "Main branch version: $MAIN_VERSION"
 echo "Dev branch version: $DEV_VERSION"
 echo "Current branch version: $CURRENT_VERSION"
 echo "gbf_macros version: $MACROS_VERSION"
+echo "gbf_suite version: $SUITE_VERSION"
 echo "README version: $README_VERSION"
 
 echo "Parsing versions..."
@@ -133,5 +135,8 @@ check_version_match "$CURRENT_VERSION" "$README_VERSION" "README.md version mism
 
 echo "Checking gbf_macros version..."
 check_version_match "$CURRENT_VERSION" "$MACROS_VERSION" "gbf_macros/Cargo.toml version mismatch"
+
+echo "Checking gbf_suite version..."
+check_version_match "$CURRENT_VERSION" "$SUITE_VERSION" "gbf_suite/Cargo.toml version mismatch"
 
 echo "All version checks passed!"

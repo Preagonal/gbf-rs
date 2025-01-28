@@ -1,21 +1,14 @@
-import { NavigationBar } from '@/components/nav';
-import { createQueryBuilder } from '@/data/data-analyzer';
-import { Container, Text, Title, List, ListItem, ThemeIcon, rem, Anchor } from '@mantine/core';
+import { getAllVersions } from '@/lib/version';
+import { Container, Text, List, ListItem, ThemeIcon, rem, Anchor } from '@mantine/core';
 import { IconExclamationCircle } from '@tabler/icons-react';
 import Link from 'next/link';
 
 export default async function Versions() {
-    const queryBuilder = await createQueryBuilder();
-    const versions = await queryBuilder.execute() as string[];
+    const versions = await getAllVersions();
 
     return (
         <>
-            <NavigationBar versions={versions} modules={[]} functions={[]} version={null} module={null} func={null} />
             <Container size="md">
-                <Title order={1}>Welcome to the GBF Test Portal</Title>
-                <Text mt="sm">
-                    This was built to track decompiler and CFG progress.
-                </Text>
                 <Text mt="sm">Versions:</Text>
                 {/* TODO: Replace icon with decompiler success if applicable. To do this we need suite result for each module. */}
                 <List mt="sm" icon={
@@ -23,9 +16,9 @@ export default async function Versions() {
                         <IconExclamationCircle style={{ width: rem(16), height: rem(16) }} />
                     </ThemeIcon>
                 } withPadding>
-                    {versions && versions.map((version: string) => (
-                        <ListItem key={version}>
-                            <Anchor component={Link} href={`/${version}`}>{version}</Anchor>
+                    {versions.map((version) => (
+                        <ListItem key={version.gbfVersion}>
+                            <Anchor component={Link} href={`/${version.gbfVersion}`}>{version.gbfVersion}</Anchor>
                         </ListItem>
                     ))}
                 </List>

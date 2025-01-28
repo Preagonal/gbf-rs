@@ -3,7 +3,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import { Draggable } from "gsap/Draggable";
-import Image from "next/image";
 gsap.registerPlugin(Draggable);
 
 const SCROLL_RESISTANCE = 15;
@@ -12,20 +11,19 @@ const MAX_ZOOM = 1;
 
 interface ZoomableDraggableSVGProps {
     /** The URL of your .svg file. */
-    svgUrl: string;
+    svg: SVGSVGElement;
     /** Optional: if the parent wants to pass inline styles for the container (width/height, etc.) */
     containerStyle?: React.CSSProperties;
 }
 
 const ZoomableDraggableSVG: React.FC<ZoomableDraggableSVGProps> = ({
-    svgUrl,
+    svg,
     containerStyle = {}, // parent can override
 }) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const imageWrapperRef = useRef<HTMLDivElement | null>(null);
     const draggable = useRef<Draggable | null>(null);
-
-    const [naturalSize, setNaturalSize] = useState({ width: 1, height: 1 });
+    const [viewBox, setViewBox] = useState<string | null>(null);
 
     // We'll keep the currentZoom in state so the component re-renders
     // whenever zoom changes (and physically resizes the image).
@@ -40,20 +38,14 @@ const ZoomableDraggableSVG: React.FC<ZoomableDraggableSVGProps> = ({
             bounds: containerRef.current, // keep child within container
         })[0];
 
+        const initialViewBox = svg.getAttribute("viewBox") || `0 0 ${svg.width.animVal.value} ${svg.height.animVal.value}`;
+        setViewBox(initialViewBox);
+
         // Cleanup
         return () => {
             draggable.current?.kill();
         };
-    }, []);
-
-    // Store the natural SVG dimensions once loaded.
-    const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-        const img = e.currentTarget;
-        setNaturalSize({
-            width: img.naturalWidth,
-            height: img.naturalHeight,
-        });
-    };
+    }, [svg]);
 
     /** Handle wheel to zoom in/out, keeping the mouse position "pinned." */
     const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -124,8 +116,8 @@ const ZoomableDraggableSVG: React.FC<ZoomableDraggableSVGProps> = ({
     }, [zoom]);
 
     // Physically compute the new size of the image.
-    const scaledWidth = naturalSize.width * zoom;
-    const scaledHeight = naturalSize.height * zoom;
+    const scaledWidth = svg.width.baseVal.value * zoom;
+    const scaledHeight = svg.height.baseVal.value * zoom;
 
     return (
         <div
@@ -152,13 +144,7 @@ const ZoomableDraggableSVG: React.FC<ZoomableDraggableSVGProps> = ({
                 }}
             >
                 {/* The <img> is physically resized to fill the wrapper's new scaledWidth/Height. */}
-                <Image
-                    src={svgUrl}
-                    alt="Zoomable draggable"
-                    onLoad={handleImageLoad}
-                    width={scaledWidth}
-                    height={scaledHeight}
-                />
+                <svg viewBox={viewBox || ""} width={scaledWidth} height={scaledHeight} dangerouslySetInnerHTML={{ __html: svg.innerHTML }} />
             </div>
         </div>
     );
