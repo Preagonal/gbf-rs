@@ -1,5 +1,4 @@
 import '@mantine/core/styles.css';
-import '@mantine/code-highlight/styles.css';
 import {
     ColorSchemeScript,
     MantineProvider,
@@ -29,7 +28,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             <body>
                 <MantineProvider defaultColorScheme="dark">
                     <NavigationBar />
-                    <Container size="md">
+                    <Container size="md" mb="sm">
                         <Title order={1}>Welcome to the GBF Test Portal</Title>
                         <Text mt="sm">
                             This was built to track decompiler and CFG progress.
