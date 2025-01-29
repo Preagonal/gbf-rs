@@ -1,5 +1,5 @@
 "use client";
-
+import '@mantine/code-highlight/styles.css';
 import React from "react";
 import { Box, Tabs, Title, Text, Paper, Alert } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
@@ -18,6 +18,7 @@ interface FunctionError {
     errorType: string;
     message: string;
     backtrace: GbfSimplifiedBacktrace;
+    errorContext: string;
 }
 
 export interface Structure {
@@ -63,10 +64,17 @@ const TabbedFunctionView: React.FC<TabbedFunctionViewProps> = ({
                             >
                                 <Text>{err.message}</Text>
                             </Alert>
+                            <Title order={3} mt="sm">Backtrace</Title>
                             <CodeHighlight
                                 mt="sm"
                                 language="json"
                                 code={JSON.stringify(err.backtrace, null, 2)}
+                            />
+                            <Title order={3} mt="sm">Context</Title>
+                            <CodeHighlight
+                                mt="sm"
+                                language="json"
+                                code={err.errorContext}
                             />
                         </>
                     )}

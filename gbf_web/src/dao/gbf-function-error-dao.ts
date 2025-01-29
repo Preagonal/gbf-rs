@@ -39,6 +39,11 @@ export class GbfFunctionErrorDao {
      */
     public backtrace: GbfSimplifiedBacktrace;
 
+    /**
+     * A more detailed error context
+     */
+    public errorContext: string;
+
     constructor(opts: {
         gbfVersion: string;
         moduleId: string;
@@ -46,6 +51,7 @@ export class GbfFunctionErrorDao {
         errorType: string;
         message: string;
         backtrace: GbfSimplifiedBacktrace;
+        errorContext: string;
     }) {
         this.gbfVersion = opts.gbfVersion;
         this.moduleId = opts.moduleId;
@@ -53,6 +59,7 @@ export class GbfFunctionErrorDao {
         this.errorType = opts.errorType;
         this.message = opts.message;
         this.backtrace = opts.backtrace;
+        this.errorContext = opts.errorContext;
     }
 
     public static pkKey(): string {
@@ -79,6 +86,7 @@ export class GbfFunctionErrorDao {
             errorType: this.errorType,
             message: this.message,
             backtrace: this.backtrace,
+            errorContext: this.errorContext,
         };
     }
 }
