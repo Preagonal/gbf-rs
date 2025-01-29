@@ -6,10 +6,11 @@ use if_region_reducer::IfRegionReducer;
 use linear_region_reducer::LinearRegionReducer;
 use petgraph::{
     graph::{DiGraph, NodeIndex},
-    visit::DfsPostOrder,
+    visit::{DfsPostOrder, Walker},
 };
 use region::{Region, RegionId, RegionType};
 use serde::Serialize;
+use tail_region_reducer::TailRegionReducer;
 
 use crate::{
     cfg_dot::{CfgDot, CfgDotConfig, DotRenderableGraph, NodeResolver},
@@ -26,6 +27,8 @@ pub mod if_region_reducer;
 pub mod linear_region_reducer;
 /// A module representing a region in the control flow graph.
 pub mod region;
+/// A module that contains the logic for reducing a tail region.
+pub mod tail_region_reducer;
 
 /// A trait for reducing a region
 pub trait RegionReducer {
@@ -206,6 +209,15 @@ impl StructureAnalysis {
             })
     }
 
+    /// Gets the region type of a region ID.
+    pub fn get_region_type(
+        &self,
+        region_id: RegionId,
+    ) -> Result<RegionType, StructureAnalysisError> {
+        self.get_region(region_id)
+            .map(|region| region.get_region_type())
+    }
+
     /// Gets the region ID of a node index.
     pub fn get_region_id(&self, node_index: NodeIndex) -> Result<RegionId, StructureAnalysisError> {
         self.region_graph
@@ -234,18 +246,23 @@ impl StructureAnalysis {
                 });
             }
 
-            // TODO: We will use the old node count in our post reduction check
-            let _old_node_count = self.regions.len();
+            let old_node_count = self.region_graph.node_count();
 
             // Get the nodes in post order
             let entry_region_id = self.get_entry_region();
             let entry_region_node_index = self.get_node_index(entry_region_id)?;
 
-            let mut dfs = DfsPostOrder::new(&self.region_graph, entry_region_node_index);
+            let dfs = DfsPostOrder::new(&self.region_graph, entry_region_node_index);
+            // collect all the nodes in the graph on the dfs and map to region ids
+            let nodes: Vec<RegionId> = dfs
+                .iter(&self.region_graph)
+                .collect::<Vec<NodeIndex>>()
+                .iter()
+                .map(|node| self.get_region_id(*node))
+                .collect::<Result<Vec<_>, _>>()?;
 
             // Iterate through the nodes in post order
-            while let Some(node) = dfs.next(&self.region_graph) {
-                let region_id = self.get_region_id(node)?;
+            for region_id in nodes {
                 // If the region is inactive, skip it
                 if self.regions[region_id.index].get_region_type() == RegionType::Inactive {
                     continue;
@@ -260,9 +277,18 @@ impl StructureAnalysis {
                     if !did_reduce {
                         break;
                     } else {
+                        self.after_reduce(region_id);
                         debug_assert!(self.is_marked);
                     }
                 }
+            }
+
+            let new_node_count = self.region_graph.node_count();
+
+            // Post reduce step
+            if old_node_count == new_node_count && new_node_count > 1 {
+                // TODO: The return value is not used at the moment
+                self.post_reduce()?;
             }
 
             iterations += 1;
@@ -454,6 +480,11 @@ impl StructureAnalysis {
         self.is_marked = true;
     }
 
+    /// This function should always be called after reducing a region.
+    pub fn after_reduce(&mut self, region_id: RegionId) {
+        self.capture_region_snapshot(region_id);
+    }
+
     /// Capture a snapshot of the CFG.
     pub fn capture_snapshot(&mut self, region_to_highlight: Option<RegionId>) {
         if !self.debug_mode {
@@ -498,6 +529,34 @@ impl StructureAnalysis {
             })?,
             RegionType::ControlFlow => IfRegionReducer.reduce_region(self, region_id)?,
         })
+    }
+
+    /// Post reduction step
+    fn post_reduce(&mut self) -> Result<bool, StructureAnalysisError> {
+        let entry_region_id = self.get_entry_region();
+        let entry_region_node_index = self.get_node_index(entry_region_id)?;
+        let dfs = DfsPostOrder::new(&self.region_graph, entry_region_node_index);
+        // collect all the nodes in the graph on the dfs and map to region ids
+        let nodes: Vec<RegionId> = dfs
+            .iter(&self.region_graph)
+            .collect::<Vec<NodeIndex>>()
+            .iter()
+            .map(|node| self.get_region_id(*node))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // Iterate through the nodes in post order
+        for region_id in nodes {
+            // If the region is inactive, skip it
+            if self.regions[region_id.index].get_region_type() == RegionType::Inactive {
+                continue;
+            }
+
+            if TailRegionReducer.reduce_region(self, region_id)? {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 }
 

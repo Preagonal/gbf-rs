@@ -73,10 +73,16 @@ impl RegionReducer for LinearRegionReducer {
 
         // Call the before_reduce hook
         analysis.before_reduce(region_id);
-
         self.merge_regions(analysis, succ, region_id)?;
-
         analysis.remove_edge(region_id, succ)?;
+
+        // For each successor of the successor region, add an edge from the region to the successor
+        for (succ_succ, edge_type) in analysis.get_successors(succ)? {
+            analysis.connect_regions(region_id, succ_succ, edge_type)?;
+            analysis.remove_edge(succ, succ_succ)?;
+        }
+
+        // Remove the successor region
         analysis.remove_node(succ)?;
         Ok(true)
     }
