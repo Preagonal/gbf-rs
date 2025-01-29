@@ -265,6 +265,11 @@ pub fn new_bool(value: bool) -> LiteralNode {
     LiteralNode::Boolean(value)
 }
 
+/// Creates a new ExprNode for a literal null.
+pub fn new_null() -> LiteralNode {
+    LiteralNode::Null
+}
+
 // == Functions ==
 /// Creates a new function node.
 pub fn new_fn<P, V>(name: Option<String>, params: P, body: V) -> FunctionNode
