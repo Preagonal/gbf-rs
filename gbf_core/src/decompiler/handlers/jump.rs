@@ -31,6 +31,13 @@ impl OpcodeHandler for JumpHandler {
                     .jump_condition(condition)
                     .build())
             }
+            Opcode::Jeq => {
+                let condition = context.pop_expression()?;
+
+                Ok(ProcessedInstructionBuilder::new()
+                    .jump_condition(condition)
+                    .build())
+            }
             Opcode::With => {
                 let condition = context.pop_expression()?;
 

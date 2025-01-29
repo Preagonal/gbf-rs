@@ -4,10 +4,7 @@ use std::backtrace::Backtrace;
 
 use crate::{
     decompiler::{
-        ast::{
-            assignable::AssignableKind, expr::ExprKind, new_array, new_assignment, new_fn_call,
-            new_id_with_version,
-        },
+        ast::{expr::ExprKind, new_array, new_assignment, new_fn_call, new_id_with_version},
         execution_frame::ExecutionFrame,
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
@@ -61,7 +58,7 @@ impl OpcodeHandler for VariableOperandHandler {
                     // Pop the function name (last argument in the array)
                     let function_name = args.pop().unwrap();
                     let function_name = match function_name {
-                        ExprKind::Assignable(AssignableKind::Identifier(ident)) => Ok(ident),
+                        ExprKind::Assignable(ident) => Ok(ident),
                         _ => Err(FunctionDecompilerError::UnexpectedNodeType {
                             expected: "Identifier".to_string(),
                             context: error_context.clone(),

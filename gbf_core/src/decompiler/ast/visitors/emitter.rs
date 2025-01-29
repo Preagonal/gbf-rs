@@ -153,12 +153,12 @@ impl AstVisitor for Gs2Emitter {
         match node {
             AssignableKind::MemberAccess(member_access) => {
                 if member_access.ssa_version.is_some() && self.context.include_ssa_versions {
-                    self.output.push('{');
+                    self.output.push('<');
                 }
                 member_access.accept(self);
                 if self.context.include_ssa_versions {
                     if let Some(ssa_version) = member_access.ssa_version {
-                        self.output.push_str(&format!("}}@{}", ssa_version));
+                        self.output.push_str(&format!(">#{}", ssa_version));
                     }
                 }
             }
@@ -166,7 +166,7 @@ impl AstVisitor for Gs2Emitter {
                 identifier.accept(self);
                 if self.context.include_ssa_versions {
                     if let Some(ssa_version) = identifier.ssa_version {
-                        self.output.push_str(&format!("@{}", ssa_version));
+                        self.output.push_str(&format!("#{}", ssa_version));
                     }
                 }
             }
