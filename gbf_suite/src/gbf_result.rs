@@ -1,8 +1,7 @@
 use std::time::Duration;
 
 use gbf_core::{
-    decompiler::function_decompiler::{FunctionDecompilerError, FunctionDecompilerErrorContext},
-    utils::Gs2BytecodeAddress,
+    decompiler::function_decompiler::FunctionDecompilerErrorContext, utils::Gs2BytecodeAddress,
 };
 use serde::{Deserialize, Serialize};
 
