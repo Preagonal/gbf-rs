@@ -238,14 +238,17 @@ Contributions are welcome! If you’d like to contribute:
 
 Please ensure your code passes all tests and adheres to the project’s style guidelines.
 
-## License
+## License & Legal Disclaimer
 
-This project is licensed under the Mozilla Public License v2.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Mozilla Public License 2.0 and is not affiliated with GraalOnline or its owners. GraalOnline and Graal are registered registered trademarks of Stephane Portha, and all trademarks are the property of their respective owners.
 
 ## Acknowledgments
 
+- **Rust**, for being awesome.
 - **Graphviz** is used to make human-readable directed graphs for debugging purposes.
 - **petgraph** is used to implement the directed graph functionality.
+- **NextJS** is used to render the front-end test environment.
+- **Netlify** is used to host the front-end test environment.
 
 ## Contact
 
