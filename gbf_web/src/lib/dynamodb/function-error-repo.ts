@@ -14,10 +14,12 @@ interface DynamoDBItem {
     error_type: string;
     message: string;
     backtrace: GbfSimplifiedBacktrace;
+    context: unknown | undefined;
 }
 
 function mapToGbfFunctionError(item: unknown): GbfFunctionErrorDao {
     const dynamoDBItem = item as DynamoDBItem;
+    const ctx = dynamoDBItem.context ? dynamoDBItem.context : {};
     return new GbfFunctionErrorDao({
         gbfVersion: dynamoDBItem.gbf_version,
         moduleId: dynamoDBItem.module_id,
@@ -25,6 +27,7 @@ function mapToGbfFunctionError(item: unknown): GbfFunctionErrorDao {
         errorType: dynamoDBItem.error_type,
         message: dynamoDBItem.message,
         backtrace: dynamoDBItem.backtrace,
+        errorContext: JSON.stringify(ctx, null, 2),
     });
 }
 

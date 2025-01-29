@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use gbf_core::utils::Gs2BytecodeAddress;
+use gbf_core::{
+    decompiler::function_decompiler::FunctionDecompilerErrorContext, utils::Gs2BytecodeAddress,
+};
 use serde::{Deserialize, Serialize};
 
 /// The dynamodb entry for a GraphViz dot file.
@@ -132,7 +134,7 @@ impl GbfFunctionDao {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Clone)]
 pub struct GbfFunctionErrorDao {
     /// GBF version
     pub gbf_version: String,
@@ -151,6 +153,9 @@ pub struct GbfFunctionErrorDao {
 
     /// A structured backtrace
     pub backtrace: GbfSimplifiedBacktrace,
+
+    /// The context of the error.
+    pub context: FunctionDecompilerErrorContext,
 }
 
 impl GbfFunctionErrorDao {

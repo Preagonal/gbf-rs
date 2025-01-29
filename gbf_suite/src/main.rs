@@ -155,6 +155,7 @@ async fn process_module(
                 error_type: res.as_ref().unwrap_err().error_type().to_string(),
                 message: res.as_ref().unwrap_err().to_string(),
                 backtrace: process_backtrace(res.as_ref().unwrap_err().backtrace()),
+                context: res.as_ref().unwrap_err().context().clone(),
             };
             module_dao.decompile_success = false;
             uploader.upload_gbf_function_error(error).await?;

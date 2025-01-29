@@ -157,8 +157,11 @@ impl AwsUpload {
         &self,
         gbf_function_error: GbfFunctionErrorDao,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let backtrace = serde_json::to_value(gbf_function_error.clone().backtrace)?;
+        let backtrace = serde_json::to_value(&gbf_function_error.backtrace)?;
         let attr = to_attribute_value(backtrace)?;
+
+        let context = serde_json::to_value(&gbf_function_error.context)?;
+        let attr_ctx = to_attribute_value(context)?;
 
         self.dynamo_client
             .put_item()
@@ -182,6 +185,7 @@ impl AwsUpload {
             )
             .item("message", AttributeValue::S(gbf_function_error.message))
             .item("backtrace", attr)
+            .item("context", attr_ctx)
             .send()
             .await?;
         Ok(())
