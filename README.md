@@ -240,7 +240,7 @@ Please ensure your code passes all tests and adheres to the project’s style gu
 
 ## License & Legal Disclaimer
 
-This project is licensed under the Mozilla Public License 2.0 and is not affiliated with GraalOnline or its owners. GraalOnline and Graal are registered registered trademarks of Stephane Portha, and all trademarks are the property of their respective owners.
+This project is licensed under the Mozilla Public License 2.0 and is not affiliated with GraalOnline or its owners. GraalOnline and Graal are registered trademarks of Stephane Portha, and all trademarks are the property of their respective owners.
 
 ## Acknowledgments
 
