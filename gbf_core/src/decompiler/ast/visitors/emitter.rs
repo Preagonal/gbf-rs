@@ -411,6 +411,7 @@ impl AstVisitor for Gs2Emitter {
             ControlFlowType::If => "if",
             ControlFlowType::Else => "else",
             ControlFlowType::ElseIf => "else if",
+            ControlFlowType::With => "with",
         };
 
         self.output.push_str(name);

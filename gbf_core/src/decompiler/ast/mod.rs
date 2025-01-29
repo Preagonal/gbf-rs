@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 
-use crate::decompiler::ast::visitors::AstVisitor;
+use crate::{decompiler::ast::visitors::AstVisitor, opcode::Opcode};
 use array_access::ArrayAccessNode;
 use assignable::AssignableKind;
 use assignment::AssignmentNode;
@@ -300,4 +300,32 @@ where
     T: Into<AstVec<AstKind>>,
 {
     ControlFlowNode::new(ControlFlowType::ElseIf, Some(condition), then_block.into())
+}
+
+/// Creates a new with statement
+pub fn new_with<C, T>(condition: C, then_block: T) -> ControlFlowNode
+where
+    C: Into<ExprKind>,
+    T: Into<AstVec<AstKind>>,
+{
+    ControlFlowNode::new(ControlFlowType::With, Some(condition), then_block.into())
+}
+
+/// Creates a new acyclic condition
+pub fn new_acylic_condition<C, T>(
+    condition: C,
+    then_block: T,
+    opcode: Option<Opcode>,
+) -> Result<ControlFlowNode, AstNodeError>
+where
+    C: Into<ExprKind>,
+    T: Into<AstVec<AstKind>>,
+{
+    match opcode {
+        Some(Opcode::Jne) => Ok(new_if(condition, then_block)),
+        Some(Opcode::Jeq) => Ok(new_if(condition, then_block)),
+        Some(Opcode::With) => Ok(new_with(condition, then_block)),
+        None => Ok(new_if(condition, then_block)),
+        _ => Err(AstNodeError::InvalidOperand),
+    }
 }

@@ -14,6 +14,8 @@ pub enum ControlFlowType {
     ElseIf,
     /// Represents an else control flow node.
     Else,
+    /// Represents a with control flow node.
+    With,
 }
 
 /// Represents a metadata node in the AST

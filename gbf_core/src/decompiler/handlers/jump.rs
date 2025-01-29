@@ -31,6 +31,13 @@ impl OpcodeHandler for JumpHandler {
                     .jump_condition(condition)
                     .build())
             }
+            Opcode::With => {
+                let condition = context.pop_expression()?;
+
+                Ok(ProcessedInstructionBuilder::new()
+                    .jump_condition(condition)
+                    .build())
+            }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {
                 opcode: instruction.opcode,
                 context: context.get_error_context(),

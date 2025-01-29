@@ -3,7 +3,7 @@
 use std::backtrace::Backtrace;
 
 use crate::decompiler::ast::{
-    control_flow::ControlFlowNode, expr::ExprKind, new_else, new_if, AstKind,
+    control_flow::ControlFlowNode, expr::ExprKind, new_acylic_condition, new_else, new_if, AstKind,
 };
 
 use super::{
@@ -129,7 +129,15 @@ impl RegionReducer for IfRegionReducer {
                 // Branch linear successor aligns with fallthrough region
                 let branch_statements =
                     IfRegionReducer::get_region_nodes(analysis, branch_region_id)?;
-                let cond = new_if(jump_expr, branch_statements);
+                let cond = new_acylic_condition(
+                    jump_expr,
+                    branch_statements,
+                    analysis.get_branch_opcode(region_id)?,
+                )
+                .map_err(|e| StructureAnalysisError::AstNodeError {
+                    source: Box::new(e),
+                    backtrace: Backtrace::capture(),
+                })?;
 
                 Self::merge_conditional(analysis, region_id, vec![cond])?;
                 Self::cleanup_region(analysis, branch_region_id, region_id, successor)?;
@@ -145,7 +153,15 @@ impl RegionReducer for IfRegionReducer {
                 // Fallthrough linear successor aligns with branch region
                 let fallthrough_statements =
                     IfRegionReducer::get_region_nodes(analysis, fallthrough_region_id)?;
-                let cond = new_if(jump_expr, fallthrough_statements);
+                let cond = new_acylic_condition(
+                    jump_expr,
+                    fallthrough_statements,
+                    analysis.get_branch_opcode(region_id)?,
+                )
+                .map_err(|e| StructureAnalysisError::AstNodeError {
+                    source: Box::new(e),
+                    backtrace: Backtrace::capture(),
+                })?;
 
                 Self::merge_conditional(analysis, region_id, vec![cond])?;
                 Self::cleanup_region(analysis, fallthrough_region_id, region_id, successor)?;

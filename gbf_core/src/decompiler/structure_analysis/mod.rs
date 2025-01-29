@@ -14,10 +14,11 @@ use tail_region_reducer::TailRegionReducer;
 
 use crate::{
     cfg_dot::{CfgDot, CfgDotConfig, DotRenderableGraph, NodeResolver},
+    opcode::Opcode,
     utils::{GBF_GREEN, GBF_RED, GBF_YELLOW},
 };
 
-use super::ast::AstKind;
+use super::ast::{AstKind, AstNodeError};
 
 use thiserror::Error;
 
@@ -80,6 +81,17 @@ pub enum StructureAnalysisError {
         backtrace: Backtrace,
     },
 
+    /// Encountered AST node error.
+    #[error("An AST node error occurred")]
+    AstNodeError {
+        /// The source error.
+        source: Box<AstNodeError>,
+
+        /// The error backtrace.
+        #[serde(skip)]
+        backtrace: Backtrace,
+    },
+
     /// Other errors.
     #[error("A structure analysis error occurred: {message}")]
     Other {
@@ -100,6 +112,7 @@ impl StructureAnalysisError {
             StructureAnalysisError::EntryRegionNotFound { backtrace } => backtrace,
             StructureAnalysisError::MaxIterationsReached { backtrace, .. } => backtrace,
             StructureAnalysisError::ExpectedConditionNotFound { backtrace } => backtrace,
+            StructureAnalysisError::AstNodeError { backtrace, .. } => backtrace,
             StructureAnalysisError::Other { backtrace, .. } => backtrace,
         }
     }
@@ -216,6 +229,15 @@ impl StructureAnalysis {
     ) -> Result<RegionType, StructureAnalysisError> {
         self.get_region(region_id)
             .map(|region| region.get_region_type())
+    }
+
+    /// Gets the opcode of a region ID.
+    pub fn get_branch_opcode(
+        &self,
+        region_id: RegionId,
+    ) -> Result<Option<Opcode>, StructureAnalysisError> {
+        self.get_region(region_id)
+            .map(|region| region.get_branch_opcode())
     }
 
     /// Gets the region ID of a node index.

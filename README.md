@@ -7,7 +7,7 @@
 ## Features
 
 - **GS2 Bytecode Analysis**:
-  - Decode and analyze GraalScript bytecode for program analysis.
+  - Decode and analyze GS2 bytecode for program analysis.
 - **Disassembly and Decompilation**:
   - Disassemble bytecode into human-readable instructions.
 - **Control Flow Graph Visualization**:

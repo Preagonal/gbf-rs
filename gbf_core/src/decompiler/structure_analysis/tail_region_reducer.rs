@@ -3,7 +3,7 @@
 use std::backtrace::Backtrace;
 
 use crate::decompiler::ast::{
-    control_flow::ControlFlowNode, expr::ExprKind, new_else, new_if, AstKind,
+    control_flow::ControlFlowNode, expr::ExprKind, new_acylic_condition, new_else, new_if, AstKind,
 };
 
 use super::{
@@ -147,7 +147,15 @@ impl RegionReducer for TailRegionReducer {
             analysis.before_reduce(region_id);
 
             let branch_statements = Self::get_region_nodes(analysis, branch_region_id)?;
-            let if_stmt = new_if(jump_expr, branch_statements);
+            let if_stmt = new_acylic_condition(
+                jump_expr,
+                branch_statements,
+                analysis.get_branch_opcode(region_id)?,
+            )
+            .map_err(|e| StructureAnalysisError::AstNodeError {
+                source: Box::new(e),
+                backtrace: Backtrace::capture(),
+            })?;
 
             Self::merge_tail(analysis, region_id, vec![if_stmt])?;
             Self::cleanup_region(analysis, branch_region_id, region_id)?;
@@ -161,7 +169,15 @@ impl RegionReducer for TailRegionReducer {
             analysis.before_reduce(region_id);
 
             let fallthrough_statements = Self::get_region_nodes(analysis, fallthrough_region_id)?;
-            let if_stmt = new_if(jump_expr, fallthrough_statements);
+            let if_stmt = new_acylic_condition(
+                jump_expr,
+                fallthrough_statements,
+                analysis.get_branch_opcode(region_id)?,
+            )
+            .map_err(|e| StructureAnalysisError::AstNodeError {
+                source: Box::new(e),
+                backtrace: Backtrace::capture(),
+            })?;
 
             Self::merge_tail(analysis, region_id, vec![if_stmt])?;
             Self::cleanup_region(analysis, fallthrough_region_id, region_id)?;
