@@ -23,7 +23,12 @@ jobs:
       - run: pip install -r ./scripts/requirements.txt
 
       - name: Extract PR Body
-        run: echo "BODY=${{ github.event.pull_request.body }}" >> $GITHUB_ENV
+        run: |
+          {
+            echo 'BODY<<EOF'
+            echo "${{ github.event.pull_request.body }}"
+            echo 'EOF'
+          } >> $GITHUB_ENV
 
       - name: Determine Version Type
         run: |
