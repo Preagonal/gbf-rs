@@ -5,7 +5,7 @@ on:
     types: [edited]
 
 permissions:
-  contents: read, write
+  contents: [read, write]
 
 jobs:
   version-bump:
