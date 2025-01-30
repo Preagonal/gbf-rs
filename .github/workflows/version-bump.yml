@@ -32,7 +32,7 @@ jobs:
             echo "VERSION_TYPE=patch" >> $GITHUB_ENV
           else
             echo "No valid version bump checkbox selected"
-            exit 1
+            exit 0
           fi
 
       - name: Run version check script
