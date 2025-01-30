@@ -1,10 +1,10 @@
 name: Run GBF Suite, Build Documentation, and Deploy to GitHub Pages
 
 on:
-  push:
-    branches:
-      - main  # Run on pushes to `main`
-      - dev   # Run on pushes to `dev`
+  workflow_run:
+    workflows: ["Version Check and Enforcement"]
+    types:
+      - completed
 permissions:
   id-token: write
   pages: write
@@ -14,6 +14,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.ref_name }} # Ensures it's on the same branch
 
     steps:
       # Step 1: Checkout Repository
