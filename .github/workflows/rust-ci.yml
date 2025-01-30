@@ -77,7 +77,7 @@ jobs:
   # Add a job to run the GBF Suite
   gbf-suite:
     name: GBF Suite
-      needs: [version-check]
+    needs: [version-check]
     runs-on: ubuntu-latest
 
     steps:
