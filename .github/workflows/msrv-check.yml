@@ -22,11 +22,25 @@ jobs:
 
       # Install Rust 1.81.0
       - name: Install MSRV (1.81.0)
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.81.0
           toolchain: nightly
-          override: true
+      
+      # https://stackoverflow.com/questions/78629554/how-to-cache-cargo-packages-in-the-github-ci-workflow
+      - name: "Cache cargo"
+        id: cache-cargo
+        uses: "actions/cache@v4"
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          save-always: true
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
       # Verify the project builds with MSRV
       - name: Build and Test with MSRV
