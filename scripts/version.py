@@ -199,17 +199,7 @@ def main():
         if 'GITHUB_BASE_REF' in os.environ:
             target_branch = os.getenv('GITHUB_BASE_REF', target_branch)
         logger.info(f"Target branch detected: {target_branch}")
-        
-        # Perform version checks based on target branch
-        if target_branch == 'main':
-            logger.info("Checking version for merging into main...")
-            check_main_merge_version(current_version, main_version)
-        elif target_branch == 'dev':
-            logger.info("Checking version for merging into dev...")
-            check_dev_merge_version(current_version, dev_version)
-        else:
-            logger.info("No specific version check required for this branch.")
-        
+
         # Validate versions
         logger.info("Checking README version...")
         check_version_match(current_version, readme_version, "README.md version mismatch")
@@ -219,7 +209,7 @@ def main():
         check_version_match(current_version, suite_version, "gbf_suite/Cargo.toml version mismatch")
         logger.info("Checking gbf_web version...")
         check_version_match(current_version, web_version, "gbf_web/package.json version mismatch")
-        
+
         if args.bump:
             # Only bump version if all checks pass
             logger.info(f"Bumping version: {args.bump}")
@@ -233,6 +223,18 @@ def main():
             update_readme_version(new_version)
             
             logger.info(f"Successfully bumped version to {new_version}")
+
+            return
+        
+        # Perform version checks based on target branch
+        if target_branch == 'main':
+            logger.info("Checking version for merging into main...")
+            check_main_merge_version(current_version, main_version)
+        elif target_branch == 'dev':
+            logger.info("Checking version for merging into dev...")
+            check_dev_merge_version(current_version, dev_version)
+        else:
+            logger.info("No specific version check required for this branch.")
         
         logger.info("All version checks passed!")
     except Exception as e:
