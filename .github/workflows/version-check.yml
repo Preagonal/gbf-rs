@@ -14,7 +14,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Python and install dependencies
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          args: python -m pip install toml semantic-version
+
       - name: Run version checks
         env:
           TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
-        run: ./scripts/version-check.sh
+        run: python ./scripts/version.py
