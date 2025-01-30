@@ -3,7 +3,7 @@ name: Version Bump on Renovate PRs
 on:
   pull_request:
     branches:
-      - feature/renovate/*
+      - feature/renovate/**
 
 jobs:
   version-check:
