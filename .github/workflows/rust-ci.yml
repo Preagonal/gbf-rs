@@ -5,10 +5,20 @@ on:
     branches:
       - main  # Run on pushes to `main`
       - dev   # Run on pushes to `dev`
+    paths:
+      - 'gbf_core/**'
+      - 'gbf_suite/**'
+      - 'gbf_macros/**'
+      - 'scripts/**'
   pull_request:
     branches:
       - main  # Run on pull requests targeting `main`
       - dev   # Run on pull requests targeting `dev`
+    paths:
+      - 'gbf_core/**'
+      - 'gbf_suite/**'
+      - 'gbf_macros/**'
+      - 'scripts/**'
 
 jobs:
   # Add a job to run the CI script
