@@ -6,5 +6,27 @@
   ],
   "baseBranches": [
     "dev"
-  ]
+  ],
+  "branchPrefix": "feature/renovate/",
+  "postUpdateOptions": [
+    "npmDedupe",
+    "yarnDedupeFewer"
+  ],
+  "onboardingConfig": {
+    "extends": [
+      "config:base"
+    ]
+  },
+  "updateBranch": true,
+  "automerge": false,
+  "postUpgradeTasks": {
+    "commands": [
+      "pip install -r ./scripts/requirements.txt",
+      "python3 ./scripts/version.py --bump patch"
+    ],
+    "fileFilters": [
+      "**/*"
+    ],
+    "executionMode": "update"
+  }
 }
