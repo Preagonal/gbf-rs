@@ -6,7 +6,7 @@ on:
       - feature/renovate/**
 
 jobs:
-  version-check:
+  version-bump:
     runs-on: ubuntu-latest
 
     steps:
