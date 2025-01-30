@@ -3,9 +3,8 @@ import { Container, Text, List, ListItem, ThemeIcon, rem, Anchor } from '@mantin
 import { IconExclamationCircle } from '@tabler/icons-react';
 import Link from 'next/link';
 
-export default async function Versions() {
+export default async function AllVersions() {
     const versions = await getAllVersions();
-
     return (
         <>
             <Container size="md">

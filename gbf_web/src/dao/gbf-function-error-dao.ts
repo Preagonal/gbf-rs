@@ -78,15 +78,15 @@ export class GbfFunctionErrorDao {
         return String(this.functionAddress);
     }
 
-    public toPlainObject() {
+    public static toPlainObject(instance: GbfFunctionErrorDao) {
         return {
-            gbfVersion: this.gbfVersion,
-            moduleId: this.moduleId,
-            functionAddress: this.functionAddress,
-            errorType: this.errorType,
-            message: this.message,
-            backtrace: this.backtrace,
-            errorContext: this.errorContext,
+            gbfVersion: instance.gbfVersion,
+            moduleId: instance.moduleId,
+            functionAddress: instance.functionAddress,
+            errorType: instance.errorType,
+            message: instance.message,
+            backtrace: instance.backtrace,
+            errorContext: instance.errorContext,
         };
     }
 }

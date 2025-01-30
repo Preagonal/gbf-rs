@@ -4,10 +4,13 @@ import TabbedFunctionView from '@/components/tabbed-view';
 import { getFunction } from '@/lib/function';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { getFunctionError } from '@/lib/error';
+import { GbfFunctionDao } from '@/dao/gbf-function-dao';
+import { GbfFunctionErrorDao } from '@/dao/gbf-function-error-dao';
+import { GbfGraphvizStructureAnalysisDao } from '@/dao/gbf-graphviz-structure-analysis-dao';
 
 type versionPromise = Promise<{ version: string; module: string; function: string }>;
 
-export default async function Functions(props: { params: versionPromise }) {
+export default async function Function(props: { params: versionPromise }) {
     const versionParam = (await props.params).version;
     const moduleParam = (await props.params).module;
     const functionParam = (await props.params).function;
@@ -47,10 +50,9 @@ export default async function Functions(props: { params: versionPromise }) {
     }
 
     const error = await getFunctionError(versionParam, moduleParam, functionParamNumber);
-
     return (
         <Box mt="sm">
-            <TabbedFunctionView err={error ? error.toPlainObject() : null} func={func.toPlainObject()} structures={structures.map((st) => st.toPlainObject())} />
+            <TabbedFunctionView err={error ? GbfFunctionErrorDao.toPlainObject(error) : null} func={GbfFunctionDao.toPlainObject(func)} structures={structures.map((st) => GbfGraphvizStructureAnalysisDao.toPlainObject(st))} />
         </Box>
     );
 }

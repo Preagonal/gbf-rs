@@ -128,4 +128,8 @@ jobs:
       - name: Run GBF Suite
         env:
           GBF_SUITE_DIR: ./gbf_core/tests/gs2bc/
-        run: cargo run --package gbf_suite
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            export GBF_VERSION="pr-${{ github.event.pull_request.number }}"
+          fi
+          cargo run --package gbf_suite

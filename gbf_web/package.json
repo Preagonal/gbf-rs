@@ -20,20 +20,27 @@
     "@netlify/plugin-nextjs": "^5.9.4",
     "@tabler/icons-react": "^3.28.1",
     "@viz-js/viz": "^3.11.0",
+    "cache-manager": "^6.4.0",
+    "cacheable": "^1.8.8",
     "next": "15.1.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "semver": "^7.7.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/node": "^22.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/semver": "^7.5.8",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8.4.49",
     "postcss-preset-mantine": "^1.17.0",
     "postcss-simple-vars": "^7.0.1",
     "typescript": "^5"
+  },
+  "overrides": {
+    "keyv": "5.2.3"
   }
 }
