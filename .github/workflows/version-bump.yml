@@ -32,11 +32,11 @@ jobs:
 
       - name: Determine Version Type
         run: |
-          if echo "$BODY" | grep -q "\- \[x\] Bump **major** version"; then
+          if echo "$BODY" | grep -q "\- \[x\] Bump \*\*major\*\* version"; then
             echo "VERSION_TYPE=major" >> $GITHUB_ENV
-          elif echo "$BODY" | grep -q "\- \[x\] Bump **minor** version"; then
+          elif echo "$BODY" | grep -q "\- \[x\] Bump \*\*minor\*\* version"; then
             echo "VERSION_TYPE=minor" >> $GITHUB_ENV
-          elif echo "$BODY" | grep -q "\- \[x\] Bump **patch** version"; then
+          elif echo "$BODY" | grep -q "\- \[x\] Bump \*\*patch\*\* version"; then
             echo "VERSION_TYPE=patch" >> $GITHUB_ENV
           else
             echo "No valid version bump checkbox selected"
