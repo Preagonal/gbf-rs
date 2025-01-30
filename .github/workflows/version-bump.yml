@@ -44,6 +44,7 @@ jobs:
           fi
 
       - name: Run version check script
+        if: env.VERSION_TYPE != ''
         run: python ./scripts/version.py --bump $VERSION_TYPE
 
       - name: Commit version bump
@@ -63,6 +64,7 @@ jobs:
           git push origin HEAD:${{ github.head_ref }}
 
       - name: Comment on PR
+        if: env.VERSION_TYPE != ''
         run: |
           gh pr comment ${{ github.event.pull_request.html_url }} --body "✅ Version has been bumped: **${VERSION_TYPE}**"
         env:
