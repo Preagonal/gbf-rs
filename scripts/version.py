@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-import toml
+import tomlkit
 import json
 import subprocess
 import logging
 import re
 import argparse
-from semantic_version import Version, NpmSpec
+from semantic_version import Version
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ def get_branch_version(branch):
             shell=True,
             text=True
         )
-        cargo_content = toml.loads(version)
+        cargo_content = tomlkit.loads(version)
         version_str = cargo_content.get('package', {}).get('version')
         if not version_str:
             raise ValueError(f"Version not found in branch {branch}")
@@ -32,7 +32,7 @@ def get_local_cargo_version(path):
     """Fetch version from a local Cargo.toml file."""
     try:
         with open(path, 'r') as f:
-            cargo_content = toml.load(f)
+            cargo_content = tomlkit.load(f)
             version_str = cargo_content.get('package', {}).get('version')
             if not version_str:
                 raise ValueError(f"Version not found in {path}")
@@ -118,12 +118,12 @@ def update_cargo_version(file_path, new_version):
     """Update version in a Cargo.toml file."""
     try:
         with open(file_path, 'r+') as f:
-            cargo_content = toml.load(f)
+            cargo_content = tomlkit.load(f)
             if 'package' not in cargo_content:
                 cargo_content['package'] = {}
             cargo_content['package']['version'] = str(new_version)
             f.seek(0)
-            f.write(toml.dumps(cargo_content))
+            f.write(tomlkit.dumps(cargo_content))
             f.truncate()
         logger.info(f"Updated version in {file_path} to {new_version}")
     except Exception as e:
