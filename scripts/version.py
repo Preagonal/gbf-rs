@@ -2,6 +2,7 @@
 
 import tomlkit
 import json
+import os
 import subprocess
 import logging
 import re
@@ -195,8 +196,8 @@ def main():
         
         # Determine target branch
         target_branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).decode().strip()
-        if 'GITHUB_BASE_REF' in subprocess.check_output(['printenv']).decode():
-            target_branch = subprocess.check_output(['echo', '$GITHUB_BASE_REF']).decode().strip()
+        if 'GITHUB_BASE_REF' in os.environ:
+            target_branch = os.getenv('GITHUB_BASE_REF', target_branch)
         logger.info(f"Target branch detected: {target_branch}")
         
         # Perform version checks based on target branch

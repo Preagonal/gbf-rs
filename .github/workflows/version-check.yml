@@ -22,6 +22,4 @@ jobs:
       - run: pip install -r ./scripts/requirements.txt
 
       - name: Run version checks
-        env:
-          TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
         run: python ./scripts/version.py
