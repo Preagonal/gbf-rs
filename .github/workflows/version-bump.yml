@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  pull-request: write
 
 jobs:
   version-bump:
