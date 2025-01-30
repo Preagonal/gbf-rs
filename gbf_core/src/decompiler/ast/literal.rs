@@ -17,6 +17,8 @@ pub enum LiteralNode {
     Float(String),
     /// A boolean literal.
     Boolean(bool),
+    /// A null literal.
+    Null,
 }
 
 impl LiteralNode {

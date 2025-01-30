@@ -433,6 +433,7 @@ impl FunctionDecompiler {
 
                     region.set_jump_expr(Some(jmp.clone()));
                     region.set_region_type(RegionType::ControlFlow);
+                    region.set_branch_opcode(instr.opcode);
                 }
             }
         }

@@ -6,6 +6,7 @@ use crate::decompiler::ast::visitors::emit_context::{EmitContextBuilder, EmitVer
 use crate::decompiler::ast::visitors::emitter::Gs2Emitter;
 use crate::decompiler::ast::visitors::AstVisitor;
 use crate::decompiler::ast::AstKind;
+use crate::opcode::Opcode;
 use crate::utils::{html_encode, GBF_GREEN, GBF_YELLOW};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
@@ -50,6 +51,7 @@ pub struct Region {
     nodes: Vec<AstKind>,
     jump_expr: Option<ExprKind>,
     region_type: RegionType,
+    branch_opcode: Option<Opcode>,
 }
 
 impl Region {
@@ -62,6 +64,7 @@ impl Region {
             nodes: Vec::new(),
             jump_expr: None,
             region_type,
+            branch_opcode: None,
         }
     }
 
@@ -129,6 +132,22 @@ impl Region {
     /// * `jump_expr` - The new optional jump expression.
     pub fn set_jump_expr(&mut self, jump_expr: Option<ExprKind>) {
         self.jump_expr = jump_expr;
+    }
+
+    /// Gets the branch opcode, if any.
+    ///
+    /// # Return
+    /// The opcode.
+    pub fn get_branch_opcode(&self) -> Option<Opcode> {
+        self.branch_opcode
+    }
+
+    /// Sets the opcode.
+    ///
+    /// # Arguments
+    /// * `opcode` - The new opcode.
+    pub fn set_branch_opcode(&mut self, opcode: Opcode) {
+        self.branch_opcode = Some(opcode);
     }
 
     /// Returns an iterator over the statements in the region.

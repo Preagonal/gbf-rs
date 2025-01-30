@@ -11,7 +11,9 @@ on:
       - dev   # Run on pull requests targeting `dev`
 
 jobs:
-  check:
+  # Add a job to run the CI script
+  rust-tests-code-coverage:
+    name: Run Rust Tests and Code Coverage
     runs-on: ubuntu-latest
 
     steps:
@@ -19,11 +21,101 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
-          override: true
           components: rustfmt, clippy
+      
+      # https://stackoverflow.com/questions/78629554/how-to-cache-cargo-packages-in-the-github-ci-workflow
+      - name: "Cache cargo"
+        id: cache-cargo
+        uses: "actions/cache@v4"
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          save-always: true
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
       - name: Run CI script
         run: IS_CI=true ./scripts/pre-commit.sh
+      
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      
+      - name: Generate code coverage
+        run: cargo llvm-cov --all-features --workspace --codecov --output-path codecov.json
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: codecov.json
+  
+  # Add a job to run the version check script
+  version-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python and install dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r ./scripts/requirements.txt
+
+      - name: Run version checks
+        run: python ./scripts/version.py
+  
+  # Add a job to run the GBF Suite
+  gbf-suite:
+    name: GBF Suite
+    needs: [version-check]
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout Repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Configure AWS Credentials (if needed for external storage)
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # Step 3: Install Rust
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+
+      # https://stackoverflow.com/questions/78629554/how-to-cache-cargo-packages-in-the-github-ci-workflow
+      - name: "Cache cargo"
+        id: cache-cargo
+        uses: "actions/cache@v4"
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          save-always: true
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      # Step 4: Run GBF Suite
+      - name: Run GBF Suite
+        env:
+          GBF_SUITE_DIR: ./gbf_core/tests/gs2bc/
+        run: cargo run --package gbf_suite
