@@ -64,13 +64,13 @@ export class GbfModuleDao {
         return this.moduleId;
     }
 
-    public toPlainObject() {
+    public static toPlainObject(instance: GbfModuleDao) {
         return {
-            gbfVersion: this.gbfVersion,
-            moduleId: this.moduleId,
-            fileName: this.fileName,
-            moduleLoadTimeMillis: this.moduleLoadTimeMillis,
-            decompileSuccess: this.decompileSuccess,
+            gbfVersion: instance.gbfVersion,
+            moduleId: instance.moduleId,
+            fileName: instance.fileName,
+            moduleLoadTimeMillis: instance.moduleLoadTimeMillis,
+            decompileSuccess: instance.decompileSuccess,
         };
     }
 

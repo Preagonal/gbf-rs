@@ -78,16 +78,16 @@ export class GbfFunctionDao {
         return String(this.functionAddress);
     }
 
-    public toPlainObject() {
+    public static toPlainObject(instance: GbfFunctionDao) {
         return {
-            gbfVersion: this.gbfVersion,
-            moduleId: this.moduleId,
-            functionAddress: this.functionAddress,
-            functionName: this.functionName,
-            decompileSuccess: this.decompileSuccess,
-            decompileResult: this.decompileResult,
-            totalTimeMillis: this.totalTimeMillis,
-            dotUrl: this.dotUrl,
+            gbfVersion: instance.gbfVersion,
+            moduleId: instance.moduleId,
+            functionAddress: instance.functionAddress,
+            functionName: instance.functionName,
+            decompileSuccess: instance.decompileSuccess,
+            decompileResult: instance.decompileResult,
+            totalTimeMillis: instance.totalTimeMillis,
+            dotUrl: instance.dotUrl,
         };
     }
 }

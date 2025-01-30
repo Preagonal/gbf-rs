@@ -3,6 +3,7 @@ import { GBF_AWS_DYNAMO_VERSION_TABLE, MAX_DYNAMO_DB_BATCH_SIZE } from '@/consts
 import { GbfVersionDao } from '@/dao/gbf-version-dao';
 import { QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { DYNAMO_CLIENT } from './dynamo';
+import semver from 'semver';
 
 /**
  * Maps the dynamodb response to a GbfVersionDao.
@@ -26,13 +27,20 @@ function mapToGbfVersionDao(item: unknown): GbfVersionDao {
  * Fetches all suites from the GbfSuiteResult table.
  */
 export async function fetchAllVersions(): Promise<GbfVersionDao[]> {
+    console.log("Fetching versions");
     const params = {
         TableName: GBF_AWS_DYNAMO_VERSION_TABLE,
         Limit: MAX_DYNAMO_DB_BATCH_SIZE,
     };
     const command = new ScanCommand(params);
     const results = await DYNAMO_CLIENT.send(command);
-    return results.Items?.map(mapToGbfVersionDao) || [];
+    const versions = results.Items?.map(mapToGbfVersionDao) || [];
+    return versions.sort((a, b) => {
+        if (semver.valid(a.gbfVersion) && semver.valid(b.gbfVersion)) {
+            return semver.rcompare(a.gbfVersion, b.gbfVersion);
+        }
+        return a.gbfVersion.localeCompare(b.gbfVersion);
+    });
 }
 
 /**

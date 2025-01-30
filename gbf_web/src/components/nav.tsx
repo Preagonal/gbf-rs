@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useTransition } from "react";
 import {
     Box,
     Title,
@@ -10,9 +10,10 @@ import {
     Alert,
     ActionIcon,
     rem,
+    Tooltip,
 } from "@mantine/core";
 import { useRouter, usePathname } from "next/navigation";
-import { IconAlertCircle, IconBook } from "@tabler/icons-react";
+import { IconAlertCircle, IconBook, IconTrash } from "@tabler/icons-react";
 import "./nav.css"; // Import the CSS file
 import Link from "next/link";
 import { DOCS_LINK } from "@/consts";
@@ -57,6 +58,8 @@ export function NavigationBar() {
     const currentFunction = segments[2] ?? "";
 
     const router = useRouter();
+
+    const [isPending, startTransition] = useTransition();
 
     // Helper: build route based on version/module/function
     function createNavLink(version?: string, mod?: string, func?: string) {
@@ -168,9 +171,13 @@ export function NavigationBar() {
                     data={versions.map((v) => ({ value: v.gbfVersion, label: v.gbfVersion }))}
                     placeholder="Select version"
                     value={currentVersion}
-                    onChange={(value) => router.push(createNavLink(value || undefined))}
-                    rightSection={versionsLoading ? <Loader size="xs" /> : null}
+                    onChange={(value) =>
+                        startTransition(() => router.push(createNavLink(value || undefined, currentModule, currentFunction)))
+                    }
+                    rightSection={versionsLoading || isPending ? <Loader size="xs" /> : null}
+                    disabled={versionsLoading || isPending}
                     className="navbar-version"
+                    searchable
                 />
 
                 {/* MODULE SELECT */}
@@ -179,11 +186,12 @@ export function NavigationBar() {
                     placeholder="Select module"
                     value={currentModule}
                     onChange={(value) =>
-                        router.push(createNavLink(currentVersion, value || undefined))
+                        startTransition(() => router.push(createNavLink(currentVersion, value || undefined, currentFunction)))
                     }
-                    rightSection={modulesLoading ? <Loader size="xs" /> : null}
-                    disabled={modulesLoading || !modules.length || !!currentFunction}
+                    rightSection={modulesLoading || isPending ? <Loader size="xs" /> : null}
+                    disabled={modulesLoading || isPending || !modules.length || !!currentFunction}
                     className="navbar-module"
+                    searchable
                 />
 
                 {/* FUNCTION SELECT */}
@@ -195,31 +203,57 @@ export function NavigationBar() {
                     placeholder="Select function"
                     value={currentFunction}
                     onChange={(value) =>
-                        router.push(
-                            createNavLink(currentVersion, currentModule, value || undefined)
+                        startTransition(() =>
+                            router.push(createNavLink(currentVersion, currentModule, value || undefined))
                         )
                     }
-                    rightSection={functionsLoading ? <Loader size="xs" /> : null}
-                    disabled={functionsLoading || !functions.length}
+                    rightSection={functionsLoading || isPending ? <Loader size="xs" /> : null}
+                    disabled={functionsLoading || isPending || !functions.length}
                     className="navbar-function"
+                    searchable
                 />
 
                 {/* BACK BUTTON */}
-                <Button onClick={() => router.push(backLink)}>
+                <Button onClick={() => startTransition(() => router.push(backLink))}>
                     Back
                 </Button>
 
                 {/* DOCS LINK */}
-                <ActionIcon
-                    color="blue"
-                    size={36}
-                    radius="xl"
-                    component={Link}
-                    href={DOCS_LINK}
-                    target="_blank"
-                >
-                    <IconBook style={{ width: rem(16), height: rem(16) }} />
-                </ActionIcon>
+                <Tooltip label="Documentation" position="bottom" withArrow>
+                    <ActionIcon
+                        color="blue"
+                        size={36}
+                        radius="xl"
+                        component={Link}
+                        href={DOCS_LINK}
+                        target="_blank"
+                    >
+                        <IconBook style={{ width: rem(16), height: rem(16) }} />
+                    </ActionIcon>
+                </Tooltip>
+                <Tooltip label="Invalidate Cache" position="bottom" withArrow>
+                    <ActionIcon
+                        color="blue"
+                        size={36}
+                        radius="xl"
+                        onClick={() => {
+                            startTransition(async () => {
+                                try {
+                                    const response = await fetch("/api/cache", { method: "POST" });
+                                    if (!response.ok) {
+                                        throw new Error(`Failed to invalidate cache: ${response.status}`);
+                                    }
+                                    window.location.reload();
+                                } catch (error) {
+                                    console.error(error);
+                                    alert("Error invalidating cache");
+                                }
+                            });
+                        }}
+                    >
+                        <IconTrash style={{ width: rem(16), height: rem(16) }} />
+                    </ActionIcon>
+                </Tooltip>
             </div>
 
             {/* Error Alerts */}

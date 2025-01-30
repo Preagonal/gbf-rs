@@ -52,13 +52,13 @@ export class GbfGraphvizStructureAnalysisDao {
         return `${this.gbfVersion}#${this.moduleId}#${this.functionAddress}`;
     }
 
-    toPlainObject() {
+    public static toPlainObject(instance: GbfGraphvizStructureAnalysisDao) {
         return {
-            gbfVersion: this.gbfVersion,
-            moduleId: this.moduleId,
-            functionAddress: this.functionAddress,
-            structureAnalysisStep: this.structureAnalysisStep,
-            dotUrl: this.dotUrl,
+            gbfVersion: instance.gbfVersion,
+            moduleId: instance.moduleId,
+            functionAddress: instance.functionAddress,
+            structureAnalysisStep: instance.structureAnalysisStep,
+            dotUrl: instance.dotUrl,
         };
     }
 }

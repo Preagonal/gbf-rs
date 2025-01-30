@@ -38,11 +38,11 @@ export class GbfVersionDao {
         return this.gbfVersion;
     }
 
-    toPlainObject() {
+    public static toPlainObject(instance: GbfVersionDao) {
         return {
-            gbfVersion: this.gbfVersion,
-            totalTimeMillis: this.totalTimeMillis,
-            suiteTimestamp: this.suiteTimestamp,
+            gbfVersion: instance.gbfVersion,
+            totalTimeMillis: instance.totalTimeMillis,
+            suiteTimestamp: instance.suiteTimestamp,
         };
     }
 }

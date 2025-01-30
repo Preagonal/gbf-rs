@@ -10,6 +10,7 @@ use std::{
 
 use aws_upload::AwsUpload;
 use consts::{ExitCode, GBF_SUITE_INPUT_DIR_ENV_VAR};
+use dotenv::dotenv;
 use gbf_core::{
     cfg_dot::{CfgDotConfig, DotRenderableGraph},
     decompiler::{
@@ -33,6 +34,9 @@ pub mod utils;
 
 #[tokio::main]
 async fn main() {
+    // Load .env file if it exists
+    dotenv().ok();
+
     let config_path = path::Path::new(env!("CARGO_MANIFEST_DIR")).join("logging_config.yaml");
     log4rs::init_file(config_path, Default::default()).unwrap();
 
@@ -53,6 +57,9 @@ async fn main() {
 
     let uploader = aws_upload::AwsUpload::new().await;
 
+    // If GBF_VERSION is set, create option and pass it to `process_module`
+    let gbf_version_override = env::var("GBF_VERSION").ok();
+
     // Iterate over the directory entries.
     let time = Instant::now();
     for entry in dir {
@@ -65,7 +72,12 @@ async fn main() {
             }
         };
 
-        let result = process_module(&uploader, entry.path().as_ref()).await;
+        let result = process_module(
+            &uploader,
+            entry.path().as_ref(),
+            gbf_version_override.clone(),
+        )
+        .await;
 
         if let Err(e) = result {
             log::error!("Failed to process module: {}", e);
@@ -75,7 +87,7 @@ async fn main() {
     let total_time = time.elapsed();
 
     let gbf_version = GbfVersionDao {
-        gbf_version: VERSION.to_string(),
+        gbf_version: gbf_version_override.clone().unwrap_or(VERSION.to_string()),
         total_time,
         suite_timestamp: std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -95,6 +107,7 @@ async fn main() {
 async fn process_module(
     uploader: &AwsUpload,
     path: &path::Path,
+    gbf_version_override: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let module_name = path
         .file_name()
@@ -122,7 +135,7 @@ async fn process_module(
     let module_time = time.elapsed();
 
     let mut module_dao = GbfModuleDao {
-        gbf_version: VERSION.to_string(),
+        gbf_version: gbf_version_override.clone().unwrap_or(VERSION.to_string()),
         module_id: module_id.to_string(),
         file_name: module_name,
         module_load_time: module_time,
@@ -149,7 +162,7 @@ async fn process_module(
 
         let decompile_success = if res.is_err() {
             let error = GbfFunctionErrorDao {
-                gbf_version: VERSION.to_string(),
+                gbf_version: gbf_version_override.clone().unwrap_or(VERSION.to_string()),
                 module_id: module_id.to_string(),
                 function_address: func.id.address,
                 error_type: res.as_ref().unwrap_err().error_type().to_string(),
@@ -165,7 +178,7 @@ async fn process_module(
         };
 
         let function_dao = GbfFunctionDao {
-            gbf_version: VERSION.to_string(),
+            gbf_version: gbf_version_override.clone().unwrap_or(VERSION.to_string()),
             module_id: module_id.to_string(),
             function_address: func.id.address,
             function_name: func.id.name.clone(),
@@ -192,7 +205,7 @@ async fn process_module(
             let dot_key = uploader.upload_graphviz_dot(dot.clone()).await?;
 
             let graphviz_dao = GbfGraphvizStructureAnalaysisDao {
-                gbf_version: VERSION.to_string(),
+                gbf_version: gbf_version_override.clone().unwrap_or(VERSION.to_string()),
                 module_id: module_id.to_string(),
                 function_address: func.id.address,
                 structure_analysis_step: i,

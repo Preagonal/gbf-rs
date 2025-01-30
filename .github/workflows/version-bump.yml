@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: write
-  pull-request: write
 
 jobs:
   version-bump:
@@ -62,11 +61,12 @@ jobs:
           
           # Pull latest changes before pushing to avoid non-fast-forward errors
           git pull --rebase origin ${{ github.head_ref }}
-          git push origin HEAD:${{ github.head_ref }}
+          git push https://x-access-token:${{ secrets.PR_PAT }}@github.com/${{ github.repository }}.git HEAD:${{ github.head_ref }}
 
       - name: Comment on PR
         if: env.VERSION_TYPE != ''
         run: |
+          gh auth login --with-token <<< "${{ secrets.PR_PAT }}"
           gh pr comment ${{ github.event.pull_request.html_url }} --body "✅ Version has been bumped: **${VERSION_TYPE}**"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PR_PAT }}

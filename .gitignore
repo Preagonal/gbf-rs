@@ -30,7 +30,8 @@ gbf_core/src/main.rs
 gbf_core/tests/gs2bc/StartScript_Connector.gs2bc
 
 # Don't track local env files
-.env.local
+.env
+.env.*
 
 # Don't track ./scripts/venv
 scripts/venv/
