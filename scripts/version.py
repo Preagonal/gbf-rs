@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import tomlkit
+import sys
 import json
 import os
 import subprocess
@@ -211,6 +212,12 @@ def main():
         check_version_match(current_version, web_version, "gbf_web/package.json version mismatch")
 
         if args.bump:
+            if target_branch == 'dev' and current_version > dev_version:
+                logger.info(
+                    f"Current version ({current_version}) is already greater than dev branch version "
+                    f"({dev_version}). Skipping bump."
+                )
+                sys.exit(0)
             # Only bump version if all checks pass
             logger.info(f"Bumping version: {args.bump}")
             new_version = bump_version(current_version, args.bump)
