@@ -3,10 +3,13 @@ name: Version Bump on Renovate PRs
 on:
   pull_request:
     branches:
-      - feature/renovate/*
+      - dev
+
+permissions:
+  contents: write
 
 jobs:
-  version-check:
+  version-bump:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,6 +23,13 @@ jobs:
           cache: 'pip'
       - run: pip install -r ./scripts/requirements.txt
 
+      - name: Check if PR is from a Renovate branch
+        run: |
+          if [[ "${{ github.head_ref }}" != feature/renovate/* ]]; then
+            echo "Skipping version bump: Not a Renovate PR"
+            exit 0
+          fi
+
       - name: Run version check script
         run: python ./scripts/version.py --bump patch
 
@@ -28,5 +38,12 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "github-actions@github.com"
           git add .
+          if git diff --staged --quiet; then
+            echo "No changes detected, skipping commit."
+            exit 0
+          fi
           git commit -m "chore: bump version for Renovate PR"
+          
+          # Pull latest changes before pushing to avoid non-fast-forward errors
+          git pull --rebase origin ${{ github.head_ref }}
           git push origin HEAD:${{ github.head_ref }}
