@@ -1,0 +1,72 @@
+name: Version Bump
+
+on:
+  pull_request:
+    types: [edited]
+
+permissions:
+  contents: write
+  pull-request: write
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python and install dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r ./scripts/requirements.txt
+
+      - name: Extract PR Body
+        run: |
+          {
+            echo 'BODY<<EOF'
+            echo "${{ github.event.pull_request.body }}"
+            echo 'EOF'
+          } >> $GITHUB_ENV
+
+      - name: Determine Version Type
+        run: |
+          if echo "$BODY" | grep -q "\- \[x\] Bump \*\*major\*\* version"; then
+            echo "VERSION_TYPE=major" >> $GITHUB_ENV
+          elif echo "$BODY" | grep -q "\- \[x\] Bump \*\*minor\*\* version"; then
+            echo "VERSION_TYPE=minor" >> $GITHUB_ENV
+          elif echo "$BODY" | grep -q "\- \[x\] Bump \*\*patch\*\* version"; then
+            echo "VERSION_TYPE=patch" >> $GITHUB_ENV
+          else
+            echo "No valid version bump checkbox selected"
+            exit 0
+          fi
+
+      - name: Run version check script
+        if: env.VERSION_TYPE != ''
+        run: python ./scripts/version.py --bump $VERSION_TYPE
+
+      - name: Commit version bump
+        if: env.VERSION_TYPE != ''
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "github-actions@github.com"
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes detected, skipping commit."
+            exit 0
+          fi
+          git commit -m "chore: bump version"
+          
+          # Pull latest changes before pushing to avoid non-fast-forward errors
+          git pull --rebase origin ${{ github.head_ref }}
+          git push origin HEAD:${{ github.head_ref }}
+
+      - name: Comment on PR
+        if: env.VERSION_TYPE != ''
+        run: |
+          gh pr comment ${{ github.event.pull_request.html_url }} --body "✅ Version has been bumped: **${VERSION_TYPE}**"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
