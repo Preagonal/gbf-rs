@@ -1,4 +1,4 @@
-name: Version Bump on Renovate PRs
+name: Version Bump
 
 on:
   pull_request:

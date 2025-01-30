@@ -7,5 +7,7 @@
   "baseBranches": [
     "dev"
   ],
-  "branchPrefix": "feature/renovate/"
+  "branchPrefix": "feature/renovate/",
+  "prHeader": "## Summary",
+  "prFooter": "\n## Version Bump\nPlease select the appropriate version bump by checking the corresponding box:\n\n- [ ] Bump **major** version (breaking changes)\n- [ ] Bump **minor** version (new features, but backwards compatible)\n- [ ] Bump **patch** version (bug fixes, backwards compatible)"
 }
