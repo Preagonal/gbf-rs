@@ -107,11 +107,11 @@ def check_version_match(current_version, target_version, description):
 def bump_version(version, bump_type):
     """Bump major, minor, or patch version."""
     if bump_type == 'major':
-        return version.bump_major()
+        return Version(major=version.major + 1, minor=0, patch=0)
     elif bump_type == 'minor':
-        return version.bump_minor()
+        return Version(major=version.major, minor=version.minor + 1, patch=0)
     elif bump_type == 'patch':
-        return version.bump_patch()
+        return Version(major=version.major, minor=version.minor, patch=version.patch + 1)
     else:
         raise ValueError("Invalid bump type. Use 'major', 'minor', or 'patch'.")
 
