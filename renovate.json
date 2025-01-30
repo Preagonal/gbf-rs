@@ -12,11 +12,6 @@
     "npmDedupe",
     "yarnDedupeFewer"
   ],
-  "onboardingConfig": {
-    "extends": [
-      "config:base"
-    ]
-  },
   "automerge": false,
   "postUpgradeTasks": {
     "commands": [
