@@ -4,7 +4,7 @@ use std::backtrace::Backtrace;
 
 use crate::{
     decompiler::{
-        ast::{new_bool, new_float, new_num, new_str},
+        ast::{new_bool, new_float, new_null, new_num, new_str},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -30,6 +30,8 @@ impl OpcodeHandler for LiteralHandler {
             || instruction.opcode == Opcode::PushFalse
         {
             new_bool(instruction.opcode == Opcode::PushTrue)
+        } else if instruction.opcode == Opcode::PushNull {
+            new_null()
         } else {
             // For literals, the opcode must contain the literal value as an operand.
             let operand = instruction.operand.as_ref().ok_or(

@@ -81,6 +81,7 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::PushNumber, Box::new(LiteralHandler));
         handlers.insert(Opcode::PushTrue, Box::new(LiteralHandler));
         handlers.insert(Opcode::PushFalse, Box::new(LiteralHandler));
+        handlers.insert(Opcode::PushNull, Box::new(LiteralHandler));
 
         // These handlers are used to create binary operation nodes.
         handlers.insert(Opcode::Add, Box::new(BinaryOperationHandler));
@@ -109,10 +110,13 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::ConvertToFloat, Box::new(NopHandler));
         handlers.insert(Opcode::ConvertToObject, Box::new(NopHandler));
         handlers.insert(Opcode::ConvertToString, Box::new(NopHandler));
+        handlers.insert(Opcode::ConvertToVariable, Box::new(NopHandler));
         handlers.insert(Opcode::FunctionStart, Box::new(NopHandler));
         handlers.insert(Opcode::IncreaseLoopCounter, Box::new(NopHandler));
         handlers.insert(Opcode::Jmp, Box::new(NopHandler));
         handlers.insert(Opcode::MarkRegisterVariable, Box::new(NopHandler));
+        handlers.insert(Opcode::WithEnd, Box::new(NopHandler));
+        handlers.insert(Opcode::New, Box::new(NopHandler));
 
         // Two operand handlers
         handlers.insert(
@@ -190,6 +194,7 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         // Jump handlers
         handlers.insert(Opcode::Jne, Box::new(jump::JumpHandler));
         handlers.insert(Opcode::Jeq, Box::new(jump::JumpHandler));
+        handlers.insert(Opcode::With, Box::new(jump::JumpHandler));
 
         handlers
     })
