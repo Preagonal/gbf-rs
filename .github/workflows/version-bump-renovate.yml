@@ -43,4 +43,7 @@ jobs:
             exit 0
           fi
           git commit -m "chore: bump version for Renovate PR"
+          
+          # Pull latest changes before pushing to avoid non-fast-forward errors
+          git pull --rebase origin ${{ github.head_ref }}
           git push origin HEAD:${{ github.head_ref }}
