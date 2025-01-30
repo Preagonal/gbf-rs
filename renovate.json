@@ -7,20 +7,5 @@
   "baseBranches": [
     "dev"
   ],
-  "branchPrefix": "feature/renovate/",
-  "postUpdateOptions": [
-    "npmDedupe",
-    "yarnDedupeFewer"
-  ],
-  "automerge": false,
-  "postUpgradeTasks": {
-    "commands": [
-      "pip install -r ./scripts/requirements.txt",
-      "python3 ./scripts/version.py --bump patch"
-    ],
-    "fileFilters": [
-      "**/*"
-    ],
-    "executionMode": "update"
-  }
+  "branchPrefix": "feature/renovate/"
 }

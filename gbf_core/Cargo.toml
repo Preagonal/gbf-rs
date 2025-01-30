@@ -1,6 +1,6 @@
 [package]
 name = "gbf_core"
-version = "0.1.5"
+version = "0.1.6"
 # TODO: Once 2024 edition is stable, switch to it. ETA Feb 2025.
 edition = "2021"
 
