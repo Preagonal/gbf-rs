@@ -11,7 +11,6 @@ use std::backtrace::Backtrace;
 use std::collections::HashMap;
 use thiserror::Error;
 
-use super::ast::ast_vec::AstVec;
 use super::ast::expr::ExprKind;
 use super::ast::function::FunctionNode;
 use super::ast::visitors::emit_context::EmitContext;
@@ -232,7 +231,7 @@ pub struct FunctionDecompiler {
     /// The current context for the decompiler
     context: Option<FunctionDecompilerContext>,
     /// The parameters for the function
-    function_parameters: AstVec<ExprKind>,
+    function_parameters: Vec<ExprKind>,
     /// The structure analysis
     struct_analysis: StructureAnalysis,
     /// Whether the analysis has been run
@@ -261,7 +260,7 @@ impl FunctionDecompiler {
             function,
             block_to_region: HashMap::new(),
             context: None,
-            function_parameters: Vec::<ExprKind>::new().into(),
+            function_parameters: Vec::<ExprKind>::new(),
             struct_analysis: StructureAnalysis::new(structure_debug_mode, structure_max_iterations),
             did_run_analysis: false,
         }
@@ -304,7 +303,7 @@ impl FunctionDecompiler {
                 .expect("[Bug] The entry region should exist.");
             region.clone()
         };
-        let entry_region_nodes = entry_region.iter_nodes().cloned().collect::<AstVec<_>>();
+        let entry_region_nodes = entry_region.iter_nodes().cloned().collect::<Vec<_>>();
 
         let func = AstKind::Function(
             FunctionNode::new(

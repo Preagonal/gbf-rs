@@ -3,14 +3,14 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{expr::ExprKind, ptr::P, visitors::AstVisitor, AstKind, AstVec, AstVisitable};
+use super::{expr::ExprKind, ptr::P, visitors::AstVisitor, AstKind, AstVisitable};
 
 /// Represents a function call
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
 #[convert_to(ExprKind::Array, AstKind::Expression)]
 pub struct ArrayNode {
     /// The arguments to the function.
-    pub elements: AstVec<ExprKind>,
+    pub elements: Vec<ExprKind>,
 }
 
 impl ArrayNode {
@@ -18,7 +18,7 @@ impl ArrayNode {
     ///
     /// # Arguments
     /// - `elements`: The elements of the array.
-    pub fn new(elements: AstVec<ExprKind>) -> Self {
+    pub fn new(elements: Vec<ExprKind>) -> Self {
         Self { elements }
     }
 }

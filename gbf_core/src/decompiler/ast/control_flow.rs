@@ -3,7 +3,7 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{ast_vec::AstVec, block::BlockNode, expr::ExprKind, ptr::P, AstKind, AstVisitable};
+use super::{block::BlockNode, expr::ExprKind, ptr::P, AstKind, AstVisitable};
 
 /// Represents the type of control flow node.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -37,10 +37,10 @@ impl ControlFlowNode {
     ///
     /// # Returns
     /// A new `ControlFlowNode`.
-    pub fn new<E, V>(ty: ControlFlowType, condition: Option<E>, body: V) -> Self
+    pub fn new<E, V>(ty: ControlFlowType, condition: Option<E>, body: Vec<V>) -> Self
     where
         E: Into<ExprKind>,
-        V: Into<AstVec<AstKind>>,
+        V: Into<AstKind>,
     {
         Self {
             ty,
