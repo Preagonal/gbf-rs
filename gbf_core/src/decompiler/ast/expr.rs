@@ -4,9 +4,9 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    assignable::AssignableKind, bin_op::BinaryOperationNode, func_call::FunctionCallNode,
-    literal::LiteralNode, unary_op::UnaryOperationNode, visitors::AstVisitor, AstKind,
-    AstVisitable,
+    array::ArrayNode, assignable::AssignableKind, bin_op::BinaryOperationNode,
+    func_call::FunctionCallNode, literal::LiteralNode, ptr::P, unary_op::UnaryOperationNode,
+    visitors::AstVisitor, AstKind, AstVisitable,
 };
 
 /// Represents an expression node in the AST.
@@ -14,21 +14,17 @@ use super::{
 #[convert_to(AstKind::Expression)]
 pub enum ExprKind {
     /// Represents a literal node in the AST.
-    Literal(LiteralNode),
+    Literal(P<LiteralNode>),
     /// Represents an assignable expression node in the AST.
     Assignable(AssignableKind),
     /// Represents a binary operation node in the AST.
-    BinOp(BinaryOperationNode),
+    BinOp(P<BinaryOperationNode>),
     /// Represents a unary operation node in the AST.
-    UnaryOp(UnaryOperationNode),
+    UnaryOp(P<UnaryOperationNode>),
     /// Represents a function call node in the AST.
-    FunctionCall(FunctionCallNode),
+    FunctionCall(P<FunctionCallNode>),
     /// Represents an array node in the AST.
-    Array(super::array::ArrayNode),
-}
-
-impl ExprKind {
-    // TODO: Make invert logic
+    Array(P<ArrayNode>),
 }
 
 impl AstVisitable for ExprKind {

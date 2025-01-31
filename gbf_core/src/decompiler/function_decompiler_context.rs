@@ -11,6 +11,7 @@ use super::ast::assignable::AssignableKind;
 use super::ast::expr::ExprKind;
 use super::ast::identifier::IdentifierNode;
 use super::ast::literal::LiteralNode;
+use super::ast::ptr::P;
 use super::ast::ssa::SsaContext;
 use super::ast::AstKind;
 use super::execution_frame::ExecutionFrame;
@@ -180,7 +181,7 @@ impl FunctionDecompilerContext {
     pub fn pop_expression(&mut self) -> Result<ExprKind, FunctionDecompilerError> {
         let node = self.pop_one_node()?;
         match node {
-            AstKind::Expression(expr) => Ok(expr),
+            AstKind::Expression(expr) => Ok(expr.clone()),
             _ => Err(FunctionDecompilerError::UnexpectedNodeType {
                 expected: "Expression".to_string(),
                 context: self.get_error_context(),
@@ -192,15 +193,26 @@ impl FunctionDecompilerContext {
     /// Pops an assignable expression from the current basic block's stack.
     pub fn pop_assignable(&mut self) -> Result<AssignableKind, FunctionDecompilerError> {
         let node = self.pop_expression()?;
+
         match node {
-            ExprKind::Assignable(assignable) => Ok(assignable),
-            ExprKind::Literal(LiteralNode::String(s)) => {
-                log::warn!(
+            ExprKind::Assignable(assignable) => Ok(assignable.clone()),
+
+            ExprKind::Literal(lit) => {
+                if let LiteralNode::String(s) = lit.as_ref() {
+                    log::warn!(
                     "String literal used as assignable: {}. Technically this is allowed in GS2. God help us all.",
                     s
                 );
-                Ok(new_id(format!("\"{}\"", &s.clone()).as_str()).into())
+                    Ok(new_id(format!("\"{}\"", &s.clone()).as_str()).into())
+                } else {
+                    Err(FunctionDecompilerError::UnexpectedNodeType {
+                        expected: "Assignable".to_string(),
+                        context: self.get_error_context(),
+                        backtrace: Backtrace::capture(),
+                    })
+                }
             }
+
             _ => Err(FunctionDecompilerError::UnexpectedNodeType {
                 expected: "Assignable".to_string(),
                 context: self.get_error_context(),
@@ -210,10 +222,11 @@ impl FunctionDecompilerContext {
     }
 
     /// Pops an identifier from the current basic block's stack.
-    pub fn pop_identifier(&mut self) -> Result<IdentifierNode, FunctionDecompilerError> {
-        let node = self.pop_expression()?;
+    pub fn pop_identifier(&mut self) -> Result<P<IdentifierNode>, FunctionDecompilerError> {
+        let node = self.pop_assignable()?;
+
         match node {
-            ExprKind::Assignable(AssignableKind::Identifier(ident)) => Ok(ident),
+            AssignableKind::Identifier(ident) => Ok(ident.clone()),
             _ => Err(FunctionDecompilerError::UnexpectedNodeType {
                 expected: "Identifier".to_string(),
                 context: self.get_error_context(),
@@ -237,7 +250,7 @@ impl FunctionDecompilerContext {
                 ExecutionFrame::BuildingArray(array) => {
                     // Ensure the node is an expression before adding to the array
                     if let AstKind::Expression(expr) = node {
-                        array.push(expr);
+                        array.push(expr.clone());
                         return Ok(());
                     } else {
                         return Err(FunctionDecompilerError::UnexpectedNodeType {

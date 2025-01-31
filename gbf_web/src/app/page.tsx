@@ -1,10 +1,10 @@
-import { getAllVersions } from '@/lib/version';
+import { fetchAllVersions } from '@/lib/dynamodb/version-repo';
 import { Container, Text, List, ListItem, ThemeIcon, rem, Anchor } from '@mantine/core';
 import { IconExclamationCircle } from '@tabler/icons-react';
 import Link from 'next/link';
 
 export default async function AllVersions() {
-    const versions = await getAllVersions();
+    const versions = await fetchAllVersions();
     return (
         <>
             <Container size="md">

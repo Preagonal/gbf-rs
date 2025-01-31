@@ -4,8 +4,8 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    assignable::AssignableKind, expr::ExprKind, ssa::SsaVersion, visitors::AstVisitor, AstKind,
-    AstNodeError,
+    assignable::AssignableKind, expr::ExprKind, ptr::P, ssa::SsaVersion, visitors::AstVisitor,
+    AstKind, AstNodeError,
 };
 use crate::decompiler::ast::AstVisitable;
 
@@ -18,9 +18,9 @@ use crate::decompiler::ast::AstVisitable;
 )]
 pub struct MemberAccessNode {
     /// The left-hand side of the member access, such as `object`.
-    pub lhs: Box<AssignableKind>,
+    pub lhs: AssignableKind,
     /// The right-hand side of the member access, such as `field`.
-    pub rhs: Box<AssignableKind>,
+    pub rhs: AssignableKind,
     /// Represents the SSA version of a variable.
     pub ssa_version: Option<SsaVersion>,
 }
@@ -37,7 +37,7 @@ impl MemberAccessNode {
     ///
     /// # Errors
     /// Returns an `AstNodeError` if `lhs` or `rhs` is of an unsupported type.
-    pub fn new(lhs: Box<AssignableKind>, rhs: Box<AssignableKind>) -> Result<Self, AstNodeError> {
+    pub fn new(lhs: AssignableKind, rhs: AssignableKind) -> Result<Self, AstNodeError> {
         let mut new_lhs = lhs.clone();
         let mut new_rhs = rhs.clone();
         Self::validate_and_strip_operand(&mut new_lhs)?;

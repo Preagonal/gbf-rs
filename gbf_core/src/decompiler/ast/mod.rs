@@ -15,6 +15,7 @@ use identifier::IdentifierNode;
 use literal::LiteralNode;
 use member_access::MemberAccessNode;
 use meta::MetaNode;
+use ptr::P;
 use ret::ReturnNode;
 use serde::{Deserialize, Serialize};
 use ssa::SsaVersion;
@@ -55,6 +56,8 @@ pub mod literal;
 pub mod member_access;
 /// Contains the specifications for any AstNodes that are metadata.
 pub mod meta;
+/// Represents a pointer
+pub mod ptr;
 /// Represents a return node in the AST.
 pub mod ret;
 /// Represents SSA versioning for the AST.
@@ -102,15 +105,15 @@ pub enum AstKind {
     /// Represents a statement node in the AST, such as `variable = value;`.
     Statement(StatementKind),
     /// Represents a function node in the AST.
-    Function(FunctionNode),
+    Function(P<FunctionNode>),
     /// Represents an expression node in the AST.
     Expression(ExprKind),
     /// Represents a metadata node in the AST.
-    Meta(MetaNode), // Covers comments or annotations
+    Meta(P<MetaNode>), // Covers comments or annotations
     /// Represenst a block of code in the AST.
-    Block(BlockNode),
+    Block(P<BlockNode>),
     /// Represents a control flow node in the AST.
-    ControlFlow(ControlFlowNode),
+    ControlFlow(P<ControlFlowNode>),
 }
 
 impl AstVisitable for AstKind {
@@ -155,8 +158,8 @@ where
 /// Creates a new AstNode for a statement.
 pub fn new_assignment<L, R>(lhs: L, rhs: R) -> AssignmentNode
 where
-    L: Into<Box<AssignableKind>>,
-    R: Into<Box<ExprKind>>,
+    L: Into<AssignableKind>,
+    R: Into<ExprKind>,
 {
     AssignmentNode {
         lhs: lhs.into(),
@@ -167,7 +170,7 @@ where
 /// Creates a new return node.
 pub fn new_return<N>(node: N) -> ReturnNode
 where
-    N: Into<Box<ExprKind>>,
+    N: Into<ExprKind>,
 {
     ReturnNode::new(node.into())
 }
@@ -175,8 +178,8 @@ where
 /// Creates a new member access node.
 pub fn new_member_access<L, R>(lhs: L, rhs: R) -> Result<MemberAccessNode, AstNodeError>
 where
-    L: Into<Box<AssignableKind>>,
-    R: Into<Box<AssignableKind>>,
+    L: Into<AssignableKind>,
+    R: Into<AssignableKind>,
 {
     MemberAccessNode::new(lhs.into(), rhs.into())
 }
@@ -213,8 +216,8 @@ where
 /// Creates a new array access node.
 pub fn new_array_access<A, I>(array: A, index: I) -> ArrayAccessNode
 where
-    A: Into<Box<AssignableKind>>,
-    I: Into<Box<ExprKind>>,
+    A: Into<AssignableKind>,
+    I: Into<ExprKind>,
 {
     ArrayAccessNode::new(array.into(), index.into())
 }
@@ -226,8 +229,8 @@ pub fn new_bin_op<L, R>(
     op_type: bin_op::BinOpType,
 ) -> Result<BinaryOperationNode, AstNodeError>
 where
-    L: Into<Box<ExprKind>>,
-    R: Into<Box<ExprKind>>,
+    L: Into<ExprKind>,
+    R: Into<ExprKind>,
 {
     BinaryOperationNode::new(lhs.into(), rhs.into(), op_type)
 }
@@ -238,7 +241,7 @@ pub fn new_unary_op<A>(
     op_type: unary_op::UnaryOpType,
 ) -> Result<UnaryOperationNode, AstNodeError>
 where
-    A: Into<Box<ExprKind>>,
+    A: Into<ExprKind>,
 {
     UnaryOperationNode::new(operand.into(), op_type)
 }
@@ -272,9 +275,9 @@ pub fn new_null() -> LiteralNode {
 
 // == Functions ==
 /// Creates a new function node.
-pub fn new_fn<P, V>(name: Option<String>, params: P, body: V) -> FunctionNode
+pub fn new_fn<C, V>(name: Option<String>, params: C, body: V) -> FunctionNode
 where
-    P: Into<AstVec<ExprKind>>,
+    C: Into<AstVec<ExprKind>>,
     V: Into<AstVec<AstKind>>,
 {
     FunctionNode::new(name, params.into(), body)

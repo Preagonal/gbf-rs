@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     array_access::ArrayAccessNode, emit, expr::ExprKind, identifier::IdentifierNode,
-    member_access::MemberAccessNode, ssa::SsaVersion, visitors::AstVisitor, AstKind, AstVisitable,
+    member_access::MemberAccessNode, ptr::P, ssa::SsaVersion, visitors::AstVisitor, AstKind,
+    AstVisitable,
 };
 
 /// Represents an assignable expression node in the AST.
@@ -13,11 +14,11 @@ use super::{
 #[convert_to(ExprKind::Assignable, AstKind::Expression)]
 pub enum AssignableKind {
     /// Represents a member access node in the AST.
-    MemberAccess(MemberAccessNode),
+    MemberAccess(P<MemberAccessNode>),
     /// Represents an identifier node in the AST.
-    Identifier(IdentifierNode),
+    Identifier(P<IdentifierNode>),
     /// Represents an array access node in the AST.
-    ArrayAccess(ArrayAccessNode),
+    ArrayAccess(P<ArrayAccessNode>),
 }
 
 impl AssignableKind {

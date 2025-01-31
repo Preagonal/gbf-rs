@@ -276,38 +276,7 @@ impl RenderableNode for Region {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decompiler::ast::assignable::AssignableKind;
-    use crate::decompiler::ast::assignment::AssignmentNode;
-    use crate::decompiler::ast::bin_op::{BinOpType, BinaryOperationNode};
-    use crate::decompiler::ast::expr::ExprKind;
-    use crate::decompiler::ast::identifier::IdentifierNode;
-    use crate::decompiler::ast::literal::LiteralNode;
-
-    fn create_identifier(id: &str) -> Box<AssignableKind> {
-        Box::new(AssignableKind::Identifier(IdentifierNode::new(
-            id.to_string(),
-        )))
-    }
-
-    fn create_integer_literal(value: i32) -> Box<ExprKind> {
-        Box::new(ExprKind::Literal(LiteralNode::Number(value)))
-    }
-
-    fn create_addition(lhs: Box<ExprKind>, rhs: Box<ExprKind>) -> Box<ExprKind> {
-        Box::new(ExprKind::BinOp(
-            BinaryOperationNode::new(lhs, rhs, BinOpType::Add).unwrap(),
-        ))
-    }
-
-    fn create_subtraction(lhs: Box<ExprKind>, rhs: Box<ExprKind>) -> Box<ExprKind> {
-        Box::new(ExprKind::BinOp(
-            BinaryOperationNode::new(lhs, rhs, BinOpType::Sub).unwrap(),
-        ))
-    }
-
-    fn create_statement(lhs: Box<AssignableKind>, rhs: Box<ExprKind>) -> AssignmentNode {
-        AssignmentNode::new(lhs, rhs).unwrap()
-    }
+    use crate::decompiler::ast::{bin_op::BinOpType, new_assignment, new_bin_op, new_id, new_num};
 
     #[test]
     fn test_region_creation_and_instruction_addition() {
@@ -316,14 +285,14 @@ mod tests {
         assert_eq!(region.region_type(), &RegionType::Linear);
         assert_eq!(region.iter_nodes().count(), 0);
 
-        let ast_node1 = create_statement(
-            create_identifier("x"),
-            create_addition(create_integer_literal(1), create_integer_literal(2)),
+        let ast_node1 = new_assignment(
+            new_id("x"),
+            new_bin_op(new_num(1), new_num(2), BinOpType::Add).unwrap(),
         );
 
-        let ast_node2 = create_statement(
-            create_identifier("y"),
-            create_subtraction(create_integer_literal(3), create_integer_literal(4)),
+        let ast_node2 = new_assignment(
+            new_id("y"),
+            new_bin_op(new_num(3), new_num(4), BinOpType::Sub).unwrap(),
         );
 
         region.push_node(ast_node1.clone().into());

@@ -3,7 +3,7 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{ast_vec::AstVec, block::BlockNode, expr::ExprKind, AstKind, AstVisitable};
+use super::{ast_vec::AstVec, block::BlockNode, expr::ExprKind, ptr::P, AstKind, AstVisitable};
 
 /// Represents a metadata node in the AST
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]

@@ -59,7 +59,11 @@ impl IfRegionReducer {
                 backtrace: Backtrace::capture(),
             },
         )?;
-        region.push_nodes(cond.into_iter().map(AstKind::ControlFlow).collect());
+        region.push_nodes(
+            cond.into_iter()
+                .map(|node| AstKind::ControlFlow(node.into()))
+                .collect(),
+        );
         region.set_region_type(RegionType::Linear);
         region.remove_jump_expr();
         Ok(())

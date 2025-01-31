@@ -306,11 +306,14 @@ impl FunctionDecompiler {
         };
         let entry_region_nodes = entry_region.iter_nodes().cloned().collect::<AstVec<_>>();
 
-        let func = AstKind::Function(FunctionNode::new(
-            self.function.id.name.clone(),
-            self.function_parameters.clone(),
-            entry_region_nodes,
-        ));
+        let func = AstKind::Function(
+            FunctionNode::new(
+                self.function.id.name.clone(),
+                self.function_parameters.clone(),
+                entry_region_nodes,
+            )
+            .into(),
+        );
 
         let mut output = String::new();
         let mut emitter = Gs2Emitter::new(emit_context);

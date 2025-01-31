@@ -4,8 +4,8 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    assignable::AssignableKind, expr::ExprKind, ssa::SsaVersion, visitors::AstVisitor, AstKind,
-    AstVisitable,
+    assignable::AssignableKind, expr::ExprKind, ptr::P, ssa::SsaVersion, visitors::AstVisitor,
+    AstKind, AstVisitable,
 };
 
 /// Represents a type of literal.

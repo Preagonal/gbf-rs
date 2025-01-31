@@ -76,48 +76,47 @@ impl AstVisitor for Gs2Emitter {
         self.output.clear();
 
         // Step 2: Handle RHS
-        if let ExprKind::BinOp(bin_op_node) = stmt_node.rhs.as_ref() {
+        if let ExprKind::BinOp(bin_op_node) = stmt_node.rhs.clone() {
             // Check if the binary operation directly involves the LHS
-            let lhs_in_rhs =
-                bin_op_node.lhs.as_ref() == &ExprKind::Assignable(*stmt_node.lhs.clone());
+            let lhs_in_rhs = bin_op_node.lhs == ExprKind::Assignable(stmt_node.lhs.clone());
 
             if lhs_in_rhs {
                 match bin_op_node.op_type {
                     BinOpType::Add => {
                         // Handle increment (++), compound assignment (+=), or fall back to addition
-                        if let ExprKind::Literal(LiteralNode::Number(num)) =
-                            bin_op_node.rhs.as_ref()
-                        {
-                            if *num == 1 {
-                                // Emit increment (++)
-                                self.output.push_str(&format!("{}++", lhs_str));
-                                return;
-                            } else {
-                                // Emit compound assignment (+=)
-                                bin_op_node.rhs.accept(self); // Visit the RHS to get the formatted number
-                                let rhs_str = self.output.clone();
-                                self.output.clear();
-                                self.output.push_str(&format!("{} += {}", lhs_str, rhs_str));
-                                return;
+                        if let ExprKind::Literal(lit) = bin_op_node.rhs.clone() {
+                            if let LiteralNode::Number(num) = lit.as_ref() {
+                                if *num == 1 {
+                                    // Emit increment (++)
+                                    self.output.push_str(&format!("{}++", lhs_str));
+                                    return;
+                                } else {
+                                    // Emit compound assignment (+=)
+                                    bin_op_node.rhs.accept(self); // Visit the RHS to get the formatted number
+                                    let rhs_str = self.output.clone();
+                                    self.output.clear();
+                                    self.output.push_str(&format!("{} += {}", lhs_str, rhs_str));
+                                    return;
+                                }
                             }
                         }
                     }
                     BinOpType::Sub => {
                         // Handle decrement (--), compound assignment (-=), or fall back to subtraction
-                        if let ExprKind::Literal(LiteralNode::Number(num)) =
-                            bin_op_node.rhs.as_ref()
-                        {
-                            if *num == 1 {
-                                // Emit decrement (--)
-                                self.output.push_str(&format!("{}--", lhs_str));
-                                return;
-                            } else {
-                                // Emit compound assignment (-=)
-                                bin_op_node.rhs.accept(self); // Visit the RHS to get the formatted number
-                                let rhs_str = self.output.clone();
-                                self.output.clear();
-                                self.output.push_str(&format!("{} -= {}", lhs_str, rhs_str));
-                                return;
+                        if let ExprKind::Literal(lit) = bin_op_node.rhs.clone() {
+                            if let LiteralNode::Number(num) = lit.as_ref() {
+                                if *num == 1 {
+                                    // Emit increment (++)
+                                    self.output.push_str(&format!("{}--", lhs_str));
+                                    return;
+                                } else {
+                                    // Emit compound assignment (+=)
+                                    bin_op_node.rhs.accept(self); // Visit the RHS to get the formatted number
+                                    let rhs_str = self.output.clone();
+                                    self.output.clear();
+                                    self.output.push_str(&format!("{} -= {}", lhs_str, rhs_str));
+                                    return;
+                                }
                             }
                         }
                     }
