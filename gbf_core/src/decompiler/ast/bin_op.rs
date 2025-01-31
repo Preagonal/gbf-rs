@@ -3,6 +3,7 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
+use super::ptr::P;
 use super::AstKind;
 use super::{expr::ExprKind, AstNodeError};
 use crate::decompiler::ast::AstVisitable;
@@ -39,9 +40,9 @@ define_ast_enum_type! {
 #[convert_to(ExprKind::BinOp, AstKind::Expression)]
 pub struct BinaryOperationNode {
     /// The left-hand side of the binary operation.
-    pub lhs: Box<ExprKind>,
+    pub lhs: ExprKind,
     /// The right-hand side of the binary operation.
-    pub rhs: Box<ExprKind>,
+    pub rhs: ExprKind,
     /// The binary operation type.
     pub op_type: BinOpType,
 }
@@ -59,11 +60,7 @@ impl BinaryOperationNode {
     ///
     /// # Errors
     /// Returns an `AstNodeError` if `lhs` or `rhs` is of an unsupported type.
-    pub fn new(
-        lhs: Box<ExprKind>,
-        rhs: Box<ExprKind>,
-        op_type: BinOpType,
-    ) -> Result<Self, AstNodeError> {
+    pub fn new(lhs: ExprKind, rhs: ExprKind, op_type: BinOpType) -> Result<Self, AstNodeError> {
         Ok(Self { lhs, rhs, op_type })
     }
 }

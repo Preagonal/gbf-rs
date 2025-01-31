@@ -27,7 +27,7 @@ Cargo.lock
 gbf_core/src/main.rs
 
 # Don't track StartScript_Connector.gs2bc
-gbf_core/tests/gs2bc/StartScript_Connector.gs2bc
+gbf_core/tests/gs2bc/Official_*.gs2bc
 
 # Don't track local env files
 .env
@@ -35,3 +35,5 @@ gbf_core/tests/gs2bc/StartScript_Connector.gs2bc
 
 # Don't track ./scripts/venv
 scripts/venv/
+
+# Don't track official bytecode

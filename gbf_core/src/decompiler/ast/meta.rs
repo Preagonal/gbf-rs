@@ -7,13 +7,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::Gs2BytecodeAddress;
 
-use super::{AstKind, AstVisitable};
+use super::{ptr::P, AstKind, AstVisitable};
 
 /// Represents a metadata node in the AST
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
 #[convert_to(AstKind::Meta)]
 pub struct MetaNode {
-    node: Box<AstKind>,
+    node: P<AstKind>,
     comment: Option<String>,
     source_location: Option<Gs2BytecodeAddress>,
     properties: HashMap<String, String>,
@@ -31,7 +31,7 @@ impl MetaNode {
     /// # Returns
     /// A new `MetaNode`.
     pub fn new(
-        node: Box<AstKind>,
+        node: P<AstKind>,
         comment: Option<String>,
         source_location: Option<Gs2BytecodeAddress>,
         properties: HashMap<String, String>,

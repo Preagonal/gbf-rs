@@ -3,7 +3,7 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{ast_vec::AstVec, block::BlockNode, expr::ExprKind, AstKind, AstVisitable};
+use super::{block::BlockNode, expr::ExprKind, ptr::P, AstKind, AstVisitable};
 
 /// Represents the type of control flow node.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -23,8 +23,8 @@ pub enum ControlFlowType {
 #[convert_to(AstKind::ControlFlow)]
 pub struct ControlFlowNode {
     ty: ControlFlowType,
-    condition: Option<ExprKind>,
-    body: BlockNode,
+    expr: Option<ExprKind>,
+    then_block: P<BlockNode>,
 }
 
 impl ControlFlowNode {
@@ -37,26 +37,26 @@ impl ControlFlowNode {
     ///
     /// # Returns
     /// A new `ControlFlowNode`.
-    pub fn new<E, V>(ty: ControlFlowType, condition: Option<E>, body: V) -> Self
+    pub fn new<E, V>(ty: ControlFlowType, condition: Option<E>, body: Vec<V>) -> Self
     where
         E: Into<ExprKind>,
-        V: Into<AstVec<AstKind>>,
+        V: Into<AstKind>,
     {
         Self {
             ty,
-            condition: condition.map(|e| e.into()),
-            body: BlockNode::new(body),
+            expr: condition.map(|e| e.into()),
+            then_block: BlockNode::new(body).into(),
         }
     }
 
     /// Returns the condition of the ControlFlowNode.
     pub fn condition(&self) -> &Option<ExprKind> {
-        &self.condition
+        &self.expr
     }
 
     /// Returns the body of the ControlFlowNode.
     pub fn body(&self) -> &BlockNode {
-        &self.body
+        &self.then_block
     }
 
     /// Returns the type of the ControlFlowNode.
@@ -74,7 +74,7 @@ impl AstVisitable for ControlFlowNode {
 
 impl PartialEq for ControlFlowNode {
     fn eq(&self, other: &Self) -> bool {
-        self.ty == other.ty && self.condition == other.condition && self.body == other.body
+        self.ty == other.ty && self.expr == other.expr && self.then_block == other.then_block
     }
 }
 

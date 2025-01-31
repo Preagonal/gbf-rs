@@ -27,7 +27,7 @@ Add `gbf_core` as a dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-gbf_core = "0.1.10"
+gbf_core = "0.1.11"
 ```
 
 ### Minimum Supported Rust Version
@@ -241,6 +241,12 @@ Please ensure your code passes all tests and adheres to the project’s style gu
 ## License & Legal Disclaimer
 
 This project is licensed under the Mozilla Public License 2.0 and is not affiliated with GraalOnline or its owners. GraalOnline and Graal are registered trademarks of Stephane Portha, and all trademarks are the property of their respective owners.
+
+This project includes code from the Rust project, which is licensed under either
+the MIT License or Apache License 2.0. You may choose either license when
+copying the code included from the Rust project.
+
+The original Rust code is available at: [ptr.rs](https://github.com/rust-lang/rust/blob/master/compiler/rustc_ast/src/ptr.rs)
 
 ## Acknowledgments
 

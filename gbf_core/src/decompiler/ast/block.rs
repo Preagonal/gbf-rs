@@ -3,14 +3,14 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{visitors::AstVisitor, AstKind, AstVec, AstVisitable};
+use super::{ptr::P, visitors::AstVisitor, AstKind, AstVisitable};
 
 /// Represents a function call
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
 #[convert_to(AstKind::Block)]
 pub struct BlockNode {
     /// The instructions in the block.
-    pub instructions: AstVec<AstKind>,
+    pub instructions: Vec<AstKind>,
 }
 
 impl BlockNode {
@@ -18,12 +18,12 @@ impl BlockNode {
     ///
     /// # Arguments
     /// - `instructions`: The instructions in the block.
-    pub fn new<V>(instructions: V) -> Self
+    pub fn new<V>(instructions: Vec<V>) -> Self
     where
-        V: Into<AstVec<AstKind>>,
+        V: Into<AstKind>,
     {
         Self {
-            instructions: instructions.into(),
+            instructions: instructions.into_iter().map(Into::into).collect(),
         }
     }
 }

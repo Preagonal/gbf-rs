@@ -112,7 +112,7 @@ impl OpcodeHandler for VariableOperandHandler {
                     let args = args.into_iter().rev().collect::<Vec<_>>();
 
                     return Ok(ProcessedInstructionBuilder::new()
-                        .function_parameters(args.into())
+                        .function_parameters(args)
                         .build());
                 }
 

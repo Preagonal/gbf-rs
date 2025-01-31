@@ -4,7 +4,8 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    assignment::AssignmentNode, ret::ReturnNode, visitors::AstVisitor, AstKind, AstVisitable,
+    assignment::AssignmentNode, ptr::P, ret::ReturnNode, visitors::AstVisitor, AstKind,
+    AstVisitable,
 };
 
 /// Represents an expression node in the AST.
@@ -12,9 +13,11 @@ use super::{
 #[convert_to(AstKind::Statement)]
 pub enum StatementKind {
     /// Assignment
-    Assignment(AssignmentNode),
+    Assignment(P<AssignmentNode>),
     /// Return
-    Return(ReturnNode),
+    Return(P<ReturnNode>),
+    // Goto
+    // Goto(GotoNode),
 }
 
 impl AstVisitable for StatementKind {

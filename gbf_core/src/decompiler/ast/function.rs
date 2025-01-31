@@ -3,14 +3,14 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{ast_vec::AstVec, block::BlockNode, expr::ExprKind, AstKind, AstVisitable};
+use super::{block::BlockNode, expr::ExprKind, ptr::P, AstKind, AstVisitable};
 
 /// Represents a metadata node in the AST
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
 #[convert_to(AstKind::Function)]
 pub struct FunctionNode {
     name: Option<String>,
-    params: AstVec<ExprKind>,
+    params: Vec<ExprKind>,
     body: BlockNode,
 }
 
@@ -24,10 +24,10 @@ impl FunctionNode {
     ///
     /// # Returns
     /// A new `FunctionNode`.
-    pub fn new<N, V>(name: N, params: AstVec<ExprKind>, body: V) -> Self
+    pub fn new<N, V>(name: N, params: Vec<ExprKind>, body: Vec<V>) -> Self
     where
         N: Into<Option<String>>,
-        V: Into<AstVec<AstKind>>,
+        V: Into<AstKind>,
     {
         Self {
             name: name.into(),

@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::define_ast_enum_type;
 
-use super::{expr::ExprKind, visitors::AstVisitor, AstKind, AstNodeError, AstVisitable};
+use super::{
+    expr::ExprKind, literal::LiteralNode, ptr::P, visitors::AstVisitor, AstKind, AstNodeError,
+    AstVisitable,
+};
 
 define_ast_enum_type!(
     UnaryOpType {
@@ -20,7 +23,7 @@ define_ast_enum_type!(
 #[convert_to(ExprKind::UnaryOp, AstKind::Expression)]
 pub struct UnaryOperationNode {
     /// The operand of the unary operation.
-    pub operand: Box<ExprKind>,
+    pub operand: ExprKind,
     /// The unary operation type.
     pub op_type: UnaryOpType,
 }
@@ -37,7 +40,7 @@ impl UnaryOperationNode {
     ///
     /// # Errors
     /// Returns an `AstNodeError` if `operand` is of an unsupported type.
-    pub fn new(operand: Box<ExprKind>, op_type: UnaryOpType) -> Result<Self, AstNodeError> {
+    pub fn new(operand: ExprKind, op_type: UnaryOpType) -> Result<Self, AstNodeError> {
         Self::validate_operand(&operand)?;
 
         Ok(Self { operand, op_type })
@@ -45,8 +48,10 @@ impl UnaryOperationNode {
 
     fn validate_operand(expr: &ExprKind) -> Result<(), AstNodeError> {
         // Most expressions are ok except for string literals.
-        if let ExprKind::Literal(crate::decompiler::ast::literal::LiteralNode::String(_)) = expr {
-            return Err(AstNodeError::InvalidOperand);
+        if let ExprKind::Literal(lit) = expr {
+            if let LiteralNode::String(_) = lit.as_ref() {
+                return Err(AstNodeError::InvalidOperand);
+            }
         }
         Ok(())
     }

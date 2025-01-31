@@ -4,7 +4,6 @@ use crate::{decompiler::ast::visitors::AstVisitor, opcode::Opcode};
 use array_access::ArrayAccessNode;
 use assignable::AssignableKind;
 use assignment::AssignmentNode;
-use ast_vec::AstVec;
 use bin_op::BinaryOperationNode;
 use block::BlockNode;
 use control_flow::{ControlFlowNode, ControlFlowType};
@@ -15,6 +14,7 @@ use identifier::IdentifierNode;
 use literal::LiteralNode;
 use member_access::MemberAccessNode;
 use meta::MetaNode;
+use ptr::P;
 use ret::ReturnNode;
 use serde::{Deserialize, Serialize};
 use ssa::SsaVersion;
@@ -33,8 +33,6 @@ pub mod assignable;
 pub mod assignment;
 /// Holds the macro that generates variants for the AST nodes.
 pub mod ast_enum_type;
-/// Represents an AST vector.
-pub mod ast_vec;
 /// Represents binary operations in the AST.
 pub mod bin_op;
 /// Represents a "block" of code in the AST.
@@ -55,6 +53,8 @@ pub mod literal;
 pub mod member_access;
 /// Contains the specifications for any AstNodes that are metadata.
 pub mod meta;
+/// Represents a pointer
+pub mod ptr;
 /// Represents a return node in the AST.
 pub mod ret;
 /// Represents SSA versioning for the AST.
@@ -102,15 +102,15 @@ pub enum AstKind {
     /// Represents a statement node in the AST, such as `variable = value;`.
     Statement(StatementKind),
     /// Represents a function node in the AST.
-    Function(FunctionNode),
+    Function(P<FunctionNode>),
     /// Represents an expression node in the AST.
     Expression(ExprKind),
     /// Represents a metadata node in the AST.
-    Meta(MetaNode), // Covers comments or annotations
+    Meta(P<MetaNode>), // Covers comments or annotations
     /// Represenst a block of code in the AST.
-    Block(BlockNode),
+    Block(P<BlockNode>),
     /// Represents a control flow node in the AST.
-    ControlFlow(ControlFlowNode),
+    ControlFlow(P<ControlFlowNode>),
 }
 
 impl AstVisitable for AstKind {
@@ -155,8 +155,8 @@ where
 /// Creates a new AstNode for a statement.
 pub fn new_assignment<L, R>(lhs: L, rhs: R) -> AssignmentNode
 where
-    L: Into<Box<AssignableKind>>,
-    R: Into<Box<ExprKind>>,
+    L: Into<AssignableKind>,
+    R: Into<ExprKind>,
 {
     AssignmentNode {
         lhs: lhs.into(),
@@ -167,7 +167,7 @@ where
 /// Creates a new return node.
 pub fn new_return<N>(node: N) -> ReturnNode
 where
-    N: Into<Box<ExprKind>>,
+    N: Into<ExprKind>,
 {
     ReturnNode::new(node.into())
 }
@@ -175,8 +175,8 @@ where
 /// Creates a new member access node.
 pub fn new_member_access<L, R>(lhs: L, rhs: R) -> Result<MemberAccessNode, AstNodeError>
 where
-    L: Into<Box<AssignableKind>>,
-    R: Into<Box<AssignableKind>>,
+    L: Into<AssignableKind>,
+    R: Into<AssignableKind>,
 {
     MemberAccessNode::new(lhs.into(), rhs.into())
 }
@@ -194,27 +194,26 @@ pub fn new_id_with_version(name: &str, version: SsaVersion) -> IdentifierNode {
 }
 
 /// Creates a new function call node.
-pub fn new_fn_call<N, A>(name: N, args: A) -> FunctionCallNode
+pub fn new_fn_call<N>(name: N, args: Vec<ExprKind>) -> FunctionCallNode
 where
     N: Into<AssignableKind>,
-    A: Into<AstVec<ExprKind>>,
 {
-    FunctionCallNode::new(name.into(), args.into())
+    FunctionCallNode::new(name.into(), args)
 }
 
 /// Creates a new array node.
-pub fn new_array<A>(elements: A) -> array::ArrayNode
+pub fn new_array<E>(elements: Vec<E>) -> array::ArrayNode
 where
-    A: Into<AstVec<ExprKind>>,
+    E: Into<ExprKind>,
 {
-    array::ArrayNode::new(elements.into())
+    array::ArrayNode::new(elements.into_iter().map(Into::into).collect())
 }
 
 /// Creates a new array access node.
 pub fn new_array_access<A, I>(array: A, index: I) -> ArrayAccessNode
 where
-    A: Into<Box<AssignableKind>>,
-    I: Into<Box<ExprKind>>,
+    A: Into<AssignableKind>,
+    I: Into<ExprKind>,
 {
     ArrayAccessNode::new(array.into(), index.into())
 }
@@ -226,8 +225,8 @@ pub fn new_bin_op<L, R>(
     op_type: bin_op::BinOpType,
 ) -> Result<BinaryOperationNode, AstNodeError>
 where
-    L: Into<Box<ExprKind>>,
-    R: Into<Box<ExprKind>>,
+    L: Into<ExprKind>,
+    R: Into<ExprKind>,
 {
     BinaryOperationNode::new(lhs.into(), rhs.into(), op_type)
 }
@@ -238,7 +237,7 @@ pub fn new_unary_op<A>(
     op_type: unary_op::UnaryOpType,
 ) -> Result<UnaryOperationNode, AstNodeError>
 where
-    A: Into<Box<ExprKind>>,
+    A: Into<ExprKind>,
 {
     UnaryOperationNode::new(operand.into(), op_type)
 }
@@ -272,62 +271,84 @@ pub fn new_null() -> LiteralNode {
 
 // == Functions ==
 /// Creates a new function node.
-pub fn new_fn<P, V>(name: Option<String>, params: P, body: V) -> FunctionNode
+pub fn new_fn<V, E>(name: Option<String>, params: Vec<E>, body: Vec<V>) -> FunctionNode
 where
-    P: Into<AstVec<ExprKind>>,
-    V: Into<AstVec<AstKind>>,
+    V: Into<AstKind>,
+    E: Into<ExprKind>,
 {
-    FunctionNode::new(name, params.into(), body)
+    FunctionNode::new(
+        name,
+        params.into_iter().map(Into::into).collect(),
+        body.into_iter().map(Into::into).collect::<Vec<AstKind>>(),
+    )
 }
 
 // == Conditionals ==
 /// Creates a new if statement
-pub fn new_if<C, T>(condition: C, then_block: T) -> ControlFlowNode
+pub fn new_if<C, E>(condition: C, then_block: Vec<E>) -> ControlFlowNode
 where
     C: Into<ExprKind>,
-    T: Into<AstVec<AstKind>>,
+    E: Into<AstKind>,
 {
-    ControlFlowNode::new(ControlFlowType::If, Some(condition), then_block.into())
+    ControlFlowNode::new(
+        ControlFlowType::If,
+        Some(condition),
+        then_block
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<AstKind>>(),
+    )
 }
 
 /// Creates a new else statement
-pub fn new_else<T>(else_block: T) -> ControlFlowNode
+pub fn new_else<T>(else_block: Vec<T>) -> ControlFlowNode
 where
-    T: Into<AstVec<AstKind>>,
+    T: Into<AstKind>,
 {
-    ControlFlowNode::new(ControlFlowType::Else, None::<ExprKind>, else_block.into())
-}
-
-/// Creates a new else if statement
-pub fn new_else_if<C, T>(condition: C, then_block: T) -> ControlFlowNode
-where
-    C: Into<ExprKind>,
-    T: Into<AstVec<AstKind>>,
-{
-    ControlFlowNode::new(ControlFlowType::ElseIf, Some(condition), then_block.into())
+    ControlFlowNode::new(
+        ControlFlowType::Else,
+        None::<ExprKind>,
+        else_block
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<AstKind>>(),
+    )
 }
 
 /// Creates a new with statement
-pub fn new_with<C, T>(condition: C, then_block: T) -> ControlFlowNode
+pub fn new_with<C, T>(condition: C, then_block: Vec<T>) -> ControlFlowNode
 where
     C: Into<ExprKind>,
-    T: Into<AstVec<AstKind>>,
+    T: Into<AstKind>,
 {
-    ControlFlowNode::new(ControlFlowType::With, Some(condition), then_block.into())
+    ControlFlowNode::new(
+        ControlFlowType::With,
+        Some(condition),
+        then_block
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<AstKind>>(),
+    )
 }
 
 /// Creates a new acyclic condition
 pub fn new_acylic_condition<C, T>(
     condition: C,
-    then_block: T,
+    then_block: Vec<T>,
     opcode: Option<Opcode>,
 ) -> Result<ControlFlowNode, AstNodeError>
 where
     C: Into<ExprKind>,
-    T: Into<AstVec<AstKind>>,
+    T: Into<AstKind>,
 {
     match opcode {
-        Some(Opcode::Jne) => Ok(new_if(condition, then_block)),
+        Some(Opcode::Jne) => Ok(new_if(
+            condition,
+            then_block
+                .into_iter()
+                .map(Into::into)
+                .collect::<Vec<AstKind>>(),
+        )),
         Some(Opcode::Jeq) => Ok(new_if(condition, then_block)),
         Some(Opcode::With) => Ok(new_with(condition, then_block)),
         None => Ok(new_if(condition, then_block)),

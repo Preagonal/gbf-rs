@@ -4,8 +4,8 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    assignable::AssignableKind, expr::ExprKind, statement::StatementKind, visitors::AstVisitor,
-    AstKind, AstNodeError,
+    assignable::AssignableKind, expr::ExprKind, ptr::P, statement::StatementKind,
+    visitors::AstVisitor, AstKind, AstNodeError,
 };
 use crate::decompiler::ast::AstVisitable;
 
@@ -14,9 +14,9 @@ use crate::decompiler::ast::AstVisitable;
 #[convert_to(StatementKind::Assignment, AstKind::Statement)]
 pub struct AssignmentNode {
     /// The left-hand side of the statement, usually a variable.
-    pub lhs: Box<AssignableKind>,
+    pub lhs: AssignableKind,
     /// The right-hand side of the statement, the value to assign.
-    pub rhs: Box<ExprKind>,
+    pub rhs: ExprKind,
 }
 
 impl AssignmentNode {
@@ -31,7 +31,7 @@ impl AssignmentNode {
     ///
     /// # Errors
     /// Returns an `AstNodeError` if `lhs` or `rhs` is of an unsupported type.
-    pub fn new(lhs: Box<AssignableKind>, rhs: Box<ExprKind>) -> Result<Self, AstNodeError> {
+    pub fn new(lhs: AssignableKind, rhs: ExprKind) -> Result<Self, AstNodeError> {
         Ok(Self { lhs, rhs })
     }
 }
