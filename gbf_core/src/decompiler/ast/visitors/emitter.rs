@@ -145,6 +145,7 @@ impl AstVisitor for Gs2Emitter {
                 s
             }
             AssignableKind::ArrayAccess(array_access) => array_access.accept(self),
+            AssignableKind::Phi(phi) => phi.accept(self),
         }
     }
 
@@ -333,6 +334,22 @@ impl AstVisitor for Gs2Emitter {
             s.push_str(") ");
         }
         s.push_str(&node.body().accept(self));
+        s
+    }
+
+    /// Visits a phi node.
+    fn visit_phi(&mut self, node: &crate::decompiler::ast::phi::PhiNode) -> String {
+        let mut s = String::new();
+        s.push_str("phi<idx=");
+        s.push_str(&node.index.to_string());
+        s.push_str(", regions=(");
+        for (i, region) in node.regions().iter().enumerate() {
+            s.push_str(&region.0.to_string());
+            if i < node.regions().len() - 1 {
+                s.push_str(", ");
+            }
+        }
+        s.push_str(")>");
         s
     }
 }

@@ -9,7 +9,7 @@ use crate::decompiler::ast::AstKind;
 use crate::opcode::Opcode;
 use crate::utils::{html_encode, GBF_GREEN, GBF_YELLOW};
 use serde::{Deserialize, Serialize};
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 use std::slice::Iter;
 
 /// Represents the type of control-flow region.
@@ -30,6 +30,12 @@ pub enum RegionType {
 pub struct RegionId {
     /// The index of the region
     pub index: usize,
+}
+
+impl Display for RegionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RegionId({})", self.index)
+    }
 }
 
 impl RegionId {

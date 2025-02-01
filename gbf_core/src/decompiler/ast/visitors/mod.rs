@@ -52,4 +52,6 @@ pub trait AstVisitor {
     fn visit_block(&mut self, node: &super::block::BlockNode) -> Self::Output;
     /// Visits a control flow node
     fn visit_control_flow(&mut self, node: &super::control_flow::ControlFlowNode) -> Self::Output;
+    /// Visits a phi node
+    fn visit_phi(&mut self, node: &super::phi::PhiNode) -> Self::Output;
 }

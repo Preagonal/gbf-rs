@@ -9,7 +9,7 @@ use petgraph::{
     visit::{DfsPostOrder, Walker},
 };
 use region::{Region, RegionId, RegionType};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tail_region_reducer::TailRegionReducer;
 
 use crate::{
@@ -119,7 +119,7 @@ impl StructureAnalysisError {
 }
 
 /// The type of control flow edge in the CFG.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
 pub enum ControlFlowEdgeType {
     /// A branch
     Branch,

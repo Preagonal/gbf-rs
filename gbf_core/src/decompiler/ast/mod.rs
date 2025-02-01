@@ -14,6 +14,7 @@ use identifier::IdentifierNode;
 use literal::LiteralNode;
 use member_access::MemberAccessNode;
 use meta::MetaNode;
+use phi::PhiNode;
 use ptr::P;
 use ret::ReturnNode;
 use serde::{Deserialize, Serialize};
@@ -53,6 +54,8 @@ pub mod literal;
 pub mod member_access;
 /// Contains the specifications for any AstNodes that are metadata.
 pub mod meta;
+/// Represents a phi node in the AST.
+pub mod phi;
 /// Represents a pointer
 pub mod ptr;
 /// Represents a return node in the AST.
@@ -321,6 +324,12 @@ where
             .map(Into::into)
             .collect::<Vec<AstKind>>(),
     )
+}
+
+// == Phi Nodes ==
+/// Creates a new phi node.
+pub fn new_phi(index: usize) -> phi::PhiNode {
+    PhiNode::new(index)
 }
 
 /// Creates a new acyclic condition

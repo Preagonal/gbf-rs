@@ -65,33 +65,6 @@ pub fn ast_node_transform(input: TokenStream) -> TokenStream {
 
             // Handle enums
             Data::Enum(_) => {
-                // P<Source> -> P<Target>
-                // impls.push(quote! {
-                //     impl From<P<#name>> for P<#to_ty> {
-                //         fn from(id: P<#name>) -> Self {
-                //             P::from(#variant(id.into()))
-                //         }
-                //     }
-                // });
-
-                // // Source -> P<Target>
-                // impls.push(quote! {
-                //     impl From<P<#name>> for #to_ty {
-                //         fn from(id: P<#name>) -> Self {
-                //             #variant(id.into())
-                //         }
-                //     }
-                // });
-
-                // // P<Source> -> Target
-                // impls.push(quote! {
-                //     impl From<#name> for P<#to_ty> {
-                //         fn from(id: #name) -> Self {
-                //             P::from(#variant(id.into()))
-                //         }
-                //     }
-                // });
-
                 // Source -> Target
                 impls.push(quote! {
                     impl From<#name> for #to_ty {
