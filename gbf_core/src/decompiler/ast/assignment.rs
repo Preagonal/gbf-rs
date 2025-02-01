@@ -38,8 +38,8 @@ impl AssignmentNode {
 
 impl AstVisitable for AssignmentNode {
     /// Accepts the visitor and calls the appropriate visit method.
-    fn accept(&self, visitor: &mut dyn AstVisitor) {
-        visitor.visit_assignment(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_assignment(self)
     }
 }
 

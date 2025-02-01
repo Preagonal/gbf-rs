@@ -60,8 +60,8 @@ impl AssignableKind {
 }
 
 impl AstVisitable for AssignableKind {
-    fn accept(&self, visitor: &mut dyn AstVisitor) {
-        visitor.visit_assignable_expr(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_assignable_expr(self)
     }
 }
 

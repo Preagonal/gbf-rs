@@ -84,16 +84,8 @@ pub enum AstNodeError {
 
 /// Trait for all AST nodes.
 pub trait AstVisitable: Clone {
-    /// Clones the AST node as a boxed trait object.
-    fn clone_box(&self) -> Box<Self>
-    where
-        Self: Sized,
-    {
-        Box::new(self.clone())
-    }
-
     /// Accepts a visitor for the AST node.
-    fn accept(&self, visitor: &mut dyn AstVisitor);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output;
 }
 
 /// Represents an AST node.
@@ -114,7 +106,7 @@ pub enum AstKind {
 }
 
 impl AstVisitable for AstKind {
-    fn accept(&self, visitor: &mut dyn AstVisitor) {
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         match self {
             AstKind::Expression(expr) => expr.accept(visitor),
             AstKind::Meta(meta) => meta.accept(visitor),
@@ -133,8 +125,8 @@ where
 {
     let node: AstKind = node.into();
     let mut emit = Gs2Emitter::new(EmitContext::default());
-    node.accept(&mut emit);
-    emit.output().to_string()
+    let ouput: String = node.accept(&mut emit);
+    ouput
 }
 
 // = Assignable expressions =
