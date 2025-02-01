@@ -69,7 +69,6 @@ jobs:
             gh auth login --with-token <<< "${{ secrets.PR_PAT }}"
             gh pr comment ${{ github.event.pull_request.html_url }} --body "✅ Version has been bumped: **${VERSION_TYPE}**"
 
-jobs:
   run-ci-workflow:
     needs: [version-bump]
     uses: ./.github/workflows/rust-ci.yml
