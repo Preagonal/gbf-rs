@@ -72,3 +72,4 @@ jobs:
   run-ci-workflow:
     needs: [version-bump]
     uses: ./.github/workflows/rust-ci.yml
+    secrets: inherit
