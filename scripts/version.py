@@ -80,25 +80,18 @@ def parse_version(version_str):
         logger.error(f"Invalid version string: {version_str}")
         raise
 
-def check_main_merge_version(current_version, main_version):
-    """Check version rules for merging into main branch."""
-    if current_version > main_version:
-        if not (current_version.minor == 0 and current_version.patch == 0):
-            raise ValueError("When bumping major version, minor and patch must be 0.")
-    elif current_version == main_version:
-        if current_version.minor <= main_version.minor:
-            raise ValueError("Minor version must be greater than main branch version ($main_minor).")
-        if current_version.patch != 0:
-            raise ValueError("When bumping minor version, patch must be set to 0.")
-    else:
-        raise ValueError("Invalid version bump. Increment the major version or the minor version.")
-
 def check_dev_merge_version(current_version, dev_version):
-    """Check version rules for merging into dev branch."""
+    """
+    Check version rules for merging into dev branch.
+
+    Ensures that:
+      - The feature branch version has the same major and minor as the dev branch.
+      - The feature branch version is not less than the dev branch version.
+    """
     if (current_version.major, current_version.minor) != (dev_version.major, dev_version.minor):
         raise ValueError("When merging into dev, only the patch version can change.")
-    if current_version <= dev_version:
-        raise ValueError("Patch version must be greater than dev branch version ($dev_patch).")
+    if current_version < dev_version:
+        raise ValueError("Feature branch version must be greater than or equal to dev branch version.")
 
 def check_version_match(current_version, target_version, description):
     """Validate that two versions match."""
@@ -178,7 +171,7 @@ def main():
         
         # Fetch versions
         logger.info("Fetching versions...")
-        main_version = get_branch_version('main')
+        # Only the dev branch exists now.
         dev_version = get_branch_version('dev')
         current_version = get_local_cargo_version('./gbf_core/Cargo.toml')
         macros_version = get_local_cargo_version('./gbf_macros/Cargo.toml')
@@ -186,8 +179,6 @@ def main():
         web_version = get_local_package_version('./gbf_web/package.json')
         readme_version = get_readme_version()
         
-        # Log versions
-        logger.info(f"Main branch version: {main_version}")
         logger.info(f"Dev branch version: {dev_version}")
         logger.info(f"Current branch version: {current_version}")
         logger.info(f"gbf_macros version: {macros_version}")
@@ -195,7 +186,7 @@ def main():
         logger.info(f"gbf_web version: {web_version}")
         logger.info(f"README version: {readme_version}")
         
-        # Determine target branch
+        # Determine target branch.
         target_branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).decode().strip()
         if 'GITHUB_BASE_REF' in os.environ:
             target_branch = os.getenv('GITHUB_BASE_REF', target_branch)
@@ -212,17 +203,17 @@ def main():
         check_version_match(current_version, web_version, "gbf_web/package.json version mismatch")
 
         if args.bump:
+            # For the dev branch, if the feature branch already has a version greater than dev,
+            # then no bump is needed. (If it's equal, we bump to increment the patch.)
             if target_branch == 'dev' and current_version > dev_version:
                 logger.info(
-                    f"Current version ({current_version}) is already greater than dev branch version "
-                    f"({dev_version}). Skipping bump."
+                    f"Current version ({current_version}) is already greater than dev branch version ({dev_version}). Skipping bump."
                 )
                 sys.exit(0)
-            # Only bump version if all checks pass
             logger.info(f"Bumping version: {args.bump}")
             new_version = bump_version(current_version, args.bump)
             
-            # Update versions in all relevant files
+            # Update versions in all relevant files.
             update_cargo_version('./gbf_core/Cargo.toml', new_version)
             update_cargo_version('./gbf_macros/Cargo.toml', new_version)
             update_cargo_version('./gbf_suite/Cargo.toml', new_version)
@@ -230,14 +221,10 @@ def main():
             update_readme_version(new_version)
             
             logger.info(f"Successfully bumped version to {new_version}")
-
             return
         
-        # Perform version checks based on target branch
-        if target_branch == 'main':
-            logger.info("Checking version for merging into main...")
-            check_main_merge_version(current_version, main_version)
-        elif target_branch == 'dev':
+        # For merging into dev, ensure that the current branch version is at least equal to the dev branch version.
+        if target_branch == 'dev':
             logger.info("Checking version for merging into dev...")
             check_dev_merge_version(current_version, dev_version)
         else:
