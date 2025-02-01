@@ -4,6 +4,7 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::ptr::P;
+use super::visitors::AstVisitor;
 use super::AstKind;
 use super::{expr::ExprKind, AstNodeError};
 use crate::decompiler::ast::AstVisitable;
@@ -73,8 +74,8 @@ impl PartialEq for BinaryOperationNode {
 }
 
 impl AstVisitable for BinaryOperationNode {
-    fn accept(&self, visitor: &mut dyn super::visitors::AstVisitor) {
-        visitor.visit_bin_op(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_bin_op(self)
     }
 }
 

@@ -28,8 +28,8 @@ pub enum ExprKind {
 }
 
 impl AstVisitable for ExprKind {
-    fn accept(&self, visitor: &mut dyn AstVisitor) {
-        visitor.visit_expr(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_expr(self)
     }
 }
 

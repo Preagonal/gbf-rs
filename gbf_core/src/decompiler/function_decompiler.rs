@@ -314,11 +314,8 @@ impl FunctionDecompiler {
             .into(),
         );
 
-        let mut output = String::new();
         let mut emitter = Gs2Emitter::new(emit_context);
-        func.accept(&mut emitter);
-        output.push_str(emitter.output());
-        output.push('\n');
+        let output: String = func.accept(&mut emitter);
 
         Ok(output)
     }

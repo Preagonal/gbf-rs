@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::Gs2BytecodeAddress;
 
-use super::{ptr::P, AstKind, AstVisitable};
+use super::{ptr::P, visitors::AstVisitor, AstKind, AstVisitable};
 
 /// Represents a metadata node in the AST
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
@@ -67,8 +67,8 @@ impl MetaNode {
 
 // == Other implementations for literal ==
 impl AstVisitable for MetaNode {
-    fn accept(&self, visitor: &mut dyn super::visitors::AstVisitor) {
-        visitor.visit_meta(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_meta(self)
     }
 }
 

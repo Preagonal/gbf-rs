@@ -30,8 +30,8 @@ impl FunctionCallNode {
 }
 
 impl AstVisitable for FunctionCallNode {
-    fn accept(&self, visitor: &mut dyn AstVisitor) {
-        visitor.visit_function_call(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_function_call(self)
     }
 }
 

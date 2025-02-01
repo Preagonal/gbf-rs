@@ -3,7 +3,9 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{block::BlockNode, expr::ExprKind, ptr::P, AstKind, AstVisitable};
+use super::{
+    block::BlockNode, expr::ExprKind, ptr::P, visitors::AstVisitor, AstKind, AstVisitable,
+};
 
 /// Represents the type of control flow node.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -67,8 +69,8 @@ impl ControlFlowNode {
 
 // == Other implementations for literal ==
 impl AstVisitable for ControlFlowNode {
-    fn accept(&self, visitor: &mut dyn super::visitors::AstVisitor) {
-        visitor.visit_control_flow(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_control_flow(self)
     }
 }
 

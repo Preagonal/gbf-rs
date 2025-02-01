@@ -58,8 +58,8 @@ impl UnaryOperationNode {
 }
 
 impl AstVisitable for UnaryOperationNode {
-    fn accept(&self, visitor: &mut dyn AstVisitor) {
-        visitor.visit_unary_op(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_unary_op(self)
     }
 }
 

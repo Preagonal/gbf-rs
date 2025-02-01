@@ -62,8 +62,8 @@ impl IdentifierNode {
 // == Other implementations for literal ==
 
 impl AstVisitable for IdentifierNode {
-    fn accept(&self, visitor: &mut dyn AstVisitor) {
-        visitor.visit_identifier(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_identifier(self)
     }
 }
 

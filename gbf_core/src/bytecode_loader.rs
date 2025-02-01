@@ -321,11 +321,11 @@ impl<R: Read> BytecodeLoader<R> {
             }
             Opcode::ImmByte => {
                 let value = self.reader.read_u8().map_err(BytecodeLoaderError::from)?;
-                Ok(Some((Operand::new_number(value as i32), 1)))
+                Ok(Some((Operand::new_number(value as i8 as i32), 1)))
             }
             Opcode::ImmShort => {
                 let value = self.reader.read_u16().map_err(BytecodeLoaderError::from)?;
-                Ok(Some((Operand::new_number(value as i32), 2)))
+                Ok(Some((Operand::new_number(value as i16 as i32), 2)))
             }
             Opcode::ImmInt => {
                 let value = self.reader.read_u32().map_err(BytecodeLoaderError::from)?;

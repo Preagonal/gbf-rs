@@ -225,8 +225,7 @@ impl RenderableNode for Region {
                 .include_ssa_versions(true)
                 .build();
             let mut emitter = Gs2Emitter::new(context);
-            emitter.visit_node(node);
-            let result = emitter.output();
+            let result = emitter.visit_node(node);
 
             // split the result by newlines
             let result = result.split('\n').collect::<Vec<&str>>();
@@ -251,8 +250,7 @@ impl RenderableNode for Region {
                 .include_ssa_versions(true)
                 .build();
             let mut emitter = Gs2Emitter::new(context);
-            emitter.visit_expr(jump_expr);
-            let result = emitter.output();
+            let result = emitter.visit_expr(jump_expr);
 
             writeln!(
                 &mut label,

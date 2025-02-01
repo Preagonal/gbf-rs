@@ -21,8 +21,8 @@ pub enum StatementKind {
 }
 
 impl AstVisitable for StatementKind {
-    fn accept(&self, visitor: &mut dyn AstVisitor) {
-        visitor.visit_statement(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_statement(self)
     }
 }
 
