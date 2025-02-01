@@ -62,7 +62,6 @@ jobs:
           # Pull latest changes before pushing to avoid non-fast-forward errors
           git pull --rebase origin ${{ github.head_ref }}
           git push https://x-access-token:${{ secrets.PR_PAT }}@github.com/${{ github.repository }}.git HEAD:${{ github.head_ref }}
-
       - name: Comment on PR
         if: env.VERSION_TYPE != ''
         run: |
