@@ -400,10 +400,17 @@ impl FunctionDecompiler {
             // For each predecessor block, see what AST nodes are left on the stack
             // and introduce Phi nodes if necessary
             for pred in self.get_predecessors(block_id)? {
-                let exec = ctx
-                    .block_ast_node_stack
-                    .get(&pred.0)
-                    .expect("Critical error: stack should always be set for each basic block");
+                let exec = ctx.block_ast_node_stack.get(&pred.0);
+
+                // There's a chance that we haven't processed the predecessor block yet, especially
+                // if we're in a self-referential loop. In that case, we can't introduce phi nodes
+                // because we don't know what the stack will look like.
+                // TODO: Double-check this logic
+                let exec = if let Some(exec) = exec {
+                    exec
+                } else {
+                    continue;
+                };
 
                 // Create empty list of region ids
                 for (i, frame) in exec.iter().enumerate() {
