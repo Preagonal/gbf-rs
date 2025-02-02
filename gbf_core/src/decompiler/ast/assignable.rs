@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     array_access::ArrayAccessNode, emit, expr::ExprKind, identifier::IdentifierNode,
-    member_access::MemberAccessNode, ptr::P, ssa::SsaVersion, visitors::AstVisitor, AstKind,
-    AstVisitable,
+    member_access::MemberAccessNode, phi::PhiNode, ptr::P, ssa::SsaVersion, visitors::AstVisitor,
+    AstKind, AstVisitable,
 };
 
 /// Represents an assignable expression node in the AST.
@@ -19,6 +19,8 @@ pub enum AssignableKind {
     Identifier(P<IdentifierNode>),
     /// Represents an array access node in the AST.
     ArrayAccess(P<ArrayAccessNode>),
+    /// Represents a phi node in the AST.
+    Phi(P<PhiNode>),
 }
 
 impl AssignableKind {
@@ -28,6 +30,7 @@ impl AssignableKind {
             AssignableKind::MemberAccess(m) => m.ssa_version = Some(ssa_version),
             AssignableKind::Identifier(i) => i.ssa_version = Some(ssa_version),
             AssignableKind::ArrayAccess(a) => a.ssa_version = Some(ssa_version),
+            AssignableKind::Phi(p) => p.ssa_version = Some(ssa_version),
         }
     }
 
@@ -36,7 +39,10 @@ impl AssignableKind {
         match self {
             AssignableKind::MemberAccess(m) => emit(m.clone()),
             AssignableKind::Identifier(i) => emit(i.clone()),
+            // TODO: Implement array access string representation
             AssignableKind::ArrayAccess(a) => emit(a.clone()),
+            // TODO: Implement phi node string representation
+            AssignableKind::Phi(_) => "todo_phi".to_string(),
         }
     }
 
@@ -46,6 +52,7 @@ impl AssignableKind {
             AssignableKind::MemberAccess(m) => m.ssa_version,
             AssignableKind::Identifier(i) => i.ssa_version,
             AssignableKind::ArrayAccess(a) => a.ssa_version,
+            AssignableKind::Phi(p) => p.ssa_version,
         }
     }
 
@@ -55,13 +62,14 @@ impl AssignableKind {
             AssignableKind::MemberAccess(m) => m.ssa_version = None,
             AssignableKind::Identifier(i) => i.ssa_version = None,
             AssignableKind::ArrayAccess(a) => a.ssa_version = None,
+            AssignableKind::Phi(p) => p.ssa_version = None,
         }
     }
 }
 
 impl AstVisitable for AssignableKind {
-    fn accept(&self, visitor: &mut dyn AstVisitor) {
-        visitor.visit_assignable_expr(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_assignable_expr(self)
     }
 }
 

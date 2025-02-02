@@ -3,7 +3,9 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{block::BlockNode, expr::ExprKind, ptr::P, AstKind, AstVisitable};
+use super::{
+    block::BlockNode, expr::ExprKind, ptr::P, visitors::AstVisitor, AstKind, AstVisitable,
+};
 
 /// Represents a metadata node in the AST
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
@@ -54,8 +56,8 @@ impl FunctionNode {
 
 // == Other implementations for literal ==
 impl AstVisitable for FunctionNode {
-    fn accept(&self, visitor: &mut dyn super::visitors::AstVisitor) {
-        visitor.visit_function(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_function(self)
     }
 }
 

@@ -19,6 +19,7 @@ on:
       - 'gbf_suite/**'
       - 'gbf_macros/**'
       - 'scripts/**'
+  workflow_call:
 
 jobs:
   # Add a job to run the CI script

@@ -134,6 +134,8 @@ async fn process_module(
     };
     let module_time = time.elapsed();
 
+    log::info!("Decompiling module {}", module_name.clone());
+
     let mut module_dao = GbfModuleDao {
         gbf_version: gbf_version_override.clone().unwrap_or(VERSION.to_string()),
         module_id: module_id.to_string(),
@@ -145,6 +147,11 @@ async fn process_module(
     for func in module.iter() {
         let func_basic_block_dot = func.render_dot(CfgDotConfig::default());
         let func_basic_block_dot_key = uploader.upload_graphviz_dot(func_basic_block_dot).await?;
+
+        log::info!(
+            "Decompiling function {}",
+            func.id.name.clone().unwrap_or("entry".to_string())
+        );
 
         let time = Instant::now();
 

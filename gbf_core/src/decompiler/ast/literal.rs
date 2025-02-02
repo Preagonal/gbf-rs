@@ -22,8 +22,8 @@ pub enum LiteralNode {
 }
 
 impl AstVisitable for LiteralNode {
-    fn accept(&self, visitor: &mut dyn AstVisitor) {
-        visitor.visit_literal(self);
+    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
+        visitor.visit_literal(self)
     }
 }
 

@@ -15,7 +15,7 @@ use super::ast::expr::ExprKind;
 use super::ast::function::FunctionNode;
 use super::ast::visitors::emit_context::EmitContext;
 use super::ast::visitors::emitter::Gs2Emitter;
-use super::ast::{AstKind, AstVisitable};
+use super::ast::{new_phi, AstKind, AstVisitable};
 use super::execution_frame::ExecutionFrame;
 use super::function_decompiler_context::FunctionDecompilerContext;
 use super::structure_analysis::region::{RegionId, RegionType};
@@ -314,11 +314,8 @@ impl FunctionDecompiler {
             .into(),
         );
 
-        let mut output = String::new();
         let mut emitter = Gs2Emitter::new(emit_context);
-        func.accept(&mut emitter);
-        output.push_str(emitter.output());
-        output.push('\n');
+        let output: String = func.accept(&mut emitter);
 
         Ok(output)
     }
@@ -397,6 +394,68 @@ impl FunctionDecompiler {
                 block.iter().cloned().collect()
             };
 
+            // Create a vector of RegionIds for the predecessors
+            let mut predecessor_regions: Vec<Vec<(RegionId, ControlFlowEdgeType)>> = Vec::new();
+
+            // For each predecessor block, see what AST nodes are left on the stack
+            // and introduce Phi nodes if necessary
+            for pred in self.get_predecessors(block_id)? {
+                let exec = ctx.block_ast_node_stack.get(&pred.0);
+
+                // There's a chance that we haven't processed the predecessor block yet, especially
+                // if we're in a self-referential loop. In that case, we can't introduce phi nodes
+                // because we don't know what the stack will look like.
+                // TODO: Double-check this logic
+                let exec = if let Some(exec) = exec {
+                    exec
+                } else {
+                    continue;
+                };
+
+                // Create empty list of region ids
+                for (i, frame) in exec.iter().enumerate() {
+                    match frame {
+                        ExecutionFrame::StandaloneNode(_) => {
+                            // Ensure we have a slot in predecessor_regions for this index.
+                            if predecessor_regions.len() <= i {
+                                // If not, extend the vector so that index i is available.
+                                predecessor_regions.resize(i + 1, Vec::new());
+                            }
+                            // Record the region info (e.g., pred.1 and pred.2) for this phi candidate.
+                            predecessor_regions[i].push((pred.1, pred.2));
+                        }
+                        _ => {
+                            return Err(FunctionDecompilerError::Other {
+                                message: "Expected StandaloneNode".to_string(),
+                                context: ctx.get_error_context(),
+                                backtrace: Backtrace::capture(),
+                            });
+                        }
+                    }
+                }
+
+                // Validate that this predecessor's execution stack length matches what we expect.
+                if !predecessor_regions.is_empty() && exec.len() != predecessor_regions.len() {
+                    return Err(FunctionDecompilerError::Other {
+                        message: format!(
+                            "Inconsistent number of phi candidates in predecessor block {:?}: expected {}, got {}",
+                            pred.0,
+                            predecessor_regions.len(),
+                            exec.len()
+                        ),
+                        context: ctx.get_error_context(),
+                        backtrace: Backtrace::capture(),
+                    });
+                }
+            }
+
+            // Inject phi nodes into the AST
+            for (index, raw_phi) in predecessor_regions.iter().enumerate() {
+                let mut phi = new_phi(index);
+                phi.add_regions(raw_phi.clone());
+                ctx.push_one_node(phi.into())?;
+            }
+
             for instr in instructions {
                 let processed = ctx.process_instruction(&instr)?;
                 if let Some(node) = processed.node_to_push {
@@ -445,11 +504,11 @@ impl FunctionDecompiler {
         Ok(())
     }
 
-    fn connect_predecessor_regions(
-        &mut self,
+    /// Get predecessors of a block and return the re
+    fn get_predecessors(
+        &self,
         block_id: BasicBlockId,
-        region_id: RegionId,
-    ) -> Result<Vec<(RegionId, ControlFlowEdgeType)>, FunctionDecompilerError> {
+    ) -> Result<Vec<(BasicBlockId, RegionId, ControlFlowEdgeType)>, FunctionDecompilerError> {
         // Step 1: Get the predecessors of the current block
         let predecessors = self.function.get_predecessors(block_id).map_err(|e| {
             FunctionDecompilerError::FunctionError {
@@ -460,7 +519,7 @@ impl FunctionDecompiler {
         })?;
 
         // Step 2: Map each predecessor to its region ID and determine the edge type
-        let predecessor_regions: Vec<(RegionId, ControlFlowEdgeType)> = predecessors
+        let predecessor_regions: Vec<(BasicBlockId, RegionId, ControlFlowEdgeType)> = predecessors
             .iter()
             .map(|pred_id| {
                 let pred_region_id = *self.block_to_region.get(pred_id).unwrap();
@@ -491,12 +550,22 @@ impl FunctionDecompiler {
                     ControlFlowEdgeType::Fallthrough
                 };
 
-                (pred_region_id, edge_type)
+                (*pred_id, pred_region_id, edge_type)
             })
             .collect();
+        Ok(predecessor_regions)
+    }
 
-        // Step 3: Connect the predecessor regions to the target region in the graph
-        for (pred_region_id, edge_type) in &predecessor_regions {
+    fn connect_predecessor_regions(
+        &mut self,
+        block_id: BasicBlockId,
+        region_id: RegionId,
+    ) -> Result<Vec<(BasicBlockId, RegionId, ControlFlowEdgeType)>, FunctionDecompilerError> {
+        // Step 1: Get the predecessors of the current block
+        let predecessor_regions = self.get_predecessors(block_id)?;
+
+        // Step 2: Connect the predecessor regions to the target region in the graph
+        for (_, pred_region_id, edge_type) in &predecessor_regions {
             self.struct_analysis
                 .connect_regions(*pred_region_id, region_id, *edge_type)
                 .map_err(|e| FunctionDecompilerError::StructureAnalysisError {
