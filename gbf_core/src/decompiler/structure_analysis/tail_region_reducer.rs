@@ -59,7 +59,7 @@ impl TailRegionReducer {
             },
         )?;
         region.push_nodes(tail.into_iter().map(AstKind::ControlFlow).collect());
-        region.set_region_type(RegionType::Tail);
+        region.set_region_type(RegionType::Linear);
         region.remove_jump_expr();
         Ok(())
     }
@@ -260,7 +260,7 @@ mod tests {
         assert_eq!(region.get_nodes().len(), 3);
 
         // Ensure that the final region is a tail region
-        assert_eq!(region.get_region_type(), RegionType::Tail);
+        assert_eq!(region.get_region_type(), RegionType::Linear);
 
         Ok(())
     }
