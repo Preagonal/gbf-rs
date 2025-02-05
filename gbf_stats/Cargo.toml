@@ -1,0 +1,11 @@
+[package]
+name = "gbf_stats"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dotenv = "0.15.0"
+gbf_core = { path = "../gbf_core" }
+log = "0.4.25"
+log4rs = "1.3.0"
+rayon = "1.10.0"
