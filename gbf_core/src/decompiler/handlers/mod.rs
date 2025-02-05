@@ -33,6 +33,8 @@ pub mod nop;
 pub mod special_one_operand;
 /// Handles member access instructions.
 pub mod special_two_operand;
+/// Handles unary operation instructions.
+pub mod un_op;
 /// Handles cases with a variable number of operands.
 pub mod variable_operand;
 
@@ -82,6 +84,17 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::PushTrue, Box::new(LiteralHandler));
         handlers.insert(Opcode::PushFalse, Box::new(LiteralHandler));
         handlers.insert(Opcode::PushNull, Box::new(LiteralHandler));
+
+        // These handlers are used to create unary operation nodes.
+        handlers.insert(Opcode::LogicalNot, Box::new(un_op::UnaryOperationHandler));
+        handlers.insert(
+            Opcode::BitwiseInvert,
+            Box::new(un_op::UnaryOperationHandler),
+        );
+        handlers.insert(
+            Opcode::UnarySubtract,
+            Box::new(un_op::UnaryOperationHandler),
+        );
 
         // These handlers are used to create binary operation nodes.
         handlers.insert(Opcode::Add, Box::new(BinaryOperationHandler));

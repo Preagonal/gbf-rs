@@ -337,7 +337,7 @@ define_opcodes! {
     Modulo = 0x40,
     Power = 0x41,
     // Unknown values: 0x42 - 0x43
-    Negate = 0x44,
+    LogicalNot = 0x44,
     UnarySubtract = 0x45,
     Equal = 0x46,
     NotEqual = 0x47,
