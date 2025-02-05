@@ -436,16 +436,14 @@ impl FunctionDecompiler {
 
                 // Validate that this predecessor's execution stack length matches what we expect.
                 if !predecessor_regions.is_empty() && exec.len() != predecessor_regions.len() {
-                    return Err(FunctionDecompilerError::Other {
-                        message: format!(
-                            "Inconsistent number of phi candidates in predecessor block {:?}: expected {}, got {}",
-                            pred.0,
-                            predecessor_regions.len(),
-                            exec.len()
-                        ),
-                        context: ctx.get_error_context(),
-                        backtrace: Backtrace::capture(),
-                    });
+                    // TODO: This will happen with short-circuit operators. We should handle this case
+                    // more gracefully.
+                    log::warn!(
+                        "Inconsistent number of phi candidates in predecessor block {:?}: expected {}, got {}",
+                        pred.0,
+                        predecessor_regions.len(),
+                        exec.len()
+                    );
                 }
             }
 

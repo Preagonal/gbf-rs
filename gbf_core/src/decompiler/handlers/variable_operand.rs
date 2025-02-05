@@ -70,7 +70,6 @@ impl OpcodeHandler for VariableOperandHandler {
                     let args = args.into_iter().rev().collect::<Vec<_>>();
 
                     // Create the function call node
-                    // TODO: Handle method call case
                     let function_call_node = new_fn_call(function_name, args);
 
                     // Create SSA ID for the function call

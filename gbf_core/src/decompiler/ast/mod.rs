@@ -335,7 +335,11 @@ where
                 .map(Into::into)
                 .collect::<Vec<AstKind>>(),
         )),
+        // TODO: Move condition flipping logic here for Jeq
         Some(Opcode::Jeq) => Ok(new_if(condition, then_block)),
+        // TODO: We may need to flip the condition on ShortCircuitAnd or ShortCircuitOr
+        Some(Opcode::ShortCircuitAnd) => Ok(new_if(condition, then_block)),
+        Some(Opcode::ShortCircuitOr) => Ok(new_if(condition, then_block)),
         Some(Opcode::With) => Ok(new_with(condition, then_block)),
         None => Ok(new_if(condition, then_block)),
         _ => Err(AstNodeError::InvalidOperand),

@@ -29,6 +29,8 @@ pub mod jump;
 pub mod literal;
 /// Handles instructions that are not useful to our decompiler.
 pub mod nop;
+/// Handles short-circuit instructions.
+pub mod short_circuit;
 /// Handles instructions with one operand.
 pub mod special_one_operand;
 /// Handles member access instructions.
@@ -113,8 +115,6 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::LessThanOrEqual, Box::new(BinaryOperationHandler));
         handlers.insert(Opcode::GreaterThan, Box::new(BinaryOperationHandler));
         handlers.insert(Opcode::GreaterThanOrEqual, Box::new(BinaryOperationHandler));
-        handlers.insert(Opcode::ShortCircuitAnd, Box::new(BinaryOperationHandler));
-        handlers.insert(Opcode::ShortCircuitOr, Box::new(BinaryOperationHandler));
         handlers.insert(Opcode::In, Box::new(BinaryOperationHandler));
         handlers.insert(Opcode::Join, Box::new(BinaryOperationHandler));
         handlers.insert(Opcode::Power, Box::new(BinaryOperationHandler));
@@ -130,6 +130,7 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::MarkRegisterVariable, Box::new(NopHandler));
         handlers.insert(Opcode::WithEnd, Box::new(NopHandler));
         handlers.insert(Opcode::New, Box::new(NopHandler));
+        handlers.insert(Opcode::ShortCircuitEnd, Box::new(NopHandler));
 
         // Two operand handlers
         handlers.insert(
@@ -208,6 +209,16 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::Jne, Box::new(jump::JumpHandler));
         handlers.insert(Opcode::Jeq, Box::new(jump::JumpHandler));
         handlers.insert(Opcode::With, Box::new(jump::JumpHandler));
+
+        // Short-circuit handlers
+        handlers.insert(
+            Opcode::ShortCircuitAnd,
+            Box::new(short_circuit::ShortCircuitHandler),
+        );
+        handlers.insert(
+            Opcode::ShortCircuitOr,
+            Box::new(short_circuit::ShortCircuitHandler),
+        );
 
         handlers
     })

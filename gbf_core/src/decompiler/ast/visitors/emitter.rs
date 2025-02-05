@@ -446,9 +446,7 @@ impl AstVisitor for Gs2Emitter {
         }
         let old_context = self.context;
         self.context = self.context.with_indent();
-        if node.instructions.is_empty() {
-            s.push_str(&self.emit_indent());
-        } else {
+        if !node.instructions.is_empty() {
             for stmt in node.instructions.iter() {
                 let stmt_out = stmt.accept(self);
                 // First emit any comments.
