@@ -37,7 +37,7 @@ impl ArrayAccessNode {
     }
 }
 
-impl AstVisitable for ArrayAccessNode {
+impl AstVisitable for P<ArrayAccessNode> {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_array_access(self)
     }

@@ -28,7 +28,7 @@ impl ReturnNode {
     }
 }
 
-impl AstVisitable for ReturnNode {
+impl AstVisitable for P<ReturnNode> {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_return(self)
     }

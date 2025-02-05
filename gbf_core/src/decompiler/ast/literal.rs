@@ -3,7 +3,7 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{expr::ExprKind, visitors::AstVisitor, AstKind, AstVisitable};
+use super::{expr::ExprKind, ptr::P, visitors::AstVisitor, AstKind, AstVisitable};
 
 /// Represents a type of literal.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, AstNodeTransform)]
@@ -21,7 +21,7 @@ pub enum LiteralNode {
     Null,
 }
 
-impl AstVisitable for LiteralNode {
+impl AstVisitable for P<LiteralNode> {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_literal(self)
     }

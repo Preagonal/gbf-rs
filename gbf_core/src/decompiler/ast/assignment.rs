@@ -36,7 +36,7 @@ impl AssignmentNode {
     }
 }
 
-impl AstVisitable for AssignmentNode {
+impl AstVisitable for P<AssignmentNode> {
     /// Accepts the visitor and calls the appropriate visit method.
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_assignment(self)

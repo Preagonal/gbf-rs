@@ -1,18 +1,19 @@
 #![deny(missing_docs)]
 
 use super::{
-    emit_context::{EmitContext, EmitVerbosity, IndentStyle},
+    emit_context::{EmitContext, IndentStyle},
     AstVisitor,
 };
 use crate::decompiler::ast::{
-    assignable::AssignableKind, control_flow::ControlFlowType, expr::ExprKind,
+    array::ArrayNode, array_access::ArrayAccessNode, assignable::AssignableKind,
+    control_flow::ControlFlowType, expr::ExprKind, phi::PhiNode,
 };
 use crate::decompiler::ast::{assignment::AssignmentNode, statement::StatementKind};
 use crate::decompiler::ast::{
     bin_op::{BinOpType, BinaryOperationNode},
     func_call::FunctionCallNode,
 };
-use crate::decompiler::ast::{block::BlockNode, meta::MetaNode};
+use crate::decompiler::ast::{block::BlockNode, ptr::P};
 use crate::decompiler::ast::{control_flow::ControlFlowNode, unary_op::UnaryOperationNode};
 use crate::decompiler::ast::{function::FunctionNode, literal::LiteralNode};
 use crate::decompiler::ast::{member_access::MemberAccessNode, ret::ReturnNode};
@@ -33,16 +34,36 @@ impl Gs2Emitter {
     pub fn new(context: EmitContext) -> Self {
         Self { context }
     }
+
+    /// Merges multiple comment vectors into a single one.
+    ///
+    /// This helper centralizes comment merging so that any future changes (such
+    /// as deduplication or filtering) can be applied in one place.
+    fn merge_comments(&self, comments: Vec<Vec<String>>) -> Vec<String> {
+        comments.into_iter().flatten().collect()
+    }
+
+    /// Returns a string containing spaces corresponding to the current indentation level.
+    fn emit_indent(&self) -> String {
+        " ".repeat(self.context.indent)
+    }
+}
+
+/// The output of the emitter.
+pub struct AstOutput {
+    /// The emitted node.
+    pub node: String,
+    /// The comments associated with the node.
+    pub comments: Vec<String>,
 }
 
 impl AstVisitor for Gs2Emitter {
-    type Output = String;
+    type Output = AstOutput;
 
     /// Visits an AST node.
-    fn visit_node(&mut self, node: &AstKind) -> String {
+    fn visit_node(&mut self, node: &AstKind) -> AstOutput {
         match node {
             AstKind::Expression(expr) => expr.accept(self),
-            AstKind::Meta(meta) => meta.accept(self),
             AstKind::Statement(stmt) => stmt.accept(self),
             AstKind::Function(func) => func.accept(self),
             AstKind::Block(block) => block.accept(self),
@@ -51,17 +72,21 @@ impl AstVisitor for Gs2Emitter {
     }
 
     /// Visits a statement node.
-    fn visit_statement(&mut self, node: &StatementKind) -> String {
+    fn visit_statement(&mut self, node: &StatementKind) -> AstOutput {
         self.context = self.context.with_expr_root(true);
         let stmt_str = match node {
             StatementKind::Assignment(assignment) => assignment.accept(self),
             StatementKind::Return(ret) => ret.accept(self),
         };
-        format!("{};", stmt_str)
+        AstOutput {
+            node: format!("{};", stmt_str.node),
+            comments: stmt_str.comments,
+        }
     }
 
     /// Visits an assignment node.
-    fn visit_assignment(&mut self, stmt_node: &AssignmentNode) -> String {
+    fn visit_assignment(&mut self, stmt_node: &P<AssignmentNode>) -> AstOutput {
+        let base_comments = stmt_node.metadata().comments().clone();
         // Step 1: Visit and emit the LHS.
         let lhs_str = stmt_node.lhs.accept(self);
 
@@ -74,10 +99,23 @@ impl AstVisitor for Gs2Emitter {
                         if let ExprKind::Literal(lit) = bin_op_node.rhs.clone() {
                             if let LiteralNode::Number(num) = lit.as_ref() {
                                 if *num == 1 {
-                                    return format!("{}++", lhs_str);
+                                    return AstOutput {
+                                        node: format!("{}++", lhs_str.node),
+                                        comments: self.merge_comments(vec![
+                                            base_comments.clone(),
+                                            lhs_str.comments.clone(),
+                                        ]),
+                                    };
                                 } else {
                                     let rhs_str = bin_op_node.rhs.accept(self);
-                                    return format!("{} += {}", lhs_str, rhs_str);
+                                    return AstOutput {
+                                        node: format!("{} += {}", lhs_str.node, rhs_str.node),
+                                        comments: self.merge_comments(vec![
+                                            base_comments.clone(),
+                                            lhs_str.comments.clone(),
+                                            rhs_str.comments,
+                                        ]),
+                                    };
                                 }
                             }
                         }
@@ -86,10 +124,23 @@ impl AstVisitor for Gs2Emitter {
                         if let ExprKind::Literal(lit) = bin_op_node.rhs.clone() {
                             if let LiteralNode::Number(num) = lit.as_ref() {
                                 if *num == 1 {
-                                    return format!("{}--", lhs_str);
+                                    return AstOutput {
+                                        node: format!("{}--", lhs_str.node),
+                                        comments: self.merge_comments(vec![
+                                            base_comments.clone(),
+                                            lhs_str.comments.clone(),
+                                        ]),
+                                    };
                                 } else {
                                     let rhs_str = bin_op_node.rhs.accept(self);
-                                    return format!("{} -= {}", lhs_str, rhs_str);
+                                    return AstOutput {
+                                        node: format!("{} -= {}", lhs_str.node, rhs_str.node),
+                                        comments: self.merge_comments(vec![
+                                            base_comments.clone(),
+                                            lhs_str.comments.clone(),
+                                            rhs_str.comments,
+                                        ]),
+                                    };
                                 }
                             }
                         }
@@ -104,11 +155,14 @@ impl AstVisitor for Gs2Emitter {
         self.context = self.context.with_expr_root(true);
         let rhs_str = stmt_node.rhs.accept(self);
         self.context = prev_context;
-        format!("{} = {}", lhs_str, rhs_str)
+        AstOutput {
+            node: format!("{} = {}", lhs_str.node, rhs_str.node),
+            comments: self.merge_comments(vec![base_comments, lhs_str.comments, rhs_str.comments]),
+        }
     }
 
     /// Visits an expression node.
-    fn visit_expr(&mut self, node: &ExprKind) -> String {
+    fn visit_expr(&mut self, node: &ExprKind) -> AstOutput {
         match node {
             ExprKind::Literal(literal) => literal.accept(self),
             ExprKind::Assignable(assignable) => self.visit_assignable_expr(assignable),
@@ -120,29 +174,37 @@ impl AstVisitor for Gs2Emitter {
     }
 
     /// Visits an assignable expression node.
-    fn visit_assignable_expr(&mut self, node: &AssignableKind) -> String {
+    fn visit_assignable_expr(&mut self, node: &AssignableKind) -> AstOutput {
         match node {
             AssignableKind::MemberAccess(member_access) => {
                 let mut s = String::new();
                 if member_access.ssa_version.is_some() && self.context.include_ssa_versions {
                     s.push('<');
                 }
-                s.push_str(&member_access.accept(self));
+                let member_access_out = member_access.accept(self);
+                s.push_str(member_access_out.node.as_str());
                 if self.context.include_ssa_versions {
                     if let Some(ssa_version) = member_access.ssa_version {
                         s.push_str(&format!(">#{}", ssa_version));
                     }
                 }
-                s
+                AstOutput {
+                    node: s,
+                    comments: member_access_out.comments.clone(),
+                }
             }
             AssignableKind::Identifier(identifier) => {
-                let mut s = identifier.accept(self);
+                let out = identifier.accept(self);
+                let mut s = out.node;
                 if self.context.include_ssa_versions {
                     if let Some(ssa_version) = identifier.ssa_version {
                         s.push_str(&format!("#{}", ssa_version));
                     }
                 }
-                s
+                AstOutput {
+                    node: s,
+                    comments: out.comments,
+                }
             }
             AssignableKind::ArrayAccess(array_access) => array_access.accept(self),
             AssignableKind::Phi(phi) => phi.accept(self),
@@ -150,31 +212,39 @@ impl AstVisitor for Gs2Emitter {
     }
 
     /// Visits an array node.
-    fn visit_array(&mut self, node: &crate::decompiler::ast::array::ArrayNode) -> String {
+    fn visit_array(&mut self, node: &P<ArrayNode>) -> AstOutput {
         let mut s = String::new();
+        let mut comments = node.metadata().comments().clone();
         s.push('{');
         for (i, elem) in node.elements.iter().enumerate() {
-            s.push_str(&elem.accept(self));
+            let elem_out = elem.accept(self);
+            s.push_str(&elem_out.node);
+            comments.extend(elem_out.comments);
             if i < node.elements.len() - 1 {
                 s.push_str(", ");
             }
         }
         s.push('}');
-        s
+        AstOutput { node: s, comments }
     }
 
     /// Visits an array access node.
-    fn visit_array_access(
-        &mut self,
-        node: &crate::decompiler::ast::array_access::ArrayAccessNode,
-    ) -> String {
+    fn visit_array_access(&mut self, node: &P<ArrayAccessNode>) -> AstOutput {
         let array_str = node.arr.accept(self);
         let index_str = node.index.accept(self);
-        format!("{}[{}]", array_str, index_str)
+        AstOutput {
+            node: format!("{}[{}]", array_str.node, index_str.node),
+            comments: self.merge_comments(vec![
+                node.metadata().comments().clone(),
+                array_str.comments,
+                index_str.comments,
+            ]),
+        }
     }
 
     /// Visits a binary operation node.
-    fn visit_bin_op(&mut self, node: &BinaryOperationNode) -> String {
+    fn visit_bin_op(&mut self, node: &P<BinaryOperationNode>) -> AstOutput {
+        let base_comments = node.metadata().comments().clone();
         let prev_context = self.context;
         self.context = self.context.with_expr_root(false);
         let lhs_str = node.lhs.accept(self);
@@ -182,117 +252,190 @@ impl AstVisitor for Gs2Emitter {
         self.context = prev_context;
         let op_str = node.op_type.to_string();
         if self.context.expr_root {
-            format!("{} {} {}", lhs_str, op_str, rhs_str)
+            AstOutput {
+                node: format!("{} {} {}", lhs_str.node, op_str, rhs_str.node),
+                comments: self.merge_comments(vec![
+                    base_comments,
+                    lhs_str.comments,
+                    rhs_str.comments,
+                ]),
+            }
         } else {
-            format!("({} {} {})", lhs_str, op_str, rhs_str)
+            AstOutput {
+                node: format!("({} {} {})", lhs_str.node, op_str, rhs_str.node),
+                comments: self.merge_comments(vec![
+                    base_comments,
+                    lhs_str.comments,
+                    rhs_str.comments,
+                ]),
+            }
         }
     }
 
     /// Visits a unary operation node.
-    fn visit_unary_op(&mut self, node: &UnaryOperationNode) -> String {
+    fn visit_unary_op(&mut self, node: &P<UnaryOperationNode>) -> AstOutput {
+        let base_comments = node.metadata().comments().clone();
         let prev_context = self.context;
         self.context = self.context.with_expr_root(false);
         let operand_str = node.operand.accept(self);
         self.context = prev_context;
         let op_str = node.op_type.to_string();
         if self.context.expr_root {
-            format!("{}{}", op_str, operand_str)
+            AstOutput {
+                node: format!("{}{}", op_str, operand_str.node),
+                comments: self.merge_comments(vec![
+                    base_comments,
+                    node.metadata().comments().clone(),
+                    operand_str.comments,
+                ]),
+            }
         } else {
-            format!("({}{})", op_str, operand_str)
+            AstOutput {
+                node: format!("({}{})", op_str, operand_str.node),
+                comments: self.merge_comments(vec![
+                    base_comments,
+                    node.metadata().comments().clone(),
+                    operand_str.comments,
+                ]),
+            }
         }
     }
 
     /// Visits an identifier node.
-    fn visit_identifier(&mut self, node: &IdentifierNode) -> String {
-        node.id().to_string()
+    fn visit_identifier(&mut self, node: &P<IdentifierNode>) -> AstOutput {
+        AstOutput {
+            node: node.id().to_string(),
+            comments: node.metadata().comments().clone(),
+        }
     }
 
     /// Visits a literal node.
-    fn visit_literal(&mut self, node: &LiteralNode) -> String {
-        match node {
-            LiteralNode::String(s) => format!("\"{}\"", escape_string(s)),
-            LiteralNode::Number(n) => {
-                if self.context.format_number_hex {
-                    format!("0x{:X}", n)
-                } else {
-                    n.to_string()
+    fn visit_literal(&mut self, node: &P<LiteralNode>) -> AstOutput {
+        match node.as_ref() {
+            LiteralNode::String(s) => {
+                let escaped = escape_string(s);
+                AstOutput {
+                    node: format!("\"{}\"", escaped),
+                    comments: node.metadata().comments().clone(),
                 }
             }
-            LiteralNode::Float(f) => f.clone(),
-            LiteralNode::Boolean(b) => b.to_string(),
-            LiteralNode::Null => "null".to_string(),
+            LiteralNode::Number(n) => {
+                if self.context.format_number_hex {
+                    AstOutput {
+                        node: format!("0x{:x}", n),
+                        comments: node.metadata().comments().clone(),
+                    }
+                } else {
+                    AstOutput {
+                        node: n.to_string(),
+                        comments: node.metadata().comments().clone(),
+                    }
+                }
+            }
+            LiteralNode::Float(f) => AstOutput {
+                node: f.to_string(),
+                comments: node.metadata().comments().clone(),
+            },
+            LiteralNode::Boolean(b) => AstOutput {
+                node: b.to_string(),
+                comments: node.metadata().comments().clone(),
+            },
+            LiteralNode::Null => AstOutput {
+                node: "null".to_string(),
+                comments: node.metadata().comments().clone(),
+            },
         }
     }
 
     /// Visits a member access node.
-    fn visit_member_access(&mut self, node: &MemberAccessNode) -> String {
+    fn visit_member_access(&mut self, node: &P<MemberAccessNode>) -> AstOutput {
         let lhs_str = node.lhs.accept(self);
         let rhs_str = node.rhs.accept(self);
-        format!("{}.{}", lhs_str, rhs_str)
-    }
-
-    /// Visits a meta node.
-    fn visit_meta(&mut self, node: &MetaNode) -> String {
-        if self.context.verbosity == EmitVerbosity::Minified {
-            return node.node().accept(self);
+        AstOutput {
+            node: format!("{}.{}", lhs_str.node, rhs_str.node),
+            comments: self.merge_comments(vec![
+                node.metadata().comments().clone(),
+                lhs_str.comments,
+                rhs_str.comments,
+            ]),
         }
-        let mut result = String::new();
-        if let Some(comment) = &node.comment() {
-            result.push_str(&format!("// {}\n", comment));
-        }
-        result.push_str(&node.node().accept(self));
-        result
     }
 
     /// Visits a function call node.
-    fn visit_function_call(&mut self, node: &FunctionCallNode) -> String {
+    fn visit_function_call(&mut self, node: &P<FunctionCallNode>) -> AstOutput {
         let mut s = String::new();
+        let mut arg_comments = Vec::new();
         s.push_str(node.name.id_string().as_str());
         s.push('(');
         for (i, arg) in node.arguments.iter().enumerate() {
-            s.push_str(&arg.accept(self));
+            let arg_out = arg.accept(self);
+            s.push_str(&arg_out.node);
+            arg_comments.extend(arg_out.comments);
             if i < node.arguments.len() - 1 {
                 s.push_str(", ");
             }
         }
         s.push(')');
-        s
+        AstOutput {
+            node: s,
+            comments: self.merge_comments(vec![node.metadata().comments().clone(), arg_comments]),
+        }
     }
 
     /// Visits a function node.
-    fn visit_function(&mut self, node: &FunctionNode) -> String {
+    fn visit_function(&mut self, node: &P<FunctionNode>) -> AstOutput {
+        let mut comments = node.metadata().comments().clone();
         if node.name().is_none() {
             let mut s = String::new();
             for stmt in node.body().instructions.iter() {
-                s.push_str(&stmt.accept(self));
+                let stmt_out = stmt.accept(self);
+                // First emit any comments.
+                for comment in stmt_out.comments.iter() {
+                    s.push_str(&self.emit_indent());
+                    s.push_str("// ");
+                    s.push_str(comment);
+                    s.push('\n');
+                }
+
+                s.push_str(&stmt_out.node);
                 s.push('\n');
             }
-            return s;
+            return AstOutput { node: s, comments };
         }
         let name = node.name().as_ref().unwrap();
         let mut s = String::new();
         s.push_str(&format!("function {}(", name));
         for (i, param) in node.params().iter().enumerate() {
-            s.push_str(&param.accept(self));
+            let param_out = param.accept(self);
+            comments.extend(param_out.comments);
+            s.push_str(&param_out.node);
             if i < node.params().len() - 1 {
                 s.push_str(", ");
             }
         }
+        let block_output = node.body().accept(self);
         s.push(')');
-        s.push_str(&node.body().accept(self));
-        s
+        s.push_str(&block_output.node);
+        AstOutput {
+            node: s,
+            comments: self.merge_comments(vec![comments, block_output.comments]),
+        }
     }
 
     /// Visits a return node.
-    fn visit_return(&mut self, node: &ReturnNode) -> String {
+    fn visit_return(&mut self, node: &P<ReturnNode>) -> AstOutput {
+        let child = node.ret.accept(self);
         let mut s = String::new();
         s.push_str("return ");
-        s.push_str(&node.ret.accept(self));
-        s
+        s.push_str(&child.node);
+        AstOutput {
+            node: s,
+            comments: self.merge_comments(vec![node.metadata().comments().clone(), child.comments]),
+        }
     }
 
     /// Visits a block node.
-    fn visit_block(&mut self, node: &BlockNode) -> String {
+    fn visit_block(&mut self, node: &P<BlockNode>) -> AstOutput {
         let mut s = String::new();
         if self.context.indent_style == IndentStyle::Allman {
             s.push('\n');
@@ -307,20 +450,33 @@ impl AstVisitor for Gs2Emitter {
             s.push_str(&self.emit_indent());
         } else {
             for stmt in node.instructions.iter() {
+                let stmt_out = stmt.accept(self);
+                // First emit any comments.
+                for comment in stmt_out.comments.iter() {
+                    s.push_str(&self.emit_indent());
+                    s.push_str("// ");
+                    s.push_str(comment);
+                    s.push('\n');
+                }
+                // Then emit the statement.
                 s.push_str(&self.emit_indent());
-                s.push_str(&stmt.accept(self));
+                s.push_str(&stmt_out.node);
                 s.push('\n');
             }
         }
         self.context = old_context;
         s.push_str(&self.emit_indent());
         s.push('}');
-        s
+        AstOutput {
+            node: s,
+            comments: node.metadata().comments().clone(),
+        }
     }
 
     /// Visits a control flow node.
-    fn visit_control_flow(&mut self, node: &ControlFlowNode) -> String {
+    fn visit_control_flow(&mut self, node: &P<ControlFlowNode>) -> AstOutput {
         let mut s = String::new();
+        let mut base_comments = node.metadata().comments().clone();
         let name = match node.ty() {
             ControlFlowType::If => "if",
             ControlFlowType::Else => "else",
@@ -329,16 +485,22 @@ impl AstVisitor for Gs2Emitter {
         };
         s.push_str(name);
         if let Some(condition) = node.condition() {
+            let condition_out = condition.accept(self);
             s.push_str(" (");
-            s.push_str(&condition.accept(self));
+            s.push_str(&condition_out.node);
             s.push_str(") ");
+            base_comments.extend(condition_out.comments.clone());
         }
-        s.push_str(&node.body().accept(self));
-        s
+        let body_out = node.body().accept(self);
+        s.push_str(&body_out.node);
+        AstOutput {
+            node: s,
+            comments: self.merge_comments(vec![base_comments, body_out.comments]),
+        }
     }
 
     /// Visits a phi node.
-    fn visit_phi(&mut self, node: &crate::decompiler::ast::phi::PhiNode) -> String {
+    fn visit_phi(&mut self, node: &P<PhiNode>) -> AstOutput {
         let mut s = String::new();
         s.push_str("phi<idx=");
         s.push_str(&node.index.to_string());
@@ -350,13 +512,9 @@ impl AstVisitor for Gs2Emitter {
             }
         }
         s.push_str(")>");
-        s
-    }
-}
-
-impl Gs2Emitter {
-    /// Returns a string containing spaces corresponding to the current indentation level.
-    fn emit_indent(&self) -> String {
-        " ".repeat(self.context.indent)
+        AstOutput {
+            node: s,
+            comments: node.metadata().comments().clone(),
+        }
     }
 }

@@ -13,7 +13,6 @@ use function::FunctionNode;
 use identifier::IdentifierNode;
 use literal::LiteralNode;
 use member_access::MemberAccessNode;
-use meta::MetaNode;
 use phi::PhiNode;
 use ptr::P;
 use ret::ReturnNode;
@@ -54,6 +53,8 @@ pub mod literal;
 pub mod member_access;
 /// Contains the specifications for any AstNodes that are metadata.
 pub mod meta;
+/// A node identifier
+pub mod node_id;
 /// Represents a phi node in the AST.
 pub mod phi;
 /// Represents a pointer
@@ -100,8 +101,6 @@ pub enum AstKind {
     Function(P<FunctionNode>),
     /// Represents an expression node in the AST.
     Expression(ExprKind),
-    /// Represents a metadata node in the AST.
-    Meta(P<MetaNode>), // Covers comments or annotations
     /// Represenst a block of code in the AST.
     Block(P<BlockNode>),
     /// Represents a control flow node in the AST.
@@ -112,7 +111,6 @@ impl AstVisitable for AstKind {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         match self {
             AstKind::Expression(expr) => expr.accept(visitor),
-            AstKind::Meta(meta) => meta.accept(visitor),
             AstKind::Statement(stmt) => stmt.accept(visitor),
             AstKind::Function(func) => func.accept(visitor),
             AstKind::Block(block) => block.accept(visitor),
@@ -128,24 +126,11 @@ where
 {
     let node: AstKind = node.into();
     let mut emit = Gs2Emitter::new(EmitContext::default());
-    let ouput: String = node.accept(&mut emit);
-    ouput
+    let ouput = node.accept(&mut emit);
+    ouput.node
 }
 
 // = Assignable expressions =
-
-/// Creates a metadata node with a comment
-pub fn new_comment<N>(node: N, comment: &str) -> MetaNode
-where
-    N: Into<AstKind>,
-{
-    MetaNode::new(
-        node.into().into(),
-        Some(comment.to_string()),
-        None,
-        Default::default(),
-    )
-}
 
 /// Creates a new AstNode for a statement.
 pub fn new_assignment<L, R>(lhs: L, rhs: R) -> AssignmentNode

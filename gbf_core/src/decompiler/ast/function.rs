@@ -13,7 +13,7 @@ use super::{
 pub struct FunctionNode {
     name: Option<String>,
     params: Vec<ExprKind>,
-    body: BlockNode,
+    body: P<BlockNode>,
 }
 
 impl FunctionNode {
@@ -34,7 +34,7 @@ impl FunctionNode {
         Self {
             name: name.into(),
             params,
-            body: BlockNode::new(body),
+            body: BlockNode::new(body).into(),
         }
     }
 
@@ -44,7 +44,7 @@ impl FunctionNode {
     }
 
     /// Returns the body of the function.
-    pub fn body(&self) -> &BlockNode {
+    pub fn body(&self) -> &P<BlockNode> {
         &self.body
     }
 
@@ -55,7 +55,7 @@ impl FunctionNode {
 }
 
 // == Other implementations for literal ==
-impl AstVisitable for FunctionNode {
+impl AstVisitable for P<FunctionNode> {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_function(self)
     }

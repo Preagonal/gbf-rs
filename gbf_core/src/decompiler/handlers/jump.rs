@@ -4,9 +4,10 @@ use std::backtrace::Backtrace;
 
 use crate::{
     decompiler::{
+        ast::{new_unary_op, unary_op::UnaryOpType},
         function_decompiler::FunctionDecompilerError,
-        function_decompiler_context::FunctionDecompilerContext, ProcessedInstruction,
-        ProcessedInstructionBuilder,
+        function_decompiler_context::FunctionDecompilerContext,
+        ProcessedInstruction, ProcessedInstructionBuilder,
     },
     instruction::Instruction,
     opcode::Opcode,
@@ -33,9 +34,16 @@ impl OpcodeHandler for JumpHandler {
             }
             Opcode::Jeq => {
                 let condition = context.pop_expression()?;
+                let wrapped = new_unary_op(condition, UnaryOpType::LogicalNot).map_err(|e| {
+                    FunctionDecompilerError::AstNodeError {
+                        source: e,
+                        context: context.get_error_context(),
+                        backtrace: Backtrace::capture(),
+                    }
+                })?;
 
                 Ok(ProcessedInstructionBuilder::new()
-                    .jump_condition(condition)
+                    .jump_condition(wrapped.into())
                     .build())
             }
             Opcode::With => {

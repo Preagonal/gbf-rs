@@ -3,7 +3,8 @@
 use std::backtrace::Backtrace;
 
 use crate::decompiler::ast::{
-    control_flow::ControlFlowNode, expr::ExprKind, new_acylic_condition, new_else, new_if, AstKind,
+    control_flow::ControlFlowNode, expr::ExprKind, new_acylic_condition, new_else, new_if, ptr::P,
+    AstKind,
 };
 
 use super::{
@@ -51,7 +52,7 @@ impl IfRegionReducer {
     fn merge_conditional(
         analysis: &mut StructureAnalysis,
         region_id: RegionId,
-        cond: Vec<ControlFlowNode>,
+        cond: Vec<P<ControlFlowNode>>,
     ) -> Result<(), StructureAnalysisError> {
         let region = analysis.regions.get_mut(region_id.index).ok_or(
             StructureAnalysisError::RegionNotFound {
@@ -59,11 +60,7 @@ impl IfRegionReducer {
                 backtrace: Backtrace::capture(),
             },
         )?;
-        region.push_nodes(
-            cond.into_iter()
-                .map(|node| AstKind::ControlFlow(node.into()))
-                .collect(),
-        );
+        region.push_nodes(cond.into_iter().map(|node| node.into()).collect());
         region.set_region_type(RegionType::Linear);
         region.remove_jump_expr();
         Ok(())
@@ -127,13 +124,18 @@ impl RegionReducer for IfRegionReducer {
         // Step 4: Handle the different cases
         if let Some(successor) = branch_linear_successor {
             if successor == fallthrough_region_id {
+                // Ensure that only the region is a predecessor of the branch region
+                if !analysis.has_single_predecessor(branch_region_id)? {
+                    return Ok(false);
+                }
+
                 // Call the before_reduce hook
                 analysis.before_reduce(region_id);
 
                 // Branch linear successor aligns with fallthrough region
                 let branch_statements =
                     IfRegionReducer::get_region_nodes(analysis, branch_region_id)?;
-                let cond = new_acylic_condition(
+                let mut cond: P<ControlFlowNode> = new_acylic_condition(
                     jump_expr,
                     branch_statements,
                     analysis.get_branch_opcode(region_id)?,
@@ -141,9 +143,11 @@ impl RegionReducer for IfRegionReducer {
                 .map_err(|e| StructureAnalysisError::AstNodeError {
                     source: Box::new(e),
                     backtrace: Backtrace::capture(),
-                })?;
+                })?
+                .into();
+                cond.metadata_mut().add_comment(region_id.to_string());
 
-                Self::merge_conditional(analysis, region_id, vec![cond])?;
+                Self::merge_conditional(analysis, branch_region_id, vec![cond])?;
                 Self::cleanup_region(analysis, branch_region_id, region_id, successor)?;
                 return Ok(true);
             }
@@ -151,13 +155,17 @@ impl RegionReducer for IfRegionReducer {
 
         if let Some(successor) = fallthrough_linear_successor {
             if successor == branch_region_id {
+                // Ensure that only the region is a predecessor of the fallthrough region
+                if !analysis.has_single_predecessor(fallthrough_region_id)? {
+                    return Ok(false);
+                }
                 // Call the before_reduce hook
                 analysis.before_reduce(region_id);
 
                 // Fallthrough linear successor aligns with branch region
                 let fallthrough_statements =
                     IfRegionReducer::get_region_nodes(analysis, fallthrough_region_id)?;
-                let cond = new_acylic_condition(
+                let mut cond: P<ControlFlowNode> = new_acylic_condition(
                     jump_expr,
                     fallthrough_statements,
                     analysis.get_branch_opcode(region_id)?,
@@ -165,7 +173,10 @@ impl RegionReducer for IfRegionReducer {
                 .map_err(|e| StructureAnalysisError::AstNodeError {
                     source: Box::new(e),
                     backtrace: Backtrace::capture(),
-                })?;
+                })?
+                .into();
+                cond.metadata_mut()
+                    .add_comment(fallthrough_region_id.to_string());
 
                 Self::merge_conditional(analysis, region_id, vec![cond])?;
                 Self::cleanup_region(analysis, fallthrough_region_id, region_id, successor)?;
@@ -178,6 +189,12 @@ impl RegionReducer for IfRegionReducer {
         {
             // Create if / else statement
             if branch_successor == fallthrough_successor {
+                // Ensure that only the region is a predecessor of the branch and fallthrough regions
+                if !analysis.has_single_predecessor(branch_region_id)?
+                    || !analysis.has_single_predecessor(fallthrough_region_id)?
+                {
+                    return Ok(false);
+                }
                 // Call the before_reduce hook
                 analysis.before_reduce(region_id);
 
@@ -186,9 +203,15 @@ impl RegionReducer for IfRegionReducer {
                     IfRegionReducer::get_region_nodes(analysis, branch_region_id)?;
                 let fallthrough_statements =
                     IfRegionReducer::get_region_nodes(analysis, fallthrough_region_id)?;
-                let if_stmnt = new_if(jump_expr, fallthrough_statements);
-                let else_stmt = new_else(branch_statements);
-
+                let mut if_stmnt: P<ControlFlowNode> =
+                    new_if(jump_expr, fallthrough_statements).into();
+                let mut else_stmt: P<ControlFlowNode> = new_else(branch_statements).into();
+                if_stmnt
+                    .metadata_mut()
+                    .add_comment(branch_region_id.to_string());
+                else_stmt
+                    .metadata_mut()
+                    .add_comment(fallthrough_region_id.to_string());
                 Self::merge_conditional(analysis, region_id, vec![if_stmnt, else_stmt])?;
                 Self::cleanup_region(analysis, branch_region_id, region_id, branch_successor)?;
                 Self::cleanup_region(

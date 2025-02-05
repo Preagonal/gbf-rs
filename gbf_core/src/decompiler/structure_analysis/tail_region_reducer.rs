@@ -3,7 +3,8 @@
 use std::backtrace::Backtrace;
 
 use crate::decompiler::ast::{
-    control_flow::ControlFlowNode, expr::ExprKind, new_acylic_condition, new_else, new_if, AstKind,
+    control_flow::ControlFlowNode, expr::ExprKind, new_acylic_condition, new_else, new_if, ptr::P,
+    AstKind,
 };
 
 use super::{
@@ -49,7 +50,7 @@ impl TailRegionReducer {
     fn merge_tail(
         analysis: &mut StructureAnalysis,
         region_id: RegionId,
-        tail: Vec<ControlFlowNode>,
+        tail: Vec<P<ControlFlowNode>>,
     ) -> Result<(), StructureAnalysisError> {
         let region = analysis.regions.get_mut(region_id.index).ok_or(
             StructureAnalysisError::RegionNotFound {
@@ -57,11 +58,7 @@ impl TailRegionReducer {
                 backtrace: Backtrace::capture(),
             },
         )?;
-        region.push_nodes(
-            tail.into_iter()
-                .map(|node| AstKind::ControlFlow(node.into()))
-                .collect(),
-        );
+        region.push_nodes(tail.into_iter().map(AstKind::ControlFlow).collect());
         region.set_region_type(RegionType::Tail);
         region.remove_jump_expr();
         Ok(())
@@ -132,13 +129,27 @@ impl RegionReducer for TailRegionReducer {
             && analysis.get_region_type(fallthrough_region_id)? == RegionType::Tail
             && fallthrough_single_pred
         {
+            // Ensure that only the region is a predecessor of the branch and fallthrough regions
+            if !analysis.has_single_predecessor(branch_region_id)?
+                || !analysis.has_single_predecessor(fallthrough_region_id)?
+            {
+                return Ok(false);
+            }
+
             analysis.before_reduce(region_id);
 
             let branch_statements = Self::get_region_nodes(analysis, branch_region_id)?;
             let fallthrough_statements = Self::get_region_nodes(analysis, fallthrough_region_id)?;
 
-            let if_else = new_if(jump_expr, fallthrough_statements);
-            let else_stmt = new_else(branch_statements);
+            let mut if_else: P<ControlFlowNode> = new_if(jump_expr, fallthrough_statements).into();
+            let mut else_stmt: P<ControlFlowNode> = new_else(branch_statements).into();
+
+            if_else
+                .metadata_mut()
+                .add_comment(fallthrough_region_id.to_string());
+            else_stmt
+                .metadata_mut()
+                .add_comment(branch_region_id.to_string());
 
             Self::merge_tail(analysis, region_id, vec![if_else, else_stmt])?;
             Self::cleanup_region(analysis, branch_region_id, region_id)?;
@@ -148,10 +159,14 @@ impl RegionReducer for TailRegionReducer {
 
         // Step 4: Merge if the first successor is a tail region with a single predecessor
         if analysis.get_region_type(branch_region_id)? == RegionType::Tail && branch_single_pred {
+            // Ensure that only the region is a predecessor of the branch region
+            if !analysis.has_single_predecessor(branch_region_id)? {
+                return Ok(false);
+            }
             analysis.before_reduce(region_id);
 
             let branch_statements = Self::get_region_nodes(analysis, branch_region_id)?;
-            let if_stmt = new_acylic_condition(
+            let mut if_stmt: P<ControlFlowNode> = new_acylic_condition(
                 jump_expr,
                 branch_statements,
                 analysis.get_branch_opcode(region_id)?,
@@ -159,7 +174,12 @@ impl RegionReducer for TailRegionReducer {
             .map_err(|e| StructureAnalysisError::AstNodeError {
                 source: Box::new(e),
                 backtrace: Backtrace::capture(),
-            })?;
+            })?
+            .into();
+
+            if_stmt
+                .metadata_mut()
+                .add_comment(branch_region_id.to_string());
 
             Self::merge_tail(analysis, region_id, vec![if_stmt])?;
             Self::cleanup_region(analysis, branch_region_id, region_id)?;
@@ -170,10 +190,14 @@ impl RegionReducer for TailRegionReducer {
         if analysis.get_region_type(fallthrough_region_id)? == RegionType::Tail
             && fallthrough_single_pred
         {
+            // Ensure that only the region is a predecessor of the fallthrough region
+            if !analysis.has_single_predecessor(fallthrough_region_id)? {
+                return Ok(false);
+            }
             analysis.before_reduce(region_id);
 
             let fallthrough_statements = Self::get_region_nodes(analysis, fallthrough_region_id)?;
-            let if_stmt = new_acylic_condition(
+            let mut if_stmt: P<ControlFlowNode> = new_acylic_condition(
                 jump_expr,
                 fallthrough_statements,
                 analysis.get_branch_opcode(region_id)?,
@@ -181,7 +205,12 @@ impl RegionReducer for TailRegionReducer {
             .map_err(|e| StructureAnalysisError::AstNodeError {
                 source: Box::new(e),
                 backtrace: Backtrace::capture(),
-            })?;
+            })?
+            .into();
+
+            if_stmt
+                .metadata_mut()
+                .add_comment(fallthrough_region_id.to_string());
 
             Self::merge_tail(analysis, region_id, vec![if_stmt])?;
             Self::cleanup_region(analysis, fallthrough_region_id, region_id)?;
@@ -194,7 +223,7 @@ impl RegionReducer for TailRegionReducer {
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{emit, new_assignment, new_id};
+    use crate::decompiler::ast::{new_assignment, new_id};
 
     use super::*;
 
@@ -227,10 +256,6 @@ mod tests {
 
         let region = structure_analysis.get_entry_region();
         let region = structure_analysis.get_region(region)?;
-
-        for node in region.get_nodes() {
-            println!("{}", emit(node.clone()));
-        }
 
         assert_eq!(region.get_nodes().len(), 3);
 
