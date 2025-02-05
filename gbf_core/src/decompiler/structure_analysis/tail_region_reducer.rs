@@ -129,6 +129,13 @@ impl RegionReducer for TailRegionReducer {
             && analysis.get_region_type(fallthrough_region_id)? == RegionType::Tail
             && fallthrough_single_pred
         {
+            // Ensure that only the region is a predecessor of the branch and fallthrough regions
+            if !analysis.has_single_predecessor(branch_region_id)?
+                || !analysis.has_single_predecessor(fallthrough_region_id)?
+            {
+                return Ok(false);
+            }
+
             analysis.before_reduce(region_id);
 
             let branch_statements = Self::get_region_nodes(analysis, branch_region_id)?;
@@ -152,6 +159,10 @@ impl RegionReducer for TailRegionReducer {
 
         // Step 4: Merge if the first successor is a tail region with a single predecessor
         if analysis.get_region_type(branch_region_id)? == RegionType::Tail && branch_single_pred {
+            // Ensure that only the region is a predecessor of the branch region
+            if !analysis.has_single_predecessor(branch_region_id)? {
+                return Ok(false);
+            }
             analysis.before_reduce(region_id);
 
             let branch_statements = Self::get_region_nodes(analysis, branch_region_id)?;
@@ -179,6 +190,10 @@ impl RegionReducer for TailRegionReducer {
         if analysis.get_region_type(fallthrough_region_id)? == RegionType::Tail
             && fallthrough_single_pred
         {
+            // Ensure that only the region is a predecessor of the fallthrough region
+            if !analysis.has_single_predecessor(fallthrough_region_id)? {
+                return Ok(false);
+            }
             analysis.before_reduce(region_id);
 
             let fallthrough_statements = Self::get_region_nodes(analysis, fallthrough_region_id)?;

@@ -124,6 +124,11 @@ impl RegionReducer for IfRegionReducer {
         // Step 4: Handle the different cases
         if let Some(successor) = branch_linear_successor {
             if successor == fallthrough_region_id {
+                // Ensure that only the region is a predecessor of the branch region
+                if !analysis.has_single_predecessor(branch_region_id)? {
+                    return Ok(false);
+                }
+
                 // Call the before_reduce hook
                 analysis.before_reduce(region_id);
 
@@ -150,6 +155,10 @@ impl RegionReducer for IfRegionReducer {
 
         if let Some(successor) = fallthrough_linear_successor {
             if successor == branch_region_id {
+                // Ensure that only the region is a predecessor of the fallthrough region
+                if !analysis.has_single_predecessor(fallthrough_region_id)? {
+                    return Ok(false);
+                }
                 // Call the before_reduce hook
                 analysis.before_reduce(region_id);
 
@@ -180,6 +189,12 @@ impl RegionReducer for IfRegionReducer {
         {
             // Create if / else statement
             if branch_successor == fallthrough_successor {
+                // Ensure that only the region is a predecessor of the branch and fallthrough regions
+                if !analysis.has_single_predecessor(branch_region_id)?
+                    || !analysis.has_single_predecessor(fallthrough_region_id)?
+                {
+                    return Ok(false);
+                }
                 // Call the before_reduce hook
                 analysis.before_reduce(region_id);
 
