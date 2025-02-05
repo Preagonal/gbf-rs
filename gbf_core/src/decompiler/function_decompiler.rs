@@ -472,17 +472,6 @@ impl FunctionDecompiler {
                 }
 
                 if let Some(jmp) = &processed.jump_condition {
-                    // Get the jump target from the instruction
-                    // let jump_target = instr
-                    //     .clone()
-                    //     .operand
-                    //     .and_then(|operand| operand.get_number_value().ok())
-                    //     .ok_or_else(|| FunctionDecompilerError::Other {
-                    //         message: "Jump instruction operand is missing or not a number"
-                    //             .to_string(),
-                    //         context: ctx.get_error_context(),
-                    //         backtrace: Backtrace::capture(),
-                    //     })?;
                     let current_region_id = self
                         .block_to_region
                         .get(&block_id)

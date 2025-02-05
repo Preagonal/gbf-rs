@@ -58,6 +58,7 @@ pub struct Region {
     jump_expr: Option<ExprKind>,
     region_type: RegionType,
     branch_opcode: Option<Opcode>,
+    region_id: RegionId,
 }
 
 impl Region {
@@ -65,12 +66,13 @@ impl Region {
     ///
     /// # Arguments
     /// * `id` - The id of the region.
-    pub fn new(region_type: RegionType) -> Self {
+    pub fn new(region_type: RegionType, region_id: RegionId) -> Self {
         Self {
             nodes: Vec::new(),
             jump_expr: None,
             region_type,
             branch_opcode: None,
+            region_id,
         }
     }
 
@@ -207,6 +209,15 @@ impl RenderableNode for Region {
         )
         .unwrap();
 
+        // Write RegionId
+        writeln!(
+            &mut label,
+            r#"{indent}<TR><TD ALIGN="LEFT"><FONT COLOR="{GBF_GREEN}">{}</FONT></TD></TR><TR><TD> </TD></TR>"#,
+            html_encode(format!("{}", self.region_id)),
+            GBF_GREEN = GBF_GREEN,
+            indent = indent
+        ).unwrap();
+
         // Write the region type as the label.
         let region_type_str = match self.region_type {
             RegionType::Linear => "Linear",
@@ -284,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_region_creation_and_instruction_addition() {
-        let mut region = Region::new(RegionType::Linear);
+        let mut region = Region::new(RegionType::Linear, RegionId::new(0));
 
         assert_eq!(region.region_type(), &RegionType::Linear);
         assert_eq!(region.iter_nodes().count(), 0);
@@ -309,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_region_into_iter() {
-        let region = Region::new(RegionType::Linear);
+        let region = Region::new(RegionType::Linear, RegionId::new(1));
         let mut iter = region.into_iter();
         assert_eq!(iter.next(), None);
     }
