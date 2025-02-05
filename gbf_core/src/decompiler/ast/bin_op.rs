@@ -73,7 +73,7 @@ impl PartialEq for BinaryOperationNode {
     }
 }
 
-impl AstVisitable for BinaryOperationNode {
+impl AstVisitable for P<BinaryOperationNode> {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_bin_op(self)
     }

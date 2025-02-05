@@ -57,7 +57,7 @@ impl UnaryOperationNode {
     }
 }
 
-impl AstVisitable for UnaryOperationNode {
+impl AstVisitable for P<UnaryOperationNode> {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_unary_op(self)
     }

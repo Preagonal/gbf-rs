@@ -28,7 +28,7 @@ impl BlockNode {
     }
 }
 
-impl AstVisitable for BlockNode {
+impl AstVisitable for P<BlockNode> {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_block(self)
     }

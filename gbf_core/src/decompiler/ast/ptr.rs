@@ -34,12 +34,17 @@ use std::{slice, vec};
 
 use serde::{Deserialize, Serialize};
 
+use super::meta::Metadata;
+use super::node_id::NodeId;
+
 /// An owned smart pointer.
 ///
 /// See the [module level documentation][crate::ptr] for details.
 #[derive(Serialize, Deserialize)]
 pub struct P<T: ?Sized> {
     ptr: Box<T>,
+    node_id: NodeId,
+    metadata: Metadata,
 }
 
 /// Construct a `P<T>` from a `T` value.
@@ -47,6 +52,8 @@ pub struct P<T: ?Sized> {
 pub fn P<T: 'static>(value: T) -> P<T> {
     P {
         ptr: Box::new(value),
+        node_id: NodeId::new(),
+        metadata: Metadata::default(),
     }
 }
 
@@ -84,6 +91,21 @@ impl<T: 'static> P<T> {
         *self.ptr = f(*self.ptr)?;
         Some(self)
     }
+
+    /// Gets the NodeId
+    pub fn node_id(&self) -> NodeId {
+        self.node_id
+    }
+
+    /// Gets the metadata
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
+    }
+
+    /// Gets the metadata mutably
+    pub fn metadata_mut(&mut self) -> &mut Metadata {
+        &mut self.metadata
+    }
 }
 
 impl<T: ?Sized> Deref for P<T> {
@@ -109,7 +131,12 @@ impl<T: ?Sized> AsRef<T> for P<T> {
 
 impl<T: 'static + Clone> Clone for P<T> {
     fn clone(&self) -> P<T> {
-        P((**self).clone())
+        P {
+            ptr: self.ptr.clone(),
+            // TODO: Should we clone the node_id?
+            node_id: NodeId::new(),
+            metadata: self.metadata.clone(),
+        }
     }
 }
 
@@ -135,6 +162,8 @@ impl<T> From<T> for P<T> {
     fn from(value: T) -> Self {
         P {
             ptr: Box::new(value),
+            node_id: NodeId::new(),
+            metadata: Metadata::default(),
         }
     }
 }
@@ -144,6 +173,8 @@ impl<T> P<[T]> {
     pub fn new() -> P<[T]> {
         P {
             ptr: Box::default(),
+            node_id: NodeId::new(),
+            metadata: Metadata::default(),
         }
     }
 
@@ -152,6 +183,8 @@ impl<T> P<[T]> {
     pub fn from_vec(v: Vec<T>) -> P<[T]> {
         P {
             ptr: v.into_boxed_slice(),
+            node_id: NodeId::new(),
+            metadata: Metadata::default(),
         }
     }
 

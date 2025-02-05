@@ -1,9 +1,12 @@
 #![deny(missing_docs)]
 
 use super::{
-    assignable::AssignableKind, assignment::AssignmentNode, bin_op::BinaryOperationNode,
-    expr::ExprKind, identifier::IdentifierNode, literal::LiteralNode,
-    member_access::MemberAccessNode, meta::MetaNode, unary_op::UnaryOperationNode, AstKind,
+    array::ArrayNode, array_access::ArrayAccessNode, assignable::AssignableKind,
+    assignment::AssignmentNode, bin_op::BinaryOperationNode, block::BlockNode,
+    control_flow::ControlFlowNode, expr::ExprKind, func_call::FunctionCallNode,
+    function::FunctionNode, identifier::IdentifierNode, literal::LiteralNode,
+    member_access::MemberAccessNode, phi::PhiNode, ptr::P, ret::ReturnNode,
+    statement::StatementKind, unary_op::UnaryOperationNode, AstKind,
 };
 
 /// Represents a visitor for the AST.
@@ -16,42 +19,40 @@ pub trait AstVisitor {
     /// The output type of the visitor.
     type Output;
 
-    /// Visits an AstNode
+    /// Visits an AST node.
     fn visit_node(&mut self, node: &AstKind) -> Self::Output;
     /// Visits a statement node.
-    fn visit_statement(&mut self, node: &super::statement::StatementKind) -> Self::Output;
-    /// Visits a assignment node.
-    fn visit_assignment(&mut self, node: &AssignmentNode) -> Self::Output;
+    fn visit_statement(&mut self, node: &StatementKind) -> Self::Output;
+    /// Visits an assignment node.
+    fn visit_assignment(&mut self, node: &P<AssignmentNode>) -> Self::Output;
     /// Visits an expression node.
     fn visit_expr(&mut self, node: &ExprKind) -> Self::Output;
     /// Visits an assignable expression node.
     fn visit_assignable_expr(&mut self, node: &AssignableKind) -> Self::Output;
     /// Visits a binary operation node.
-    fn visit_bin_op(&mut self, node: &BinaryOperationNode) -> Self::Output;
+    fn visit_bin_op(&mut self, node: &P<BinaryOperationNode>) -> Self::Output;
     /// Visits a unary operation node.
-    fn visit_unary_op(&mut self, node: &UnaryOperationNode) -> Self::Output;
+    fn visit_unary_op(&mut self, node: &P<UnaryOperationNode>) -> Self::Output;
     /// Visits an identifier node.
-    fn visit_identifier(&mut self, node: &IdentifierNode) -> Self::Output;
+    fn visit_identifier(&mut self, node: &P<IdentifierNode>) -> Self::Output;
     /// Visits a literal node.
-    fn visit_literal(&mut self, node: &LiteralNode) -> Self::Output;
+    fn visit_literal(&mut self, node: &P<LiteralNode>) -> Self::Output;
     /// Visits a member access node.
-    fn visit_member_access(&mut self, node: &MemberAccessNode) -> Self::Output;
-    /// Visits a meta node.
-    fn visit_meta(&mut self, node: &MetaNode) -> Self::Output;
+    fn visit_member_access(&mut self, node: &P<MemberAccessNode>) -> Self::Output;
     /// Visits a function call node.
-    fn visit_function_call(&mut self, node: &super::func_call::FunctionCallNode) -> Self::Output;
+    fn visit_function_call(&mut self, node: &P<FunctionCallNode>) -> Self::Output;
     /// Visits an array node.
-    fn visit_array(&mut self, node: &super::array::ArrayNode) -> Self::Output;
+    fn visit_array(&mut self, node: &P<ArrayNode>) -> Self::Output;
     /// Visits an array access node.
-    fn visit_array_access(&mut self, node: &super::array_access::ArrayAccessNode) -> Self::Output;
+    fn visit_array_access(&mut self, node: &P<ArrayAccessNode>) -> Self::Output;
     /// Visits a function node.
-    fn visit_function(&mut self, node: &super::function::FunctionNode) -> Self::Output;
+    fn visit_function(&mut self, node: &P<FunctionNode>) -> Self::Output;
     /// Visits a return node.
-    fn visit_return(&mut self, node: &super::ret::ReturnNode) -> Self::Output;
+    fn visit_return(&mut self, node: &P<ReturnNode>) -> Self::Output;
     /// Visits a block node.
-    fn visit_block(&mut self, node: &super::block::BlockNode) -> Self::Output;
-    /// Visits a control flow node
-    fn visit_control_flow(&mut self, node: &super::control_flow::ControlFlowNode) -> Self::Output;
-    /// Visits a phi node
-    fn visit_phi(&mut self, node: &super::phi::PhiNode) -> Self::Output;
+    fn visit_block(&mut self, node: &P<BlockNode>) -> Self::Output;
+    /// Visits a control flow node.
+    fn visit_control_flow(&mut self, node: &P<ControlFlowNode>) -> Self::Output;
+    /// Visits a phi node.
+    fn visit_phi(&mut self, node: &P<PhiNode>) -> Self::Output;
 }

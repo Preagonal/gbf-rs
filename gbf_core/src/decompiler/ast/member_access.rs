@@ -63,7 +63,7 @@ impl MemberAccessNode {
     }
 }
 
-impl AstVisitable for MemberAccessNode {
+impl AstVisitable for P<MemberAccessNode> {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_member_access(self)
     }

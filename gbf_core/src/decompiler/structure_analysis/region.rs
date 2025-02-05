@@ -231,7 +231,7 @@ impl RenderableNode for Region {
                 .include_ssa_versions(true)
                 .build();
             let mut emitter = Gs2Emitter::new(context);
-            let result = emitter.visit_node(node);
+            let result = emitter.visit_node(node).node;
 
             // split the result by newlines
             let result = result.split('\n').collect::<Vec<&str>>();
@@ -263,7 +263,7 @@ impl RenderableNode for Region {
                 r##"{indent}    <TR><TD> </TD></TR><TR>
 {indent}        <TD ALIGN="LEFT"><FONT COLOR="{GBF_GREEN}">JumpExpr: {}</FONT></TD>
 {indent}    </TR>"##,
-                html_encode(result),
+                html_encode(result.node),
                 GBF_GREEN = GBF_GREEN,
                 indent = indent
             )

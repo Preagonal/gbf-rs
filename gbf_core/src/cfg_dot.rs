@@ -468,7 +468,6 @@ mod tests {
         let dot_output = cfg_dot.render(&graph, &resolver);
 
         // Verify the output.
-        println!("{}", dot_output);
         assert!(dot_output.contains("N0 -> N1"));
         assert!(dot_output.contains("N1 -> N2"));
         assert!(dot_output.contains("N0 -> N2"));

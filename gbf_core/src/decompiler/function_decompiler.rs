@@ -315,7 +315,7 @@ impl FunctionDecompiler {
         );
 
         let mut emitter = Gs2Emitter::new(emit_context);
-        let output: String = func.accept(&mut emitter);
+        let output: String = func.accept(&mut emitter).node;
 
         Ok(output)
     }

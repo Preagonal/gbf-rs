@@ -71,7 +71,7 @@ impl PhiNode {
     }
 }
 
-impl AstVisitable for PhiNode {
+impl AstVisitable for P<PhiNode> {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_phi(self)
     }

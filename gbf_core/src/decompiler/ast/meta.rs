@@ -1,62 +1,34 @@
 #![deny(missing_docs)]
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use gbf_macros::AstNodeTransform;
-use serde::{Deserialize, Serialize};
-
-use crate::utils::Gs2BytecodeAddress;
-
-use super::{ptr::P, visitors::AstVisitor, AstKind, AstVisitable};
-
 /// Represents a metadata node in the AST
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
-#[convert_to(AstKind::Meta)]
-pub struct MetaNode {
-    node: P<AstKind>,
-    comment: Option<String>,
-    source_location: Option<Gs2BytecodeAddress>,
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default)]
+pub struct Metadata {
+    comments: Vec<String>,
     properties: HashMap<String, String>,
 }
 
-impl MetaNode {
-    /// Creates a new `MetaNode` with the given `node`, `comment`, `source_location`, and `properties`.
-    ///
-    /// # Arguments
-    /// - `node` - The inner node.
-    /// - `comment` - The comment for the node.
-    /// - `source_location` - The source location of the node.
-    /// - `properties` - The properties of the node.
-    ///
-    /// # Returns
-    /// A new `MetaNode`.
-    pub fn new(
-        node: P<AstKind>,
-        comment: Option<String>,
-        source_location: Option<Gs2BytecodeAddress>,
-        properties: HashMap<String, String>,
-    ) -> Self {
-        Self {
-            node,
-            comment,
-            source_location,
-            properties,
-        }
+impl Metadata {
+    /// Returns the comments.
+    pub fn comments(&self) -> &Vec<String> {
+        &self.comments
     }
 
-    /// Returns the inner node.
-    pub fn node(&self) -> &AstKind {
-        &self.node
+    /// Adds a new comment
+    pub fn add_comment(&mut self, comment: String) {
+        self.comments.push(comment);
     }
 
-    /// Returns the comment.
-    pub fn comment(&self) -> Option<&String> {
-        self.comment.as_ref()
+    /// Adds a new property
+    pub fn add_property(&mut self, key: String, value: String) {
+        self.properties.insert(key, value);
     }
 
-    /// Returns the source location.
-    pub fn source_location(&self) -> Option<Gs2BytecodeAddress> {
-        self.source_location
+    /// Gets a property
+    pub fn get_property(&self, key: &str) -> Option<&String> {
+        self.properties.get(key)
     }
 
     /// Returns the properties.
@@ -65,41 +37,43 @@ impl MetaNode {
     }
 }
 
-// == Other implementations for literal ==
-impl AstVisitable for MetaNode {
-    fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
-        visitor.visit_meta(self)
-    }
-}
-
-impl PartialEq for MetaNode {
+impl PartialEq for Metadata {
     fn eq(&self, other: &Self) -> bool {
-        self.node == other.node
-            && self.comment == other.comment
-            && self.source_location == other.source_location
-            && self.properties == other.properties
+        self.comments == other.comments && self.properties == other.properties
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::decompiler::ast::{emit, new_assignment, new_comment, new_id};
+    use crate::decompiler::ast::{
+        assignment::AssignmentNode, emit, new_assignment, new_id, new_if, ptr::P,
+    };
+
+    use super::*;
 
     #[test]
-    fn test_comment_emit() {
-        let statement = new_assignment(new_id("foo"), new_id("bar"));
-        let comment = new_comment(statement, "Sets foo to bar");
-        assert_eq!(emit(comment), "// Sets foo to bar\nfoo = bar;");
+    fn test_metadata() {
+        let mut metadata = Metadata::default();
+        metadata.add_comment("This is a comment".to_string());
+        metadata.add_property("key".to_string(), "value".to_string());
+
+        assert_eq!(metadata.comments(), &vec!["This is a comment".to_string()]);
+        assert_eq!(metadata.get_property("key"), Some(&"value".to_string()));
     }
 
     #[test]
-    fn test_comment_equality() {
-        let statement = new_assignment(new_id("foo"), new_id("bar"));
-        let comment1 = new_comment(statement.clone(), "Sets foo to bar");
-        let comment2 = new_comment(statement.clone(), "Sets foo to bar");
-        let comment3 = new_comment(statement.clone(), "Sets foo to baz");
+    fn test_attach_metadata() {
+        let mut stmt: P<AssignmentNode> = new_assignment(new_id("foo"), new_id("bar")).into();
+        stmt.metadata_mut()
+            .add_comment("This is a comment".to_string());
 
-        assert_eq!(comment1, comment2);
-        assert_ne!(comment1, comment3);
+        // Create if stmt
+        let if_node = new_if(new_id("test"), vec![stmt]);
+
+        let emitted = emit(if_node);
+        assert_eq!(
+            emitted,
+            "if (test) \n{\n    // This is a comment\n    foo = bar;\n}"
+        );
     }
 }

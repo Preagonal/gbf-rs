@@ -57,7 +57,7 @@ impl ControlFlowNode {
     }
 
     /// Returns the body of the ControlFlowNode.
-    pub fn body(&self) -> &BlockNode {
+    pub fn body(&self) -> &P<BlockNode> {
         &self.then_block
     }
 
@@ -68,7 +68,7 @@ impl ControlFlowNode {
 }
 
 // == Other implementations for literal ==
-impl AstVisitable for ControlFlowNode {
+impl AstVisitable for P<ControlFlowNode> {
     fn accept<V: AstVisitor>(&self, visitor: &mut V) -> V::Output {
         visitor.visit_control_flow(self)
     }
