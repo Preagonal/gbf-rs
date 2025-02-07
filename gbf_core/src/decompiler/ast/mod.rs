@@ -53,6 +53,8 @@ pub mod literal;
 pub mod member_access;
 /// Contains the specifications for any AstNodes that are metadata.
 pub mod meta;
+/// Represents the new
+pub mod new;
 /// A node identifier
 pub mod node_id;
 /// Represents a phi node in the AST.
@@ -344,4 +346,12 @@ where
         None => Ok(new_if(condition, then_block)),
         _ => Err(AstNodeError::InvalidOperand),
     }
+}
+
+/// Creates a new new node.
+pub fn new_new<N>(new_type: &str, arg: N) -> Result<new::NewNode, AstNodeError>
+where
+    N: Into<ExprKind>,
+{
+    new::NewNode::new(new_type, arg.into())
 }

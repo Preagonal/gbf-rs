@@ -145,6 +145,10 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
             Opcode::AssignArrayIndex,
             Box::new(special_two_operand::SpecialTwoOperandHandler),
         );
+        handlers.insert(
+            Opcode::NewObject,
+            Box::new(special_two_operand::SpecialTwoOperandHandler),
+        );
 
         // One operand handlers
         handlers.insert(
@@ -161,6 +165,14 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         );
         handlers.insert(
             Opcode::GetRegister,
+            Box::new(special_one_operand::SpecialOneOperandHandler),
+        );
+        handlers.insert(
+            Opcode::Inc,
+            Box::new(special_one_operand::SpecialOneOperandHandler),
+        );
+        handlers.insert(
+            Opcode::Dec,
             Box::new(special_one_operand::SpecialOneOperandHandler),
         );
 

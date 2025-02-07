@@ -90,6 +90,69 @@ impl FunctionDecompilerContext {
             stack.push(ExecutionFrame::BuildingArray(Vec::new()));
             return Ok(ProcessedInstructionBuilder::new().build());
         }
+        // TODO: Better handle swap
+        if instr.opcode == Opcode::Swap {
+            let error_context = self.get_error_context();
+
+            let stack = self
+                .block_ast_node_stack
+                .get_mut(&current_block_id)
+                .expect("Critical error: stack should always be set for each basic block");
+
+            let last = stack
+                .pop()
+                .ok_or_else(|| FunctionDecompilerError::ExecutionStackEmpty {
+                    backtrace: Backtrace::capture(),
+                    context: error_context.clone(),
+                })?;
+            let second_last =
+                stack
+                    .pop()
+                    .ok_or_else(|| FunctionDecompilerError::ExecutionStackEmpty {
+                        backtrace: Backtrace::capture(),
+                        context: error_context.clone(),
+                    })?;
+
+            // If `last` is a BuildingArray, merge it with `second_last`. Otherwise,
+            // push both back onto the stack.
+
+            match last {
+                ExecutionFrame::BuildingArray(mut last_array) => match second_last {
+                    ExecutionFrame::BuildingArray(mut second_last_array) => {
+                        last_array.append(&mut second_last_array);
+                        stack.push(ExecutionFrame::BuildingArray(last_array));
+                    }
+                    ExecutionFrame::StandaloneNode(n) => {
+                        // Convert n from AstKind to ExprKind
+                        let expr = match n {
+                            AstKind::Expression(e) => e,
+                            _ => {
+                                return Err(FunctionDecompilerError::UnexpectedNodeType {
+                                    expected: "Expression".to_string(),
+                                    context: error_context,
+                                    backtrace: Backtrace::capture(),
+                                });
+                            }
+                        };
+                        last_array.push(expr);
+                        stack.push(ExecutionFrame::BuildingArray(last_array));
+                    }
+                    _ => {
+                        return Err(FunctionDecompilerError::UnexpectedNodeType {
+                            expected: "Expression".to_string(),
+                            context: error_context,
+                            backtrace: Backtrace::capture(),
+                        });
+                    }
+                },
+                _ => {
+                    stack.push(last);
+                    stack.push(second_last);
+                }
+            }
+
+            return Ok(ProcessedInstructionBuilder::new().build());
+        }
 
         let handlers = global_opcode_handlers();
 

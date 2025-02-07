@@ -60,7 +60,7 @@ impl OpcodeHandler for VariableOperandHandler {
                     let function_name = match function_name {
                         ExprKind::Assignable(ident) => Ok(ident),
                         _ => Err(FunctionDecompilerError::UnexpectedNodeType {
-                            expected: "Identifier".to_string(),
+                            expected: "AssignableKind".to_string(),
                             context: error_context.clone(),
                             backtrace: Backtrace::capture(),
                         }),

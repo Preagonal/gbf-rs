@@ -331,6 +331,15 @@ impl StructureAnalysis {
         region.push_node(node.into());
     }
 
+    /// Push an unresolved node to a region.
+    pub fn push_unresolved_to_region(&mut self, region_id: RegionId, node: AstKind) {
+        let region = self
+            .regions
+            .get_mut(region_id.index)
+            .expect("Region not found");
+        region.push_unresolved_node(node);
+    }
+
     /// Get the single successor of a region, if there is only one.
     ///
     /// # Arguments

@@ -3,8 +3,8 @@
 use std::backtrace::Backtrace;
 
 use crate::decompiler::ast::{
-    control_flow::ControlFlowNode, expr::ExprKind, new_acylic_condition, new_else, new_if, ptr::P,
-    AstKind,
+    control_flow::ControlFlowNode, emit, expr::ExprKind, new_acylic_condition, new_else, new_if,
+    ptr::P, AstKind,
 };
 
 use super::{
@@ -79,6 +79,39 @@ impl IfRegionReducer {
         )?;
         Ok(region.get_nodes().to_vec())
     }
+
+    /// Extracts the unresolved nodes of a given region.
+    fn get_unresolved_nodes(
+        analysis: &StructureAnalysis,
+        region_id: RegionId,
+    ) -> Result<Vec<AstKind>, StructureAnalysisError> {
+        let region = analysis.regions.get(region_id.index).ok_or(
+            StructureAnalysisError::RegionNotFound {
+                region_id,
+                backtrace: Backtrace::capture(),
+            },
+        )?;
+        Ok(region.get_unresolved_nodes().to_vec())
+    }
+
+    /// Add region comments to P<ControlFlowNode>
+    fn add_region_comments(
+        analysis: &StructureAnalysis,
+        node: &mut P<ControlFlowNode>,
+        region_id: RegionId,
+    ) {
+        node.metadata_mut().add_comment(region_id.to_string());
+
+        let unresolved = IfRegionReducer::get_unresolved_nodes(analysis, region_id).unwrap();
+        if !unresolved.is_empty() {
+            node.metadata_mut()
+                .add_comment("Unresolved nodes:".to_string());
+        }
+        for (idx, n) in unresolved.iter().enumerate() {
+            node.metadata_mut()
+                .add_comment(format!("idx={}: {}", idx, emit(n.clone())));
+        }
+    }
 }
 
 impl RegionReducer for IfRegionReducer {
@@ -145,7 +178,8 @@ impl RegionReducer for IfRegionReducer {
                     backtrace: Backtrace::capture(),
                 })?
                 .into();
-                cond.metadata_mut().add_comment(region_id.to_string());
+
+                IfRegionReducer::add_region_comments(analysis, &mut cond, branch_region_id);
 
                 Self::merge_conditional(analysis, branch_region_id, vec![cond])?;
                 Self::cleanup_region(analysis, branch_region_id, region_id, successor)?;
@@ -175,8 +209,9 @@ impl RegionReducer for IfRegionReducer {
                     backtrace: Backtrace::capture(),
                 })?
                 .into();
-                cond.metadata_mut()
-                    .add_comment(fallthrough_region_id.to_string());
+
+                IfRegionReducer::add_region_comments(analysis, &mut cond, region_id);
+                IfRegionReducer::add_region_comments(analysis, &mut cond, fallthrough_region_id);
 
                 Self::merge_conditional(analysis, region_id, vec![cond])?;
                 Self::cleanup_region(analysis, fallthrough_region_id, region_id, successor)?;
@@ -206,12 +241,15 @@ impl RegionReducer for IfRegionReducer {
                 let mut if_stmnt: P<ControlFlowNode> =
                     new_if(jump_expr, fallthrough_statements).into();
                 let mut else_stmt: P<ControlFlowNode> = new_else(branch_statements).into();
-                if_stmnt
-                    .metadata_mut()
-                    .add_comment(branch_region_id.to_string());
-                else_stmt
-                    .metadata_mut()
-                    .add_comment(fallthrough_region_id.to_string());
+
+                IfRegionReducer::add_region_comments(analysis, &mut if_stmnt, region_id);
+                IfRegionReducer::add_region_comments(
+                    analysis,
+                    &mut if_stmnt,
+                    fallthrough_region_id,
+                );
+                IfRegionReducer::add_region_comments(analysis, &mut else_stmt, branch_region_id);
+
                 Self::merge_conditional(analysis, region_id, vec![if_stmnt, else_stmt])?;
                 Self::cleanup_region(analysis, branch_region_id, region_id, branch_successor)?;
                 Self::cleanup_region(

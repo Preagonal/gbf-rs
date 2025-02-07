@@ -4,7 +4,10 @@ use std::backtrace::Backtrace;
 
 use crate::{
     decompiler::{
-        ast::{expr::ExprKind, new_assignment, new_id_with_version, new_return},
+        ast::{
+            bin_op::BinOpType, expr::ExprKind, new_assignment, new_bin_op, new_id_with_version,
+            new_num, new_return,
+        },
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -112,6 +115,52 @@ impl OpcodeHandler for SpecialOneOperandHandler {
                     .insert(register_id as usize, register_map_add);
 
                 Ok(processed_instruction)
+            }
+            Opcode::Inc => {
+                // Pop the last assignable from the stack, create AST node for assignment + 1, push it back to the stack
+                let expr = context.pop_assignable()?;
+                let bin_op = new_bin_op(expr.clone(), new_num(1), BinOpType::Add).map_err(|e| {
+                    FunctionDecompilerError::AstNodeError {
+                        source: e,
+                        context: context.get_error_context(),
+                        backtrace: Backtrace::capture(),
+                    }
+                })?;
+
+                // an assignment bumps the version of the lhs
+                let mut lhs = expr;
+                let ver = context.ssa_context.new_ssa_version_for(&lhs.id_string());
+                lhs.set_ssa_version(ver);
+                let stmt = new_assignment(lhs.clone(), bin_op);
+
+                context.push_one_node(lhs.clone().into())?;
+
+                Ok(ProcessedInstructionBuilder::new()
+                    .push_to_region(stmt.into())
+                    .build())
+            }
+            Opcode::Dec => {
+                // Pop the last assignable from the stack, create AST node for assignment + 1, push it back to the stack
+                let expr = context.pop_assignable()?;
+                let bin_op = new_bin_op(expr.clone(), new_num(1), BinOpType::Sub).map_err(|e| {
+                    FunctionDecompilerError::AstNodeError {
+                        source: e,
+                        context: context.get_error_context(),
+                        backtrace: Backtrace::capture(),
+                    }
+                })?;
+
+                // an assignment bumps the version of the lhs
+                let mut lhs = expr;
+                let ver = context.ssa_context.new_ssa_version_for(&lhs.id_string());
+                lhs.set_ssa_version(ver);
+                let stmt = new_assignment(lhs.clone(), bin_op);
+
+                context.push_one_node(lhs.clone().into())?;
+
+                Ok(ProcessedInstructionBuilder::new()
+                    .push_to_region(stmt.into())
+                    .build())
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {
                 opcode: instruction.opcode,

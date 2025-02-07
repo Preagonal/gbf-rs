@@ -170,6 +170,7 @@ impl AstVisitor for Gs2Emitter {
             ExprKind::UnaryOp(unary_op) => unary_op.accept(self),
             ExprKind::FunctionCall(func_call) => func_call.accept(self),
             ExprKind::Array(array) => array.accept(self),
+            ExprKind::New(new_node) => new_node.accept(self),
         }
     }
 
@@ -365,7 +366,8 @@ impl AstVisitor for Gs2Emitter {
     fn visit_function_call(&mut self, node: &P<FunctionCallNode>) -> AstOutput {
         let mut s = String::new();
         let mut arg_comments = Vec::new();
-        s.push_str(node.name.id_string().as_str());
+        let name_out = node.name.accept(self);
+        s.push_str(name_out.node.as_str());
         s.push('(');
         for (i, arg) in node.arguments.iter().enumerate() {
             let arg_out = arg.accept(self);
@@ -513,6 +515,15 @@ impl AstVisitor for Gs2Emitter {
         AstOutput {
             node: s,
             comments: node.metadata().comments().clone(),
+        }
+    }
+
+    /// Visits a new node
+    fn visit_new(&mut self, node: &P<crate::decompiler::ast::new::NewNode>) -> AstOutput {
+        let arg_out = node.arg.accept(self);
+        AstOutput {
+            node: format!("new {}({})", node.new_type, arg_out.node),
+            comments: arg_out.comments,
         }
     }
 }

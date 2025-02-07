@@ -4,7 +4,10 @@ use std::backtrace::Backtrace;
 
 use crate::{
     decompiler::{
-        ast::{assignable::AssignableKind, new_array_access, new_assignment, new_member_access},
+        ast::{
+            assignable::AssignableKind, expr::ExprKind, literal::LiteralNode, new_array_access,
+            new_assignment, new_id_with_version, new_member_access, new_new,
+        },
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -63,6 +66,48 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
 
                 context.push_one_node(array_access.into())?;
                 Ok(ProcessedInstructionBuilder::new().build())
+            }
+            Opcode::NewObject => {
+                let new_type = context.pop_expression()?;
+                let arg = context.pop_expression()?;
+
+                // Ensure that new_type is a string, and then get the string value
+                let new_type = match new_type {
+                    ExprKind::Literal(lit) => match lit.as_ref() {
+                        LiteralNode::String(s) => s.clone(),
+                        _ => {
+                            return Err(FunctionDecompilerError::UnexpectedNodeType {
+                                expected: "String".to_string(),
+                                context: context.get_error_context(),
+                                backtrace: Backtrace::capture(),
+                            })
+                        }
+                    },
+                    _ => {
+                        return Err(FunctionDecompilerError::UnexpectedNodeType {
+                            expected: "String".to_string(),
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })
+                    }
+                };
+
+                let new_node =
+                    new_new(&new_type, arg).map_err(|e| FunctionDecompilerError::AstNodeError {
+                        source: e,
+                        context: context.get_error_context(),
+                        backtrace: Backtrace::capture(),
+                    })?;
+
+                // Create SSA ID for the function call
+                let var = context.ssa_context.new_ssa_version_for("new_node");
+                let ssa_id = new_id_with_version("new_node", var);
+                let stmt = new_assignment(ssa_id.clone(), new_node);
+
+                Ok(ProcessedInstructionBuilder::new()
+                    .ssa_id(ssa_id.into())
+                    .push_to_region(stmt.into())
+                    .build())
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {
                 opcode: instruction.opcode,
