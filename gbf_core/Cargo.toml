@@ -1,6 +1,6 @@
 [package]
 name = "gbf_core"
-version = "0.1.14"
+version = "0.1.15"
 # TODO: Once 2024 edition is stable, switch to it. ETA Feb 2025.
 edition = "2021"
 
@@ -11,6 +11,7 @@ serde = {version = "1.0.216", features = ["derive"]}
 thiserror = "2.0.8"
 gbf_macros = { path = "../gbf_macros" }
 regex = "1.11.1"
+serde_json = "1.0.138"
 
 [package.metadata]
 msrv = "1.81.0"

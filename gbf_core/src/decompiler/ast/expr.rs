@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     array::ArrayNode, assignable::AssignableKind, bin_op::BinaryOperationNode,
-    func_call::FunctionCallNode, literal::LiteralNode, ptr::P, unary_op::UnaryOperationNode,
-    visitors::AstVisitor, AstKind, AstVisitable,
+    func_call::FunctionCallNode, literal::LiteralNode, new::NewNode, ptr::P,
+    unary_op::UnaryOperationNode, visitors::AstVisitor, AstKind, AstVisitable,
 };
 
 /// Represents an expression node in the AST.
@@ -25,6 +25,8 @@ pub enum ExprKind {
     FunctionCall(P<FunctionCallNode>),
     /// Represents an array node in the AST.
     Array(P<ArrayNode>),
+    /// Represents a new node in the AST.
+    New(P<NewNode>),
 }
 
 impl AstVisitable for ExprKind {
@@ -44,6 +46,7 @@ impl PartialEq for ExprKind {
             (ExprKind::UnaryOp(u1), ExprKind::UnaryOp(u2)) => u1 == u2,
             (ExprKind::FunctionCall(f1), ExprKind::FunctionCall(f2)) => f1 == f2,
             (ExprKind::Array(a1), ExprKind::Array(a2)) => a1 == a2,
+            (ExprKind::New(n1), ExprKind::New(n2)) => n1 == n2,
             _ => false,
         }
     }

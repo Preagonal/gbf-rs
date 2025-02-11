@@ -77,6 +77,7 @@ impl AstVisitor for Gs2Emitter {
         let stmt_str = match node {
             StatementKind::Assignment(assignment) => assignment.accept(self),
             StatementKind::Return(ret) => ret.accept(self),
+            StatementKind::VirtualBranch(vbranch) => vbranch.accept(self),
         };
         AstOutput {
             node: format!("{};", stmt_str.node),
@@ -161,6 +162,22 @@ impl AstVisitor for Gs2Emitter {
         }
     }
 
+    /// Visits a virtual branch node.
+    fn visit_virtual_branch(
+        &mut self,
+        node: &P<crate::decompiler::ast::vbranch::VirtualBranchNode>,
+    ) -> Self::Output {
+        // Put out `goto` statement
+        let mut s = String::new();
+        s.push_str("goto ");
+        s.push_str(&node.branch().to_string());
+
+        AstOutput {
+            node: s,
+            comments: node.metadata().comments().clone(),
+        }
+    }
+
     /// Visits an expression node.
     fn visit_expr(&mut self, node: &ExprKind) -> AstOutput {
         match node {
@@ -170,6 +187,7 @@ impl AstVisitor for Gs2Emitter {
             ExprKind::UnaryOp(unary_op) => unary_op.accept(self),
             ExprKind::FunctionCall(func_call) => func_call.accept(self),
             ExprKind::Array(array) => array.accept(self),
+            ExprKind::New(new_node) => new_node.accept(self),
         }
     }
 
@@ -365,7 +383,8 @@ impl AstVisitor for Gs2Emitter {
     fn visit_function_call(&mut self, node: &P<FunctionCallNode>) -> AstOutput {
         let mut s = String::new();
         let mut arg_comments = Vec::new();
-        s.push_str(node.name.id_string().as_str());
+        let name_out = node.name.accept(self);
+        s.push_str(name_out.node.as_str());
         s.push('(');
         for (i, arg) in node.arguments.iter().enumerate() {
             let arg_out = arg.accept(self);
@@ -446,9 +465,7 @@ impl AstVisitor for Gs2Emitter {
         }
         let old_context = self.context;
         self.context = self.context.with_indent();
-        if node.instructions.is_empty() {
-            s.push_str(&self.emit_indent());
-        } else {
+        if !node.instructions.is_empty() {
             for stmt in node.instructions.iter() {
                 let stmt_out = stmt.accept(self);
                 // First emit any comments.
@@ -515,6 +532,15 @@ impl AstVisitor for Gs2Emitter {
         AstOutput {
             node: s,
             comments: node.metadata().comments().clone(),
+        }
+    }
+
+    /// Visits a new node
+    fn visit_new(&mut self, node: &P<crate::decompiler::ast::new::NewNode>) -> AstOutput {
+        let arg_out = node.arg.accept(self);
+        AstOutput {
+            node: format!("new {}({})", node.new_type, arg_out.node),
+            comments: arg_out.comments,
         }
     }
 }

@@ -370,36 +370,38 @@ impl FunctionDecompiler {
                 context: ctx.get_error_context(),
             })?;
 
-        for block_id in reverse_post_order {
+        for block_id in &reverse_post_order {
             // Get the region id for the block
             let region_id = *self
                 .block_to_region
-                .get(&block_id)
+                .get(block_id)
                 .expect("[Bug] We just made the regions, so not sure why it doesn't exist.");
 
-            ctx.start_block_processing(block_id)?;
+            ctx.start_block_processing(*block_id)?;
 
             // Connect the block's predecessors in the graph
-            self.connect_predecessor_regions(block_id, region_id)?;
+            self.connect_predecessor_regions(*block_id, region_id)?;
 
             // Process instructions in the block
             let instructions: Vec<_> = {
-                let block = self.function.get_basic_block_by_id(block_id).map_err(|e| {
-                    FunctionDecompilerError::FunctionError {
+                let block = self
+                    .function
+                    .get_basic_block_by_id(*block_id)
+                    .map_err(|e| FunctionDecompilerError::FunctionError {
                         source: e,
                         backtrace: Backtrace::capture(),
                         context: ctx.get_error_context(),
-                    }
-                })?;
+                    })?;
                 block.iter().cloned().collect()
             };
 
             // Create a vector of RegionIds for the predecessors
-            let mut predecessor_regions: Vec<Vec<(RegionId, ControlFlowEdgeType)>> = Vec::new();
+            let mut predecessor_regions: Vec<Vec<(RegionId, ControlFlowEdgeType, AstKind)>> =
+                Vec::new();
 
             // For each predecessor block, see what AST nodes are left on the stack
             // and introduce Phi nodes if necessary
-            for pred in self.get_predecessors(block_id)? {
+            for pred in self.get_predecessors(*block_id)? {
                 let exec = ctx.block_ast_node_stack.get(&pred.0);
 
                 // There's a chance that we haven't processed the predecessor block yet, especially
@@ -413,16 +415,16 @@ impl FunctionDecompiler {
                 };
 
                 // Create empty list of region ids
-                for (i, frame) in exec.iter().enumerate() {
+                for (i, frame) in exec.iter().rev().enumerate() {
                     match frame {
-                        ExecutionFrame::StandaloneNode(_) => {
+                        ExecutionFrame::StandaloneNode(n) => {
                             // Ensure we have a slot in predecessor_regions for this index.
                             if predecessor_regions.len() <= i {
                                 // If not, extend the vector so that index i is available.
                                 predecessor_regions.resize(i + 1, Vec::new());
                             }
                             // Record the region info (e.g., pred.1 and pred.2) for this phi candidate.
-                            predecessor_regions[i].push((pred.1, pred.2));
+                            predecessor_regions[i].push((pred.1, pred.2, n.clone()));
                         }
                         _ => {
                             return Err(FunctionDecompilerError::Other {
@@ -436,23 +438,27 @@ impl FunctionDecompiler {
 
                 // Validate that this predecessor's execution stack length matches what we expect.
                 if !predecessor_regions.is_empty() && exec.len() != predecessor_regions.len() {
-                    return Err(FunctionDecompilerError::Other {
-                        message: format!(
-                            "Inconsistent number of phi candidates in predecessor block {:?}: expected {}, got {}",
-                            pred.0,
-                            predecessor_regions.len(),
-                            exec.len()
-                        ),
-                        context: ctx.get_error_context(),
-                        backtrace: Backtrace::capture(),
-                    });
+                    // TODO: This will happen with short-circuit operators. We should handle this case
+                    // more gracefully.
+                    log::warn!(
+                        "Inconsistent number of phi candidates in predecessor block {:?}: expected {}, got {}",
+                        pred.0,
+                        predecessor_regions.len(),
+                        exec.len()
+                    );
                 }
             }
 
             // Inject phi nodes into the AST
             for (index, raw_phi) in predecessor_regions.iter().enumerate() {
+                if raw_phi.len() == 1 || raw_phi.iter().all(|(_, _, node)| node == &raw_phi[0].2) {
+                    // If there's only one predecessor or all nodes are equal, simply push the node onto the stack.
+                    let (_, _, node) = &raw_phi[0];
+                    ctx.push_one_node(node.clone())?;
+                    continue;
+                }
                 let mut phi = new_phi(index);
-                phi.add_regions(raw_phi.clone());
+                phi.add_regions(raw_phi.iter().map(|x| (x.0, x.1)).collect());
                 ctx.push_one_node(phi.into())?;
             }
 
@@ -461,7 +467,7 @@ impl FunctionDecompiler {
                 if let Some(node) = processed.node_to_push {
                     let current_region_id = self
                         .block_to_region
-                        .get(&block_id)
+                        .get(block_id)
                         .expect("[Bug] The region should exist.");
                     self.struct_analysis
                         .push_to_region(*current_region_id, node);
@@ -474,7 +480,7 @@ impl FunctionDecompiler {
                 if let Some(jmp) = &processed.jump_condition {
                     let current_region_id = self
                         .block_to_region
-                        .get(&block_id)
+                        .get(block_id)
                         .expect("[Bug] The region should exist.");
                     let region = self
                         .struct_analysis
@@ -488,12 +494,40 @@ impl FunctionDecompiler {
             }
         }
 
+        for blk in reverse_post_order {
+            let region_id = *self
+                .block_to_region
+                .get(&blk)
+                .expect("[Bug] We just made the regions, so not sure why it doesn't exist.");
+
+            // for any nodes left in the block push them to the region
+            let exec = ctx.block_ast_node_stack.get(&blk);
+            if let Some(exec) = exec {
+                for frame in exec.iter().rev() {
+                    match frame {
+                        ExecutionFrame::StandaloneNode(n) => {
+                            // Push the unresolved node into the region
+                            self.struct_analysis
+                                .push_unresolved_to_region(region_id, n.clone());
+                        }
+                        _ => {
+                            return Err(FunctionDecompilerError::Other {
+                                message: "Expected StandaloneNode".to_string(),
+                                context: ctx.get_error_context(),
+                                backtrace: Backtrace::capture(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
         self.context = Some(ctx);
 
         Ok(())
     }
 
-    /// Get predecessors of a block and return the re
+    /// Get predecessors of a block and return the results as a vector of tuples
     fn get_predecessors(
         &self,
         block_id: BasicBlockId,

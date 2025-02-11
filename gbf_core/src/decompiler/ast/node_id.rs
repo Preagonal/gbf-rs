@@ -1,6 +1,9 @@
 #![deny(missing_docs)]
 
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{
+    fmt::{self, Display, Formatter},
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -30,5 +33,11 @@ impl NodeId {
 impl Default for NodeId {
     fn default() -> Self {
         NodeId::new()
+    }
+}
+
+impl Display for NodeId {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "N{}", self.0)
     }
 }

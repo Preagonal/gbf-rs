@@ -60,7 +60,7 @@ impl OpcodeHandler for VariableOperandHandler {
                     let function_name = match function_name {
                         ExprKind::Assignable(ident) => Ok(ident),
                         _ => Err(FunctionDecompilerError::UnexpectedNodeType {
-                            expected: "Identifier".to_string(),
+                            expected: "AssignableKind".to_string(),
                             context: error_context.clone(),
                             backtrace: Backtrace::capture(),
                         }),
@@ -70,7 +70,6 @@ impl OpcodeHandler for VariableOperandHandler {
                     let args = args.into_iter().rev().collect::<Vec<_>>();
 
                     // Create the function call node
-                    // TODO: Handle method call case
                     let function_call_node = new_fn_call(function_name, args);
 
                     // Create SSA ID for the function call

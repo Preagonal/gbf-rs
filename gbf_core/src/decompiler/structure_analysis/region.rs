@@ -55,6 +55,7 @@ impl RegionId {
 #[derive(Debug, Clone)]
 pub struct Region {
     nodes: Vec<AstKind>,
+    unresolved_nodes: Vec<AstKind>,
     jump_expr: Option<ExprKind>,
     region_type: RegionType,
     branch_opcode: Option<Opcode>,
@@ -69,6 +70,7 @@ impl Region {
     pub fn new(region_type: RegionType, region_id: RegionId) -> Self {
         Self {
             nodes: Vec::new(),
+            unresolved_nodes: Vec::new(),
             jump_expr: None,
             region_type,
             branch_opcode: None,
@@ -89,6 +91,14 @@ impl Region {
         self.nodes.push(node);
     }
 
+    /// Adds an unresolved statement to the region.
+    ///
+    /// # Arguments
+    /// * `node` - The AST node to add.
+    pub fn push_unresolved_node(&mut self, node: AstKind) {
+        self.unresolved_nodes.push(node);
+    }
+
     /// Adds multiple statements to the region.
     ///
     /// # Arguments
@@ -97,12 +107,28 @@ impl Region {
         self.nodes.extend(nodes);
     }
 
+    /// Adds multiple unresolved statements to the region.
+    ///
+    /// # Arguments
+    /// * `nodes` - The AST nodes to add.
+    pub fn push_unresolved_nodes(&mut self, nodes: Vec<AstKind>) {
+        self.unresolved_nodes.extend(nodes);
+    }
+
     /// Gets the nodes in the region.
     ///
     /// # Return
     /// The nodes in the region.
     pub fn get_nodes(&self) -> &Vec<AstKind> {
         &self.nodes
+    }
+
+    /// Gets the unresolved nodes in the region.
+    ///
+    /// # Return
+    /// The unresolved nodes in the region.
+    pub fn get_unresolved_nodes(&self) -> &Vec<AstKind> {
+        &self.unresolved_nodes
     }
 
     /// Gets the region type.

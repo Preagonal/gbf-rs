@@ -55,4 +55,11 @@ pub trait AstVisitor {
     fn visit_control_flow(&mut self, node: &P<ControlFlowNode>) -> Self::Output;
     /// Visits a phi node.
     fn visit_phi(&mut self, node: &P<PhiNode>) -> Self::Output;
+    /// Visits a `new` node.
+    fn visit_new(&mut self, node: &P<crate::decompiler::ast::new::NewNode>) -> Self::Output;
+    /// Visits a virtual branch node.
+    fn visit_virtual_branch(
+        &mut self,
+        node: &P<crate::decompiler::ast::vbranch::VirtualBranchNode>,
+    ) -> Self::Output;
 }

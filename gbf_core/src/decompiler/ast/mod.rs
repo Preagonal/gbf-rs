@@ -21,7 +21,10 @@ use ssa::SsaVersion;
 use statement::StatementKind;
 use thiserror::Error;
 use unary_op::UnaryOperationNode;
+use vbranch::VirtualBranchNode;
 use visitors::{emit_context::EmitContext, emitter::Gs2Emitter};
+
+use super::structure_analysis::region::RegionId;
 
 /// Represents an array
 pub mod array;
@@ -53,6 +56,8 @@ pub mod literal;
 pub mod member_access;
 /// Contains the specifications for any AstNodes that are metadata.
 pub mod meta;
+/// Represents the new
+pub mod new;
 /// A node identifier
 pub mod node_id;
 /// Represents a phi node in the AST.
@@ -67,6 +72,8 @@ pub mod ssa;
 pub mod statement;
 /// Represents unary operations in the AST.
 pub mod unary_op;
+/// Represents a virtual branch
+pub mod vbranch;
 /// Represents the visitor pattern for the AST.
 pub mod visitors;
 
@@ -150,6 +157,11 @@ where
     N: Into<ExprKind>,
 {
     ReturnNode::new(node.into())
+}
+
+/// Creates a new virtual branch node.
+pub fn new_virtual_branch(branch: RegionId) -> VirtualBranchNode {
+    VirtualBranchNode::new(branch)
 }
 
 /// Creates a new member access node.
@@ -335,9 +347,21 @@ where
                 .map(Into::into)
                 .collect::<Vec<AstKind>>(),
         )),
+        // TODO: Move condition flipping logic here for Jeq
         Some(Opcode::Jeq) => Ok(new_if(condition, then_block)),
+        // TODO: We may need to flip the condition on ShortCircuitAnd or ShortCircuitOr
+        Some(Opcode::ShortCircuitAnd) => Ok(new_if(condition, then_block)),
+        Some(Opcode::ShortCircuitOr) => Ok(new_if(condition, then_block)),
         Some(Opcode::With) => Ok(new_with(condition, then_block)),
         None => Ok(new_if(condition, then_block)),
         _ => Err(AstNodeError::InvalidOperand),
     }
+}
+
+/// Creates a new new node.
+pub fn new_new<N>(new_type: &str, arg: N) -> Result<new::NewNode, AstNodeError>
+where
+    N: Into<ExprKind>,
+{
+    new::NewNode::new(new_type, arg.into())
 }

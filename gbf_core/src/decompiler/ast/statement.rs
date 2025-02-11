@@ -4,8 +4,8 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    assignment::AssignmentNode, ptr::P, ret::ReturnNode, visitors::AstVisitor, AstKind,
-    AstVisitable,
+    assignment::AssignmentNode, ptr::P, ret::ReturnNode, vbranch::VirtualBranchNode,
+    visitors::AstVisitor, AstKind, AstVisitable,
 };
 
 /// Represents an expression node in the AST.
@@ -16,8 +16,8 @@ pub enum StatementKind {
     Assignment(P<AssignmentNode>),
     /// Return
     Return(P<ReturnNode>),
-    // Goto
-    // Goto(GotoNode),
+    /// Virtual Branch
+    VirtualBranch(P<VirtualBranchNode>),
 }
 
 impl AstVisitable for StatementKind {
@@ -33,6 +33,7 @@ impl PartialEq for StatementKind {
         match (self, other) {
             (StatementKind::Assignment(a1), StatementKind::Assignment(a2)) => a1 == a2,
             (StatementKind::Return(r1), StatementKind::Return(r2)) => r1 == r2,
+            (StatementKind::VirtualBranch(v1), StatementKind::VirtualBranch(v2)) => v1 == v2,
             _ => false,
         }
     }
