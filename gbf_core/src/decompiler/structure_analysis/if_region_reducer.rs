@@ -185,7 +185,7 @@ impl RegionReducer for IfRegionReducer {
                 IfRegionReducer::add_region_comments(analysis, &mut cond, region_id);
                 IfRegionReducer::add_region_comments(analysis, &mut cond, branch_region_id);
 
-                Self::merge_conditional(analysis, branch_region_id, vec![cond])?;
+                Self::merge_conditional(analysis, region_id, vec![cond])?;
                 Self::cleanup_region(analysis, branch_region_id, region_id, successor)?;
                 return Ok(true);
             }

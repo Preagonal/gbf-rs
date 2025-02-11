@@ -72,6 +72,11 @@ async fn main() {
             }
         };
 
+        // If entry is a directory, skip it.
+        if entry.file_type().unwrap().is_dir() {
+            continue;
+        }
+
         let result = process_module(
             &uploader,
             entry.path().as_ref(),
