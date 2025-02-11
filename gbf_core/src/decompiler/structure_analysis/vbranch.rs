@@ -26,23 +26,18 @@ impl RegionReducer for VirtualBranchReducer {
         }
 
         // Ensure that this linear region has one successor node
-        let successors = analysis.get_successors(region_id)?;
-        if successors.len() != 1 {
-            return Err(StructureAnalysisError::Other {
+        let successor_id = analysis.get_single_successor(region_id)?.ok_or_else(|| {
+            StructureAnalysisError::Other {
                 message: "Linear region does not have exactly one successor".to_string(),
                 backtrace: Backtrace::capture(),
-            });
-        }
-
-        // Get the successor region
-        let successor_id = successors[0];
-
+            }
+        })?;
         // Insert the virtual branch
-        let vbranch = new_virtual_branch(successor_id.0);
+        let vbranch = new_virtual_branch(successor_id);
         let region = analysis.get_region_mut(region_id)?;
         region.push_node(vbranch.into());
         region.set_region_type(RegionType::Tail);
-        analysis.remove_edge(region_id, successor_id.0)?;
+        analysis.remove_edge(region_id, successor_id)?;
         Ok(true)
     }
 }

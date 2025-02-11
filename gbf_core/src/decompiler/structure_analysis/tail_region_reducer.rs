@@ -51,6 +51,7 @@ impl TailRegionReducer {
         analysis: &mut StructureAnalysis,
         region_id: RegionId,
         tail: Vec<P<ControlFlowNode>>,
+        is_tail: bool,
     ) -> Result<(), StructureAnalysisError> {
         let region = analysis.regions.get_mut(region_id.index).ok_or(
             StructureAnalysisError::RegionNotFound {
@@ -59,7 +60,11 @@ impl TailRegionReducer {
             },
         )?;
         region.push_nodes(tail.into_iter().map(AstKind::ControlFlow).collect());
-        region.set_region_type(RegionType::Linear);
+        if is_tail {
+            region.set_region_type(RegionType::Tail);
+        } else {
+            region.set_region_type(RegionType::Linear);
+        }
         region.remove_jump_expr();
         Ok(())
     }
@@ -151,7 +156,7 @@ impl RegionReducer for TailRegionReducer {
                 .metadata_mut()
                 .add_comment(branch_region_id.to_string());
 
-            Self::merge_tail(analysis, region_id, vec![if_else, else_stmt])?;
+            Self::merge_tail(analysis, region_id, vec![if_else, else_stmt], true)?;
             Self::cleanup_region(analysis, branch_region_id, region_id)?;
             Self::cleanup_region(analysis, fallthrough_region_id, region_id)?;
             return Ok(true);
@@ -181,7 +186,7 @@ impl RegionReducer for TailRegionReducer {
                 .metadata_mut()
                 .add_comment(branch_region_id.to_string());
 
-            Self::merge_tail(analysis, region_id, vec![if_stmt])?;
+            Self::merge_tail(analysis, region_id, vec![if_stmt], false)?;
             Self::cleanup_region(analysis, branch_region_id, region_id)?;
             return Ok(true);
         }
@@ -212,7 +217,7 @@ impl RegionReducer for TailRegionReducer {
                 .metadata_mut()
                 .add_comment(fallthrough_region_id.to_string());
 
-            Self::merge_tail(analysis, region_id, vec![if_stmt])?;
+            Self::merge_tail(analysis, region_id, vec![if_stmt], false)?;
             Self::cleanup_region(analysis, fallthrough_region_id, region_id)?;
             return Ok(true);
         }

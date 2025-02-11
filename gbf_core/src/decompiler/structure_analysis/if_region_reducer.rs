@@ -127,7 +127,10 @@ impl RegionReducer for IfRegionReducer {
         let successors = analysis.get_successors(region_id)?;
         if successors.len() != 2 {
             return Err(StructureAnalysisError::Other {
-                message: "Control flow region must have exactly two successors".to_string(),
+                message: format!(
+                    "Control flow region must have exactly two successors, found {}",
+                    successors.len()
+                ),
                 backtrace: Backtrace::capture(),
             });
         }
@@ -179,6 +182,7 @@ impl RegionReducer for IfRegionReducer {
                 })?
                 .into();
 
+                IfRegionReducer::add_region_comments(analysis, &mut cond, region_id);
                 IfRegionReducer::add_region_comments(analysis, &mut cond, branch_region_id);
 
                 Self::merge_conditional(analysis, branch_region_id, vec![cond])?;
