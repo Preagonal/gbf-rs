@@ -11,6 +11,7 @@ use petgraph::{
 use region::{Region, RegionId, RegionType};
 use serde::{Deserialize, Serialize};
 use tail_region_reducer::TailRegionReducer;
+use vbranch::VirtualBranchReducer;
 
 use crate::{
     cfg_dot::{CfgDot, CfgDotConfig, DotRenderableGraph, NodeResolver},
@@ -30,6 +31,8 @@ pub mod linear_region_reducer;
 pub mod region;
 /// A module that contains the logic for reducing a tail region.
 pub mod tail_region_reducer;
+/// Create / resolve virtual branches
+pub mod vbranch;
 
 /// A trait for reducing a region
 pub trait RegionReducer {
@@ -583,6 +586,10 @@ impl StructureAnalysis {
             }
 
             if TailRegionReducer.reduce_region(self, region_id)? {
+                return Ok(true);
+            }
+
+            if VirtualBranchReducer.reduce_region(self, region_id)? {
                 return Ok(true);
             }
         }

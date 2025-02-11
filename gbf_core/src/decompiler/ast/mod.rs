@@ -21,7 +21,10 @@ use ssa::SsaVersion;
 use statement::StatementKind;
 use thiserror::Error;
 use unary_op::UnaryOperationNode;
+use vbranch::VirtualBranchNode;
 use visitors::{emit_context::EmitContext, emitter::Gs2Emitter};
+
+use super::structure_analysis::region::RegionId;
 
 /// Represents an array
 pub mod array;
@@ -69,6 +72,8 @@ pub mod ssa;
 pub mod statement;
 /// Represents unary operations in the AST.
 pub mod unary_op;
+/// Represents a virtual branch
+pub mod vbranch;
 /// Represents the visitor pattern for the AST.
 pub mod visitors;
 
@@ -152,6 +157,11 @@ where
     N: Into<ExprKind>,
 {
     ReturnNode::new(node.into())
+}
+
+/// Creates a new virtual branch node.
+pub fn new_virtual_branch(branch: RegionId) -> VirtualBranchNode {
+    VirtualBranchNode::new(branch)
 }
 
 /// Creates a new member access node.

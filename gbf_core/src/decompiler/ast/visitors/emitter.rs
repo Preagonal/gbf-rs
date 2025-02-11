@@ -77,6 +77,7 @@ impl AstVisitor for Gs2Emitter {
         let stmt_str = match node {
             StatementKind::Assignment(assignment) => assignment.accept(self),
             StatementKind::Return(ret) => ret.accept(self),
+            StatementKind::VirtualBranch(vbranch) => vbranch.accept(self),
         };
         AstOutput {
             node: format!("{};", stmt_str.node),
@@ -158,6 +159,22 @@ impl AstVisitor for Gs2Emitter {
         AstOutput {
             node: format!("{} = {}", lhs_str.node, rhs_str.node),
             comments: self.merge_comments(vec![base_comments, lhs_str.comments, rhs_str.comments]),
+        }
+    }
+
+    /// Visits a virtual branch node.
+    fn visit_virtual_branch(
+        &mut self,
+        node: &P<crate::decompiler::ast::vbranch::VirtualBranchNode>,
+    ) -> Self::Output {
+        // Put out `goto` statement
+        let mut s = String::new();
+        s.push_str("goto ");
+        s.push_str(&node.branch().to_string());
+
+        AstOutput {
+            node: s,
+            comments: node.metadata().comments().clone(),
         }
     }
 
