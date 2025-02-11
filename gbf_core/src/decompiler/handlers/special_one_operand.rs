@@ -162,6 +162,21 @@ impl OpcodeHandler for SpecialOneOperandHandler {
                     .push_to_region(stmt.into())
                     .build())
             }
+            Opcode::New => {
+                // Pop the last expr from the stack, create AST node for new expr, push it back to the stack
+                let new_type = context.pop_expression()?;
+
+                // Create assignment for new node
+                let var = context.ssa_context.new_ssa_version_for("gbf_new_obj");
+                let ssa_id = new_id_with_version("gbf_new_obj", var);
+                let stmt = new_assignment(ssa_id.clone(), new_type.clone());
+
+                context.push_one_node(ssa_id.clone().into())?;
+
+                Ok(ProcessedInstructionBuilder::new()
+                    .push_to_region(stmt.into())
+                    .build())
+            }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {
                 opcode: instruction.opcode,
                 context: context.get_error_context(),
