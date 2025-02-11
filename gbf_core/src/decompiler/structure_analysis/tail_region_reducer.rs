@@ -265,7 +265,7 @@ mod tests {
         assert_eq!(region.get_nodes().len(), 3);
 
         // Ensure that the final region is a tail region
-        assert_eq!(region.get_region_type(), RegionType::Linear);
+        assert_eq!(region.get_region_type(), RegionType::Tail);
 
         Ok(())
     }

@@ -66,14 +66,14 @@ impl DecompStats {
         // Get top 5 errors
         let mut errors: Vec<_> = self.error_counts.iter().collect();
         errors.sort_by(|a, b| b.1.cmp(a.1));
-        let top_errors: Vec<_> = errors.iter().take(5).collect();
+        let top_errors: Vec<_> = errors.iter().take(10).collect();
 
         log::info!(
             "Decompilation Statistics:\n\
             Total Scripts: {}\n\
             Total Functions: {}\n\
             Total Coverage: {:.1}%\n\
-            Top 5 most common errors:{}",
+            Top 10 most common errors:{}",
             self.total_scripts,
             self.total_functions,
             coverage,
@@ -115,12 +115,12 @@ fn main() {
     });
 
     // Process each file in the directory (each file is considered a module).
-    for entry in dir {
+    dir.par_bridge().for_each(|entry| {
         let entry = match entry {
             Ok(entry) => entry,
             Err(err) => {
                 log::error!("Failed to get the directory entry: {}", err);
-                continue;
+                return;
             }
         };
 
@@ -129,7 +129,7 @@ fn main() {
             log::error!("Failed to process module: {}", e);
             std::process::exit(ExitCode::UnexpectedError.into());
         }
-    }
+    });
 
     // After processing all modules, log the final statistics.
     STATS.lock().unwrap().log_stats();
