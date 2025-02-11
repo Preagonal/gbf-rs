@@ -2,7 +2,7 @@
 [![codecov](https://codecov.io/gh/Preagonal/gbf-rs/graph/badge.svg?token=V66BCXQ5IX)](https://codecov.io/gh/Preagonal/gbf-rs)
 [![Rust CI](https://github.com/cernec1999/gbf-rs/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/cernec1999/gbf-rs/actions/workflows/rust-ci.yml)
 
-![GBF Logo](./docs/gbf.png | width=256)
+<img src="docs/gbf.png" alt="GBF Logo" width="256" />
 
 `gbf_core` is a Rust library designed to analyze, disassemble, process, and decompile Graal Script 2 (GS2) bytecode. It provides tools for GS2 bytecode analysis, control flow graph (CFG) generation, and abstract syntax tree (AST) construction, with a focus on modern Rust best practices.
 
