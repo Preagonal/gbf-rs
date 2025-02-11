@@ -2,6 +2,8 @@
 [![codecov](https://codecov.io/gh/Preagonal/gbf-rs/graph/badge.svg?token=V66BCXQ5IX)](https://codecov.io/gh/Preagonal/gbf-rs)
 [![Rust CI](https://github.com/cernec1999/gbf-rs/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/cernec1999/gbf-rs/actions/workflows/rust-ci.yml)
 
+<img src="./docs/gbf.png" alt="GBF Logo" width="256" />
+
 `gbf_core` is a Rust library designed to analyze, disassemble, process, and decompile Graal Script 2 (GS2) bytecode. It provides tools for GS2 bytecode analysis, control flow graph (CFG) generation, and abstract syntax tree (AST) construction, with a focus on modern Rust best practices.
 
 ## Features
@@ -44,7 +46,7 @@ use std::{fs::File, io::Read, path::Path};
 
 use gbf_core::decompiler::{
     ast::visitors::emit_context::{EmitContextBuilder, EmitVerbosity, IndentStyle},
-    function_decompiler::FunctionDecompiler,
+    function_decompiler::FunctionDecompilerBuilder,
 };
 
 fn load_bytecode(name: &str) -> Result<impl Read, std::io::Error> {
@@ -71,9 +73,9 @@ fn main() {
         .format_number_hex(true)
         .indent_style(IndentStyle::Allman)
         .build();
-    
+
     // Invoke the `FunctionDecompiler`
-    let mut decompiler = FunctionDecompiler::new(function.clone()).unwrap();
+    let mut decompiler = FunctionDecompilerBuilder::new(function.clone()).build();
     let decompiled = decompiler.decompile(context).unwrap();
     println!("{}", decompiled);
 }
@@ -96,9 +98,7 @@ This library can generate directed control flow graphs using Graphviz. We can lo
 ```rs
 use std::{fs::File, io::Read, path::Path};
 
-use gbf_core::{
-    cfg_dot::{CfgDotConfig, DotRenderableGraph},
-};
+use gbf_core::cfg_dot::{CfgDotConfig, DotRenderableGraph};
 
 fn load_bytecode(name: &str) -> Result<impl Read, std::io::Error> {
     let path = Path::new("tests").join("gs2bc").join(name);
@@ -167,12 +167,14 @@ $ dot -Tpng cfg.dot -o cfg.png
 The library can also be used to manually build ASTs. Not only can you access the AST from the decompiled output, there are helper functions you can use to define your own AST for testing purposes:
 
 ```rs
-use gbf_core::decompiler::ast::{emit, member_access, new_id, new_str, statement, AstNodeError};
+use gbf_core::decompiler::ast::{
+    emit, new_assignment, new_id, new_member_access, new_str, AstNodeError,
+};
 
 fn build_player_chat() -> Result<String, AstNodeError> {
     // player.chat = "Hello, world!";
-    let stmt = statement(
-        member_access(new_id("player"), new_id("chat"))?,
+    let stmt = new_assignment(
+        new_member_access(new_id("player"), new_id("chat"))?,
         new_str("Hello, world!"),
     );
     Ok(emit(stmt))
