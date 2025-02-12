@@ -224,6 +224,7 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::Jne, Box::new(jump::JumpHandler));
         handlers.insert(Opcode::Jeq, Box::new(jump::JumpHandler));
         handlers.insert(Opcode::With, Box::new(jump::JumpHandler));
+        handlers.insert(Opcode::ForEach, Box::new(jump::JumpHandler));
 
         // Short-circuit handlers
         handlers.insert(
