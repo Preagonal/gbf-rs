@@ -5,7 +5,7 @@ use std::backtrace::Backtrace;
 use crate::{
     decompiler::{
         ast::{
-            assignable::AssignableKind, new_array_access, new_assignment, new_id_with_version,
+            expr::ExprKind, new_array_access, new_assignment, new_id_with_version,
             new_member_access, new_new,
         },
         function_decompiler::FunctionDecompilerError,
@@ -29,29 +29,39 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
     ) -> Result<ProcessedInstruction, FunctionDecompilerError> {
         match instruction.opcode {
             Opcode::AccessMember => {
-                let rhs = context.pop_assignable()?;
-                let lhs = context.pop_assignable()?;
+                let mut rhs = context.pop_expression()?;
+                let mut lhs = context.pop_expression()?;
 
-                let mut ma: AssignableKind = new_member_access(lhs, rhs)
+                // TODO: Check this logic. If either rhs or lhs is an identifier, strip the version from it
+                if let ExprKind::Identifier(mut id) = lhs {
+                    id.ssa_version = None;
+                    lhs = id.into();
+                }
+                if let ExprKind::Identifier(mut id) = rhs {
+                    id.ssa_version = None;
+                    rhs = id.into();
+                }
+
+                let ma: ExprKind = new_member_access(lhs, rhs)
                     .map_err(|e| FunctionDecompilerError::AstNodeError {
                         source: e,
                         context: context.get_error_context(),
                         backtrace: Backtrace::capture(),
                     })?
                     .into();
-                let ver = context
-                    .ssa_context
-                    .current_version_of_or_new(&ma.id_string());
-                ma.set_ssa_version(ver);
-                Ok(ProcessedInstructionBuilder::new().ssa_id(ma).build())
+                context.push_one_node(ma.into())?;
+                Ok(ProcessedInstructionBuilder::new().build())
             }
             Opcode::Assign => {
                 let rhs = context.pop_expression()?;
-                let mut lhs = context.pop_assignable()?;
+                let mut lhs = context.pop_expression()?;
 
-                // an assignment bumps the version of the lhs
-                let ver = context.ssa_context.new_ssa_version_for(&lhs.id_string());
-                lhs.set_ssa_version(ver);
+                // an assignment bumps the version of the lhs, if it's an identifier
+                if let ExprKind::Identifier(mut id) = lhs {
+                    let ver = context.ssa_context.new_ssa_version_for(id.id());
+                    id.ssa_version = Some(ver);
+                    lhs = id.into();
+                }
                 let stmt = new_assignment(lhs, rhs);
 
                 Ok(ProcessedInstructionBuilder::new()
@@ -60,7 +70,7 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
             }
             Opcode::AssignArrayIndex => {
                 let index = context.pop_expression()?;
-                let arr = context.pop_assignable()?;
+                let arr = context.pop_expression()?;
 
                 let array_access = new_array_access(arr, index);
 

@@ -4,7 +4,7 @@ use std::backtrace::Backtrace;
 
 use crate::{
     decompiler::{
-        ast::{expr::ExprKind, new_array, new_assignment, new_fn_call, new_id_with_version},
+        ast::{new_array, new_assignment, new_fn_call, new_id_with_version},
         execution_frame::ExecutionFrame,
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
@@ -57,14 +57,6 @@ impl OpcodeHandler for VariableOperandHandler {
 
                     // Pop the function name (last argument in the array)
                     let function_name = args.pop().unwrap();
-                    let function_name = match function_name {
-                        ExprKind::Assignable(ident) => Ok(ident),
-                        _ => Err(FunctionDecompilerError::UnexpectedNodeType {
-                            expected: "AssignableKind".to_string(),
-                            context: error_context.clone(),
-                            backtrace: Backtrace::capture(),
-                        }),
-                    }?;
 
                     // Reverse the remaining arguments to get the correct order
                     let args = args.into_iter().rev().collect::<Vec<_>>();

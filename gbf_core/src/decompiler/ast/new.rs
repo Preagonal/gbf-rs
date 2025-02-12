@@ -4,8 +4,8 @@ use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    assignable::AssignableKind, expr::ExprKind, literal::LiteralNode, ptr::P, visitors::AstVisitor,
-    AstKind, AstNodeError, AstVisitable,
+    expr::ExprKind, literal::LiteralNode, ptr::P, visitors::AstVisitor, AstKind, AstNodeError,
+    AstVisitable,
 };
 
 /// Represents a return node in the AST, such as `return 5`.
@@ -39,7 +39,7 @@ impl NewNode {
                 return Ok(());
             }
         }
-        if let ExprKind::Assignable(AssignableKind::Identifier(_)) = expr {
+        if let ExprKind::Identifier(_) = expr {
             return Ok(());
         }
 

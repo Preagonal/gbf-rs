@@ -87,25 +87,30 @@ impl OpcodeHandler for SpecialOneOperandHandler {
 
                 let register_store = context.pop_expression()?;
 
-                // If register_store is an AssignableKind, we can use it directly
-                let (register_map_add, processed_instruction) = match register_store.clone() {
-                    ExprKind::Assignable(assignable) => (
-                        assignable.clone(),
-                        ProcessedInstructionBuilder::new().build(),
-                    ),
-                    _ => {
-                        let var = context.ssa_context.new_ssa_version_for("set_register");
-                        let ssa_id = new_id_with_version("set_register", var);
-                        let stmt = new_assignment(ssa_id.clone(), register_store.clone());
-                        (
-                            ssa_id.clone().into(),
-                            ProcessedInstructionBuilder::new()
-                                .push_to_region(stmt.into())
-                                .ssa_id(ssa_id.into())
-                                .build(),
-                        )
-                    }
-                };
+                // If register_store is an identifier, we can use it directly
+                let (register_map_add, processed_instruction): (ExprKind, ProcessedInstruction) =
+                    match register_store.clone() {
+                        ExprKind::Identifier(assignable) => (
+                            assignable.clone().into(),
+                            ProcessedInstructionBuilder::new().build(),
+                        ),
+                        ExprKind::MemberAccess(member_access) => (
+                            member_access.clone().into(),
+                            ProcessedInstructionBuilder::new().build(),
+                        ),
+                        _ => {
+                            let var = context.ssa_context.new_ssa_version_for("set_register");
+                            let ssa_id = new_id_with_version("set_register", var);
+                            let stmt = new_assignment(ssa_id.clone(), register_store.clone());
+                            (
+                                ssa_id.clone().into(),
+                                ProcessedInstructionBuilder::new()
+                                    .push_to_region(stmt.into())
+                                    .ssa_id(ssa_id.into())
+                                    .build(),
+                            )
+                        }
+                    };
 
                 // push to the stack
                 context.push_one_node(register_store.clone().into())?;
@@ -118,7 +123,7 @@ impl OpcodeHandler for SpecialOneOperandHandler {
             }
             Opcode::Inc => {
                 // Pop the last assignable from the stack, create AST node for assignment + 1, push it back to the stack
-                let expr = context.pop_assignable()?;
+                let expr = context.pop_expression()?;
                 let bin_op = new_bin_op(expr.clone(), new_num(1), BinOpType::Add).map_err(|e| {
                     FunctionDecompilerError::AstNodeError {
                         source: e,
@@ -129,8 +134,11 @@ impl OpcodeHandler for SpecialOneOperandHandler {
 
                 // an assignment bumps the version of the lhs
                 let mut lhs = expr;
-                let ver = context.ssa_context.new_ssa_version_for(&lhs.id_string());
-                lhs.set_ssa_version(ver);
+                if let ExprKind::Identifier(mut id) = lhs {
+                    let ver = context.ssa_context.new_ssa_version_for(id.id());
+                    id.ssa_version = Some(ver);
+                    lhs = id.clone().into();
+                }
                 let stmt = new_assignment(lhs.clone(), bin_op);
 
                 context.push_one_node(lhs.clone().into())?;
@@ -141,7 +149,7 @@ impl OpcodeHandler for SpecialOneOperandHandler {
             }
             Opcode::Dec => {
                 // Pop the last assignable from the stack, create AST node for assignment + 1, push it back to the stack
-                let expr = context.pop_assignable()?;
+                let expr = context.pop_expression()?;
                 let bin_op = new_bin_op(expr.clone(), new_num(1), BinOpType::Sub).map_err(|e| {
                     FunctionDecompilerError::AstNodeError {
                         source: e,
@@ -152,8 +160,11 @@ impl OpcodeHandler for SpecialOneOperandHandler {
 
                 // an assignment bumps the version of the lhs
                 let mut lhs = expr;
-                let ver = context.ssa_context.new_ssa_version_for(&lhs.id_string());
-                lhs.set_ssa_version(ver);
+                if let ExprKind::Identifier(mut id) = lhs {
+                    let ver = context.ssa_context.new_ssa_version_for(id.id());
+                    id.ssa_version = Some(ver);
+                    lhs = id.clone().into();
+                }
                 let stmt = new_assignment(lhs.clone(), bin_op);
 
                 context.push_one_node(lhs.clone().into())?;

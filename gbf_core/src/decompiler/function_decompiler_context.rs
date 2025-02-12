@@ -1,16 +1,13 @@
 #![deny(missing_docs)]
 
 use crate::basic_block::BasicBlockId;
-use crate::decompiler::ast::new_id;
 use crate::instruction::Instruction;
 use crate::opcode::Opcode;
 use std::backtrace::Backtrace;
 use std::collections::HashMap;
 
-use super::ast::assignable::AssignableKind;
 use super::ast::expr::ExprKind;
 use super::ast::identifier::IdentifierNode;
-use super::ast::literal::LiteralNode;
 use super::ast::ptr::P;
 use super::ast::ssa::SsaContext;
 use super::ast::AstKind;
@@ -32,7 +29,7 @@ pub struct FunctionDecompilerContext {
     /// The current instruction being processed.
     pub current_instruction: Instruction,
     /// Register mapping for the current function
-    pub register_mapping: HashMap<usize, AssignableKind>,
+    pub register_mapping: HashMap<usize, ExprKind>,
 }
 
 impl FunctionDecompilerContext {
@@ -253,43 +250,12 @@ impl FunctionDecompilerContext {
         }
     }
 
-    /// Pops an assignable expression from the current basic block's stack.
-    pub fn pop_assignable(&mut self) -> Result<AssignableKind, FunctionDecompilerError> {
+    /// Pops an identifier from the current basic block's stack.
+    pub fn pop_identifier(&mut self) -> Result<P<IdentifierNode>, FunctionDecompilerError> {
         let node = self.pop_expression()?;
 
         match node {
-            ExprKind::Assignable(assignable) => Ok(assignable.clone()),
-
-            ExprKind::Literal(lit) => {
-                if let LiteralNode::String(s) = lit.as_ref() {
-                    log::warn!(
-                    "String literal used as assignable: {}. Technically this is allowed in GS2. God help us all.",
-                    s
-                );
-                    Ok(new_id(format!("\"{}\"", &s.clone()).as_str()).into())
-                } else {
-                    Err(FunctionDecompilerError::UnexpectedNodeType {
-                        expected: "Assignable".to_string(),
-                        context: self.get_error_context(),
-                        backtrace: Backtrace::capture(),
-                    })
-                }
-            }
-
-            _ => Err(FunctionDecompilerError::UnexpectedNodeType {
-                expected: "Assignable".to_string(),
-                context: self.get_error_context(),
-                backtrace: Backtrace::capture(),
-            }),
-        }
-    }
-
-    /// Pops an identifier from the current basic block's stack.
-    pub fn pop_identifier(&mut self) -> Result<P<IdentifierNode>, FunctionDecompilerError> {
-        let node = self.pop_assignable()?;
-
-        match node {
-            AssignableKind::Identifier(ident) => Ok(ident.clone()),
+            ExprKind::Identifier(ident) => Ok(ident.clone()),
             _ => Err(FunctionDecompilerError::UnexpectedNodeType {
                 expected: "Identifier".to_string(),
                 context: self.get_error_context(),

@@ -5,10 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::decompiler::structure_analysis::{region::RegionId, ControlFlowEdgeType};
 
-use super::{
-    assignable::AssignableKind, expr::ExprKind, ptr::P, ssa::SsaVersion, visitors::AstVisitor,
-    AstKind, AstVisitable,
-};
+use super::{expr::ExprKind, ptr::P, ssa::SsaVersion, visitors::AstVisitor, AstKind, AstVisitable};
 
 /// Represents a Phi node in SSA form.
 ///
@@ -16,7 +13,7 @@ use super::{
 /// Initially, the phi node has no arguments (i.e. no predecessor regions), but you
 /// can add them later using the [`add_region`] method.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, AstNodeTransform)]
-#[convert_to(AstKind::Expression, ExprKind::Assignable, AssignableKind::Phi)]
+#[convert_to(AstKind::Expression, ExprKind::Phi)]
 pub struct PhiNode {
     region_ids: Vec<(RegionId, ControlFlowEdgeType)>,
     /// Represents the SSA version of a variable.

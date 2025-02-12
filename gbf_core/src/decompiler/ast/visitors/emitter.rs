@@ -5,8 +5,8 @@ use super::{
     AstVisitor,
 };
 use crate::decompiler::ast::{
-    array::ArrayNode, array_access::ArrayAccessNode, assignable::AssignableKind,
-    control_flow::ControlFlowType, expr::ExprKind, phi::PhiNode,
+    array::ArrayNode, array_access::ArrayAccessNode, control_flow::ControlFlowType, expr::ExprKind,
+    phi::PhiNode,
 };
 use crate::decompiler::ast::{assignment::AssignmentNode, statement::StatementKind};
 use crate::decompiler::ast::{
@@ -93,7 +93,7 @@ impl AstVisitor for Gs2Emitter {
 
         // Step 2: Check for binary operations that use the LHS.
         if let ExprKind::BinOp(bin_op_node) = stmt_node.rhs.clone() {
-            let lhs_in_rhs = bin_op_node.lhs == ExprKind::Assignable(stmt_node.lhs.clone());
+            let lhs_in_rhs = bin_op_node.lhs == stmt_node.lhs.clone();
             if lhs_in_rhs {
                 match bin_op_node.op_type {
                     BinOpType::Add => {
@@ -182,50 +182,15 @@ impl AstVisitor for Gs2Emitter {
     fn visit_expr(&mut self, node: &ExprKind) -> AstOutput {
         match node {
             ExprKind::Literal(literal) => literal.accept(self),
-            ExprKind::Assignable(assignable) => self.visit_assignable_expr(assignable),
             ExprKind::BinOp(bin_op) => bin_op.accept(self),
             ExprKind::UnaryOp(unary_op) => unary_op.accept(self),
             ExprKind::FunctionCall(func_call) => func_call.accept(self),
             ExprKind::Array(array) => array.accept(self),
             ExprKind::New(new_node) => new_node.accept(self),
-        }
-    }
-
-    /// Visits an assignable expression node.
-    fn visit_assignable_expr(&mut self, node: &AssignableKind) -> AstOutput {
-        match node {
-            AssignableKind::MemberAccess(member_access) => {
-                let mut s = String::new();
-                if member_access.ssa_version.is_some() && self.context.include_ssa_versions {
-                    s.push('<');
-                }
-                let member_access_out = member_access.accept(self);
-                s.push_str(member_access_out.node.as_str());
-                if self.context.include_ssa_versions {
-                    if let Some(ssa_version) = member_access.ssa_version {
-                        s.push_str(&format!(">#{}", ssa_version));
-                    }
-                }
-                AstOutput {
-                    node: s,
-                    comments: member_access_out.comments.clone(),
-                }
-            }
-            AssignableKind::Identifier(identifier) => {
-                let out = identifier.accept(self);
-                let mut s = out.node;
-                if self.context.include_ssa_versions {
-                    if let Some(ssa_version) = identifier.ssa_version {
-                        s.push_str(&format!("#{}", ssa_version));
-                    }
-                }
-                AstOutput {
-                    node: s,
-                    comments: out.comments,
-                }
-            }
-            AssignableKind::ArrayAccess(array_access) => array_access.accept(self),
-            AssignableKind::Phi(phi) => phi.accept(self),
+            ExprKind::MemberAccess(member_access) => member_access.accept(self),
+            ExprKind::Identifier(identifier) => identifier.accept(self),
+            ExprKind::ArrayAccess(array_access) => array_access.accept(self),
+            ExprKind::Phi(phi) => phi.accept(self),
         }
     }
 
@@ -321,8 +286,14 @@ impl AstVisitor for Gs2Emitter {
 
     /// Visits an identifier node.
     fn visit_identifier(&mut self, node: &P<IdentifierNode>) -> AstOutput {
+        let mut s = node.id().clone();
+        if self.context.include_ssa_versions {
+            if let Some(ssa_version) = node.ssa_version {
+                s.push_str(&format!("#{}", ssa_version));
+            }
+        }
         AstOutput {
-            node: node.id().to_string(),
+            node: s,
             comments: node.metadata().comments().clone(),
         }
     }

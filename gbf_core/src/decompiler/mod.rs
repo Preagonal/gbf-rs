@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 
-use ast::{assignable::AssignableKind, expr::ExprKind, AstKind};
+use ast::{expr::ExprKind, identifier::IdentifierNode, ptr::P, AstKind};
 
 /// This provides the AST for the decompiler.
 pub mod ast;
@@ -18,7 +18,7 @@ pub mod structure_analysis;
 #[derive(Debug, Clone, Default)]
 /// Builder for constructing a `ProcessedInstruction`.
 pub struct ProcessedInstructionBuilder {
-    ssa_id: Option<AssignableKind>,
+    ssa_id: Option<P<IdentifierNode>>,
     node_to_push: Option<AstKind>,
     function_parameters: Option<Vec<ExprKind>>,
     jump_condition: Option<ExprKind>,
@@ -42,7 +42,7 @@ impl ProcessedInstructionBuilder {
     ///
     /// # Returns
     /// A mutable reference to the builder for chaining.
-    pub fn ssa_id(mut self, ssa_id: AssignableKind) -> Self {
+    pub fn ssa_id(mut self, ssa_id: P<IdentifierNode>) -> Self {
         self.ssa_id = Some(ssa_id);
         self
     }
@@ -101,7 +101,7 @@ impl ProcessedInstructionBuilder {
 /// Represents a processed instruction
 pub struct ProcessedInstruction {
     /// The SSA ID
-    pub ssa_id: Option<AssignableKind>,
+    pub ssa_id: Option<P<IdentifierNode>>,
     /// The node to push to a region
     pub node_to_push: Option<AstKind>,
     /// The parameters of a function. Returned with Opcode::EndParams.

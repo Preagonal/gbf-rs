@@ -2,7 +2,6 @@
 
 use crate::{decompiler::ast::visitors::AstVisitor, opcode::Opcode};
 use array_access::ArrayAccessNode;
-use assignable::AssignableKind;
 use assignment::AssignmentNode;
 use bin_op::BinaryOperationNode;
 use block::BlockNode;
@@ -30,8 +29,6 @@ use super::structure_analysis::region::RegionId;
 pub mod array;
 /// Represents an array access node.
 pub mod array_access;
-/// Contains the specifications for any AstNodes that are assignable.
-pub mod assignable;
 /// Contains the specifications for any AstNodes that are assignments
 pub mod assignment;
 /// Holds the macro that generates variants for the AST nodes.
@@ -142,7 +139,7 @@ where
 /// Creates a new AstNode for a statement.
 pub fn new_assignment<L, R>(lhs: L, rhs: R) -> AssignmentNode
 where
-    L: Into<AssignableKind>,
+    L: Into<ExprKind>,
     R: Into<ExprKind>,
 {
     AssignmentNode {
@@ -167,8 +164,8 @@ pub fn new_virtual_branch(branch: RegionId) -> VirtualBranchNode {
 /// Creates a new member access node.
 pub fn new_member_access<L, R>(lhs: L, rhs: R) -> Result<MemberAccessNode, AstNodeError>
 where
-    L: Into<AssignableKind>,
-    R: Into<AssignableKind>,
+    L: Into<ExprKind>,
+    R: Into<ExprKind>,
 {
     MemberAccessNode::new(lhs.into(), rhs.into())
 }
@@ -188,7 +185,7 @@ pub fn new_id_with_version(name: &str, version: SsaVersion) -> IdentifierNode {
 /// Creates a new function call node.
 pub fn new_fn_call<N>(name: N, args: Vec<ExprKind>) -> FunctionCallNode
 where
-    N: Into<AssignableKind>,
+    N: Into<ExprKind>,
 {
     FunctionCallNode::new(name.into(), args)
 }
@@ -204,7 +201,7 @@ where
 /// Creates a new array access node.
 pub fn new_array_access<A, I>(array: A, index: I) -> ArrayAccessNode
 where
-    A: Into<AssignableKind>,
+    A: Into<ExprKind>,
     I: Into<ExprKind>,
 {
     ArrayAccessNode::new(array.into(), index.into())
