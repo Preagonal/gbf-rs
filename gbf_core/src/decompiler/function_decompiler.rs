@@ -426,6 +426,7 @@ impl FunctionDecompiler {
                             // Record the region info (e.g., pred.1 and pred.2) for this phi candidate.
                             predecessor_regions[i].push((pred.1, pred.2, n.clone()));
                         }
+                        // TODO: Bug. BuildingArray is another possible frame type.
                         _ => {
                             return Err(FunctionDecompilerError::Other {
                                 message: "Expected StandaloneNode".to_string(),
@@ -510,6 +511,7 @@ impl FunctionDecompiler {
                             self.struct_analysis
                                 .push_unresolved_to_region(region_id, n.clone());
                         }
+                        // TODO: Bug. BuildingArray is another possible frame type.
                         _ => {
                             return Err(FunctionDecompilerError::Other {
                                 message: "Expected StandaloneNode".to_string(),

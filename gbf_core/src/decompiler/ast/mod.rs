@@ -359,9 +359,9 @@ where
 }
 
 /// Creates a new new node.
-pub fn new_new<N>(new_type: &str, arg: N) -> Result<new::NewNode, AstNodeError>
+pub fn new_new<N>(new_type: N, arg: N) -> Result<new::NewNode, AstNodeError>
 where
     N: Into<ExprKind>,
 {
-    new::NewNode::new(new_type, arg.into())
+    new::NewNode::new(new_type.into(), arg.into())
 }

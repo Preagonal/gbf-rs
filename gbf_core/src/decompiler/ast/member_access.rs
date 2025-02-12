@@ -40,8 +40,8 @@ impl MemberAccessNode {
     pub fn new(lhs: AssignableKind, rhs: AssignableKind) -> Result<Self, AstNodeError> {
         let mut new_lhs = lhs.clone();
         let mut new_rhs = rhs.clone();
-        Self::validate_and_strip_operand(&mut new_lhs)?;
-        Self::validate_and_strip_operand(&mut new_rhs)?;
+        Self::validate_and_strip_operand(&mut new_lhs);
+        Self::validate_and_strip_operand(&mut new_rhs);
 
         Ok(Self {
             lhs: new_lhs,
@@ -49,17 +49,8 @@ impl MemberAccessNode {
             ssa_version: None,
         })
     }
-
-    // This is marked as unreachable because the only two types of operands are Identifier and MemberAccess.
-    // In the future, if more types are added, this function will need to be updated, especially for array.
-    // This also removes the SsaVersion from the operands.
-    #[allow(unreachable_patterns)]
-    fn validate_and_strip_operand(expr: &mut AssignableKind) -> Result<(), AstNodeError> {
+    fn validate_and_strip_operand(expr: &mut AssignableKind) {
         expr.remove_ssa_version();
-        match expr {
-            AssignableKind::Identifier(_) | AssignableKind::MemberAccess(_) => Ok(()),
-            _ => Err(AstNodeError::InvalidOperand),
-        }
     }
 }
 

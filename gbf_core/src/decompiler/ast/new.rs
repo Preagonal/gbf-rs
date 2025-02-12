@@ -13,7 +13,7 @@ use super::{
 #[convert_to(ExprKind::New, AstKind::Expression)]
 pub struct NewNode {
     /// The type of object to create.
-    pub new_type: String,
+    pub new_type: ExprKind,
     /// The arguments to pass to the object.
     pub arg: ExprKind,
 }
@@ -27,12 +27,9 @@ impl NewNode {
     ///
     /// # Returns
     /// - A `NewNode` instance containing the provided type and arguments.
-    pub fn new<S: Into<String>>(new_type: S, arg: ExprKind) -> Result<Self, AstNodeError> {
+    pub fn new(new_type: ExprKind, arg: ExprKind) -> Result<Self, AstNodeError> {
         Self::validate_operand(&arg)?;
-        Ok(Self {
-            new_type: new_type.into(),
-            arg,
-        })
+        Ok(Self { new_type, arg })
     }
 
     fn validate_operand(expr: &ExprKind) -> Result<(), AstNodeError> {

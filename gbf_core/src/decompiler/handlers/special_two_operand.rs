@@ -5,8 +5,8 @@ use std::backtrace::Backtrace;
 use crate::{
     decompiler::{
         ast::{
-            assignable::AssignableKind, expr::ExprKind, literal::LiteralNode, new_array_access,
-            new_assignment, new_id_with_version, new_member_access, new_new,
+            assignable::AssignableKind, new_array_access, new_assignment, new_id_with_version,
+            new_member_access, new_new,
         },
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
@@ -71,29 +71,8 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                 let new_type = context.pop_expression()?;
                 let arg = context.pop_expression()?;
 
-                // Ensure that new_type is a string, and then get the string value
-                let new_type = match new_type {
-                    ExprKind::Literal(lit) => match lit.as_ref() {
-                        LiteralNode::String(s) => s.clone(),
-                        _ => {
-                            return Err(FunctionDecompilerError::UnexpectedNodeType {
-                                expected: "String".to_string(),
-                                context: context.get_error_context(),
-                                backtrace: Backtrace::capture(),
-                            })
-                        }
-                    },
-                    _ => {
-                        return Err(FunctionDecompilerError::UnexpectedNodeType {
-                            expected: "String".to_string(),
-                            context: context.get_error_context(),
-                            backtrace: Backtrace::capture(),
-                        })
-                    }
-                };
-
                 let new_node =
-                    new_new(&new_type, arg).map_err(|e| FunctionDecompilerError::AstNodeError {
+                    new_new(new_type, arg).map_err(|e| FunctionDecompilerError::AstNodeError {
                         source: e,
                         context: context.get_error_context(),
                         backtrace: Backtrace::capture(),

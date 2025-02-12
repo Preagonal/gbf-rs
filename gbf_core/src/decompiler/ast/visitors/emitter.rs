@@ -537,10 +537,16 @@ impl AstVisitor for Gs2Emitter {
 
     /// Visits a new node
     fn visit_new(&mut self, node: &P<crate::decompiler::ast::new::NewNode>) -> AstOutput {
+        let type_out = node.new_type.accept(self);
         let arg_out = node.arg.accept(self);
+        // TODO: if type_out is a string literal, we shouldn't put out the quotes.
         AstOutput {
-            node: format!("new {}({})", node.new_type, arg_out.node),
-            comments: arg_out.comments,
+            node: format!("new {}({})", type_out.node, arg_out.node),
+            comments: self.merge_comments(vec![
+                node.metadata().comments().clone(),
+                type_out.comments,
+                arg_out.comments,
+            ]),
         }
     }
 }
