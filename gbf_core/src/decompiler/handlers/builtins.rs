@@ -244,6 +244,20 @@ impl OpcodeHandler for BuiltinsHandler {
                     args,
                 )
             }
+            // TODO: This has no return value
+            Opcode::ObjClear => {
+                let args: Vec<_> = vec![];
+                (
+                    new_member_access(context.pop_expression()?, new_id("clear"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
+                    args,
+                )
+            }
             Opcode::ObjIndex => {
                 let args: Vec<_> = vec![context.pop_expression()?];
                 (
@@ -314,10 +328,49 @@ impl OpcodeHandler for BuiltinsHandler {
             }
             // TODO: This has no return value
             Opcode::ObjInsertString => {
-                // TODO: Validate the order of the arguments, and what they represent (presumably index and string)
                 let args: Vec<_> = vec![context.pop_expression()?, context.pop_expression()?];
                 (
                     new_member_access(context.pop_expression()?, new_id("insert"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
+                    args,
+                )
+            }
+            // TODO: This has no return value
+            Opcode::ObjReplaceString => {
+                let args: Vec<_> = vec![context.pop_expression()?, context.pop_expression()?];
+                (
+                    new_member_access(context.pop_expression()?, new_id("replace"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
+                    args,
+                )
+            }
+            Opcode::ObjSubArray => {
+                let args: Vec<_> = vec![context.pop_expression()?, context.pop_expression()?];
+                (
+                    new_member_access(context.pop_expression()?, new_id("subarray"))
+                        .map_err(|e| FunctionDecompilerError::AstNodeError {
+                            source: e,
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        })?
+                        .into(),
+                    args,
+                )
+            }
+            Opcode::ObjType => {
+                let args: Vec<_> = vec![];
+                (
+                    new_member_access(context.pop_expression()?, new_id("type"))
                         .map_err(|e| FunctionDecompilerError::AstNodeError {
                             source: e,
                             context: context.get_error_context(),

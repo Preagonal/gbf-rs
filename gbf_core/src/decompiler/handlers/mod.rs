@@ -236,6 +236,13 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::ObjRemoveString, Box::new(builtins::BuiltinsHandler));
         handlers.insert(Opcode::ObjDeleteString, Box::new(builtins::BuiltinsHandler));
         handlers.insert(Opcode::ObjInsertString, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(
+            Opcode::ObjReplaceString,
+            Box::new(builtins::BuiltinsHandler),
+        );
+        handlers.insert(Opcode::ObjSubArray, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjType, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjClear, Box::new(builtins::BuiltinsHandler));
 
         // Jump handlers
         handlers.insert(Opcode::Jne, Box::new(jump::JumpHandler));
