@@ -32,7 +32,8 @@ define_ast_enum_type! {
         ShiftRight => ">>",
         In => "in",
         Join => "@",
-        Power => "^"
+        Power => "^",
+        Foreach => ":"
     }
 }
 

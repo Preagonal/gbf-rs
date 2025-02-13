@@ -18,6 +18,12 @@ pub enum ControlFlowType {
     Else,
     /// Represents a with control flow node.
     With,
+    /// Represents a while control flow node.
+    While,
+    /// Represents a for control flow node.
+    For,
+    /// Represents a DoWhile control flow node.
+    DoWhile,
 }
 
 /// Represents a metadata node in the AST

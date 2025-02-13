@@ -33,7 +33,9 @@ pub mod nop;
 pub mod short_circuit;
 /// Handles instructions with one operand.
 pub mod special_one_operand;
-/// Handles member access instructions.
+/// Handles instructinos with three operands.
+pub mod special_three_operand;
+/// Handles instructions with two operands.
 pub mod special_two_operand;
 /// Handles unary operation instructions.
 pub mod un_op;
@@ -131,6 +133,20 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::WithEnd, Box::new(NopHandler));
         handlers.insert(Opcode::ShortCircuitEnd, Box::new(NopHandler));
 
+        // Three operand handlers
+        handlers.insert(
+            Opcode::AssignArray,
+            Box::new(special_three_operand::SpecialThreeOperandHandler),
+        );
+        handlers.insert(
+            Opcode::InRange,
+            Box::new(special_three_operand::SpecialThreeOperandHandler),
+        );
+        handlers.insert(
+            Opcode::AssignMultiDimensionalArrayIndex,
+            Box::new(special_three_operand::SpecialThreeOperandHandler),
+        );
+
         // Two operand handlers
         handlers.insert(
             Opcode::AccessMember,
@@ -141,7 +157,7 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
             Box::new(special_two_operand::SpecialTwoOperandHandler),
         );
         handlers.insert(
-            Opcode::AssignArrayIndex,
+            Opcode::ArrayAccess,
             Box::new(special_two_operand::SpecialTwoOperandHandler),
         );
         handlers.insert(
@@ -176,6 +192,10 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         );
         handlers.insert(
             Opcode::New,
+            Box::new(special_one_operand::SpecialOneOperandHandler),
+        );
+        handlers.insert(
+            Opcode::NewUninitializedArray,
             Box::new(special_one_operand::SpecialOneOperandHandler),
         );
 
@@ -219,11 +239,20 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
         handlers.insert(Opcode::ObjAddString, Box::new(builtins::BuiltinsHandler));
         handlers.insert(Opcode::ObjRemoveString, Box::new(builtins::BuiltinsHandler));
         handlers.insert(Opcode::ObjDeleteString, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjInsertString, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(
+            Opcode::ObjReplaceString,
+            Box::new(builtins::BuiltinsHandler),
+        );
+        handlers.insert(Opcode::ObjSubArray, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjType, Box::new(builtins::BuiltinsHandler));
+        handlers.insert(Opcode::ObjClear, Box::new(builtins::BuiltinsHandler));
 
         // Jump handlers
         handlers.insert(Opcode::Jne, Box::new(jump::JumpHandler));
         handlers.insert(Opcode::Jeq, Box::new(jump::JumpHandler));
         handlers.insert(Opcode::With, Box::new(jump::JumpHandler));
+        handlers.insert(Opcode::ForEach, Box::new(jump::JumpHandler));
 
         // Short-circuit handlers
         handlers.insert(

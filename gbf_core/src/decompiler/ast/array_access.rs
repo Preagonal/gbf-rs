@@ -3,17 +3,14 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    assignable::AssignableKind, expr::ExprKind, ptr::P, ssa::SsaVersion, visitors::AstVisitor,
-    AstKind, AstVisitable,
-};
+use super::{expr::ExprKind, ptr::P, ssa::SsaVersion, visitors::AstVisitor, AstKind, AstVisitable};
 
 /// Represents a function call
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
-#[convert_to(AssignableKind::ArrayAccess, ExprKind::Assignable, AstKind::Expression)]
+#[convert_to(ExprKind::ArrayAccess, AstKind::Expression)]
 pub struct ArrayAccessNode {
     /// The array to access.
-    pub arr: AssignableKind,
+    pub arr: ExprKind,
 
     /// The index to access.
     pub index: ExprKind,
@@ -28,7 +25,7 @@ impl ArrayAccessNode {
     /// # Arguments
     /// - `arr`: The array to access.
     /// - `index`: The index to access.
-    pub fn new(arr: AssignableKind, index: ExprKind) -> Self {
+    pub fn new(arr: ExprKind, index: ExprKind) -> Self {
         Self {
             arr,
             index,

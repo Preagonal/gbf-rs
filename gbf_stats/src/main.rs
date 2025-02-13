@@ -166,7 +166,11 @@ fn process_module(path: &path::Path) -> Result<(), Box<dyn std::error::Error>> {
     // Decompile each function in parallel using rayon
     module.par_iter().for_each(|func| {
         let func_name = func.id.name.clone().unwrap_or_else(|| "entry".to_string());
-        log::info!("Decompiling function {}", func_name);
+        log::info!(
+            "Decompiling function {} in module {}",
+            func_name,
+            module_name
+        );
 
         let mut decompiler = FunctionDecompilerBuilder::new(func.clone())
             .structure_analysis_max_iterations(100)

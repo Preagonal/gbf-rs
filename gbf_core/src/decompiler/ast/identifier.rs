@@ -3,14 +3,11 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    assignable::AssignableKind, expr::ExprKind, ptr::P, ssa::SsaVersion, visitors::AstVisitor,
-    AstKind, AstVisitable,
-};
+use super::{expr::ExprKind, ptr::P, ssa::SsaVersion, visitors::AstVisitor, AstKind, AstVisitable};
 
 /// Represents a type of literal.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, AstNodeTransform)]
-#[convert_to(ExprKind::Assignable, AstKind::Expression, AssignableKind::Identifier)]
+#[convert_to(ExprKind::Identifier, AstKind::Expression)]
 pub struct IdentifierNode {
     id: String,
     /// Represents the SSA version of a variable.

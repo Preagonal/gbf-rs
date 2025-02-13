@@ -1,11 +1,10 @@
 #![deny(missing_docs)]
 
 use super::{
-    array::ArrayNode, array_access::ArrayAccessNode, assignable::AssignableKind,
-    assignment::AssignmentNode, bin_op::BinaryOperationNode, block::BlockNode,
-    control_flow::ControlFlowNode, expr::ExprKind, func_call::FunctionCallNode,
-    function::FunctionNode, identifier::IdentifierNode, literal::LiteralNode,
-    member_access::MemberAccessNode, phi::PhiNode, ptr::P, ret::ReturnNode,
+    array::ArrayNode, array_access::ArrayAccessNode, assignment::AssignmentNode,
+    bin_op::BinaryOperationNode, block::BlockNode, control_flow::ControlFlowNode, expr::ExprKind,
+    func_call::FunctionCallNode, function::FunctionNode, identifier::IdentifierNode,
+    literal::LiteralNode, member_access::MemberAccessNode, phi::PhiNode, ptr::P, ret::ReturnNode,
     statement::StatementKind, unary_op::UnaryOperationNode, AstKind,
 };
 
@@ -27,8 +26,6 @@ pub trait AstVisitor {
     fn visit_assignment(&mut self, node: &P<AssignmentNode>) -> Self::Output;
     /// Visits an expression node.
     fn visit_expr(&mut self, node: &ExprKind) -> Self::Output;
-    /// Visits an assignable expression node.
-    fn visit_assignable_expr(&mut self, node: &AssignableKind) -> Self::Output;
     /// Visits a binary operation node.
     fn visit_bin_op(&mut self, node: &P<BinaryOperationNode>) -> Self::Output;
     /// Visits a unary operation node.
@@ -57,9 +54,16 @@ pub trait AstVisitor {
     fn visit_phi(&mut self, node: &P<PhiNode>) -> Self::Output;
     /// Visits a `new` node.
     fn visit_new(&mut self, node: &P<crate::decompiler::ast::new::NewNode>) -> Self::Output;
+    /// Visits a `new_array` node.
+    fn visit_new_array(
+        &mut self,
+        node: &P<crate::decompiler::ast::new_array::NewArrayNode>,
+    ) -> Self::Output;
     /// Visits a virtual branch node.
     fn visit_virtual_branch(
         &mut self,
         node: &P<crate::decompiler::ast::vbranch::VirtualBranchNode>,
     ) -> Self::Output;
+    /// Visits a range node.
+    fn visit_range(&mut self, node: &P<crate::decompiler::ast::range::RangeNode>) -> Self::Output;
 }

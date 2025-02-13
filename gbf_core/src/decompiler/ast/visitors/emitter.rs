@@ -5,8 +5,8 @@ use super::{
     AstVisitor,
 };
 use crate::decompiler::ast::{
-    array::ArrayNode, array_access::ArrayAccessNode, assignable::AssignableKind,
-    control_flow::ControlFlowType, expr::ExprKind, phi::PhiNode,
+    array::ArrayNode, array_access::ArrayAccessNode, control_flow::ControlFlowType, expr::ExprKind,
+    phi::PhiNode,
 };
 use crate::decompiler::ast::{assignment::AssignmentNode, statement::StatementKind};
 use crate::decompiler::ast::{
@@ -93,7 +93,7 @@ impl AstVisitor for Gs2Emitter {
 
         // Step 2: Check for binary operations that use the LHS.
         if let ExprKind::BinOp(bin_op_node) = stmt_node.rhs.clone() {
-            let lhs_in_rhs = bin_op_node.lhs == ExprKind::Assignable(stmt_node.lhs.clone());
+            let lhs_in_rhs = bin_op_node.lhs == stmt_node.lhs.clone();
             if lhs_in_rhs {
                 match bin_op_node.op_type {
                     BinOpType::Add => {
@@ -182,50 +182,17 @@ impl AstVisitor for Gs2Emitter {
     fn visit_expr(&mut self, node: &ExprKind) -> AstOutput {
         match node {
             ExprKind::Literal(literal) => literal.accept(self),
-            ExprKind::Assignable(assignable) => self.visit_assignable_expr(assignable),
             ExprKind::BinOp(bin_op) => bin_op.accept(self),
             ExprKind::UnaryOp(unary_op) => unary_op.accept(self),
             ExprKind::FunctionCall(func_call) => func_call.accept(self),
             ExprKind::Array(array) => array.accept(self),
             ExprKind::New(new_node) => new_node.accept(self),
-        }
-    }
-
-    /// Visits an assignable expression node.
-    fn visit_assignable_expr(&mut self, node: &AssignableKind) -> AstOutput {
-        match node {
-            AssignableKind::MemberAccess(member_access) => {
-                let mut s = String::new();
-                if member_access.ssa_version.is_some() && self.context.include_ssa_versions {
-                    s.push('<');
-                }
-                let member_access_out = member_access.accept(self);
-                s.push_str(member_access_out.node.as_str());
-                if self.context.include_ssa_versions {
-                    if let Some(ssa_version) = member_access.ssa_version {
-                        s.push_str(&format!(">#{}", ssa_version));
-                    }
-                }
-                AstOutput {
-                    node: s,
-                    comments: member_access_out.comments.clone(),
-                }
-            }
-            AssignableKind::Identifier(identifier) => {
-                let out = identifier.accept(self);
-                let mut s = out.node;
-                if self.context.include_ssa_versions {
-                    if let Some(ssa_version) = identifier.ssa_version {
-                        s.push_str(&format!("#{}", ssa_version));
-                    }
-                }
-                AstOutput {
-                    node: s,
-                    comments: out.comments,
-                }
-            }
-            AssignableKind::ArrayAccess(array_access) => array_access.accept(self),
-            AssignableKind::Phi(phi) => phi.accept(self),
+            ExprKind::NewArray(new_array) => new_array.accept(self),
+            ExprKind::MemberAccess(member_access) => member_access.accept(self),
+            ExprKind::Identifier(identifier) => identifier.accept(self),
+            ExprKind::ArrayAccess(array_access) => array_access.accept(self),
+            ExprKind::Phi(phi) => phi.accept(self),
+            ExprKind::Range(range) => range.accept(self),
         }
     }
 
@@ -321,8 +288,14 @@ impl AstVisitor for Gs2Emitter {
 
     /// Visits an identifier node.
     fn visit_identifier(&mut self, node: &P<IdentifierNode>) -> AstOutput {
+        let mut s = node.id().clone();
+        if self.context.include_ssa_versions {
+            if let Some(ssa_version) = node.ssa_version {
+                s.push_str(&format!("#{}", ssa_version));
+            }
+        }
         AstOutput {
-            node: node.id().to_string(),
+            node: s,
             comments: node.metadata().comments().clone(),
         }
     }
@@ -499,20 +472,41 @@ impl AstVisitor for Gs2Emitter {
             ControlFlowType::Else => "else",
             ControlFlowType::ElseIf => "else if",
             ControlFlowType::With => "with",
+            ControlFlowType::While => "while",
+            ControlFlowType::For => "for",
+            ControlFlowType::DoWhile => "do",
         };
-        s.push_str(name);
-        if let Some(condition) = node.condition() {
-            let condition_out = condition.accept(self);
-            s.push_str(" (");
-            s.push_str(&condition_out.node);
-            s.push_str(") ");
-            base_comments.extend(condition_out.comments.clone());
-        }
-        let body_out = node.body().accept(self);
-        s.push_str(&body_out.node);
-        AstOutput {
-            node: s,
-            comments: self.merge_comments(vec![base_comments, body_out.comments]),
+        if *node.ty() == ControlFlowType::DoWhile {
+            s.push_str(name);
+            let body_out = node.body().accept(self);
+            s.push(' ');
+            s.push_str(&body_out.node);
+            s.push_str(" while (");
+            if let Some(condition) = node.condition() {
+                let condition_out = condition.accept(self);
+                s.push_str(&condition_out.node);
+                base_comments.extend(condition_out.comments.clone());
+            }
+            s.push_str(");");
+            AstOutput {
+                node: s,
+                comments: self.merge_comments(vec![base_comments, body_out.comments]),
+            }
+        } else {
+            s.push_str(name);
+            if let Some(condition) = node.condition() {
+                let condition_out = condition.accept(self);
+                s.push_str(" (");
+                s.push_str(&condition_out.node);
+                s.push_str(") ");
+                base_comments.extend(condition_out.comments.clone());
+            }
+            let body_out = node.body().accept(self);
+            s.push_str(&body_out.node);
+            AstOutput {
+                node: s,
+                comments: self.merge_comments(vec![base_comments, body_out.comments]),
+            }
         }
     }
 
@@ -537,10 +531,43 @@ impl AstVisitor for Gs2Emitter {
 
     /// Visits a new node
     fn visit_new(&mut self, node: &P<crate::decompiler::ast::new::NewNode>) -> AstOutput {
+        let type_out = node.new_type.accept(self);
+        let arg_out = node.arg.accept(self);
+        // TODO: if type_out is a string literal, we shouldn't put out the quotes.
+        AstOutput {
+            node: format!("new {}({})", type_out.node, arg_out.node),
+            comments: self.merge_comments(vec![
+                node.metadata().comments().clone(),
+                type_out.comments,
+                arg_out.comments,
+            ]),
+        }
+    }
+
+    /// Visits a new array node
+    fn visit_new_array(
+        &mut self,
+        node: &P<crate::decompiler::ast::new_array::NewArrayNode>,
+    ) -> AstOutput {
         let arg_out = node.arg.accept(self);
         AstOutput {
-            node: format!("new {}({})", node.new_type, arg_out.node),
-            comments: arg_out.comments,
+            node: format!("new [{}]", arg_out.node),
+            comments: self
+                .merge_comments(vec![node.metadata().comments().clone(), arg_out.comments]),
+        }
+    }
+
+    /// Visits a range node
+    fn visit_range(&mut self, node: &P<crate::decompiler::ast::range::RangeNode>) -> AstOutput {
+        let start_out = node.start.accept(self);
+        let end_out = node.end.accept(self);
+        AstOutput {
+            node: format!("<{}, {}>", start_out.node, end_out.node),
+            comments: self.merge_comments(vec![
+                node.metadata().comments().clone(),
+                start_out.comments,
+                end_out.comments,
+            ]),
         }
     }
 }

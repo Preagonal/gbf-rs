@@ -3,24 +3,17 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    assignable::AssignableKind, expr::ExprKind, ptr::P, ssa::SsaVersion, visitors::AstVisitor,
-    AstKind, AstNodeError,
-};
+use super::{expr::ExprKind, ptr::P, ssa::SsaVersion, visitors::AstVisitor, AstKind, AstNodeError};
 use crate::decompiler::ast::AstVisitable;
 
 /// Represents a member access node in the AST, such as `object.field`.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
-#[convert_to(
-    ExprKind::Assignable,
-    AstKind::Expression,
-    AssignableKind::MemberAccess
-)]
+#[convert_to(ExprKind::MemberAccess, AstKind::Expression)]
 pub struct MemberAccessNode {
     /// The left-hand side of the member access, such as `object`.
-    pub lhs: AssignableKind,
+    pub lhs: ExprKind,
     /// The right-hand side of the member access, such as `field`.
-    pub rhs: AssignableKind,
+    pub rhs: ExprKind,
     /// Represents the SSA version of a variable.
     pub ssa_version: Option<SsaVersion>,
 }
@@ -37,29 +30,15 @@ impl MemberAccessNode {
     ///
     /// # Errors
     /// Returns an `AstNodeError` if `lhs` or `rhs` is of an unsupported type.
-    pub fn new(lhs: AssignableKind, rhs: AssignableKind) -> Result<Self, AstNodeError> {
-        let mut new_lhs = lhs.clone();
-        let mut new_rhs = rhs.clone();
-        Self::validate_and_strip_operand(&mut new_lhs)?;
-        Self::validate_and_strip_operand(&mut new_rhs)?;
+    pub fn new(lhs: ExprKind, rhs: ExprKind) -> Result<Self, AstNodeError> {
+        let new_lhs = lhs.clone();
+        let new_rhs = rhs.clone();
 
         Ok(Self {
             lhs: new_lhs,
             rhs: new_rhs,
             ssa_version: None,
         })
-    }
-
-    // This is marked as unreachable because the only two types of operands are Identifier and MemberAccess.
-    // In the future, if more types are added, this function will need to be updated, especially for array.
-    // This also removes the SsaVersion from the operands.
-    #[allow(unreachable_patterns)]
-    fn validate_and_strip_operand(expr: &mut AssignableKind) -> Result<(), AstNodeError> {
-        expr.remove_ssa_version();
-        match expr {
-            AssignableKind::Identifier(_) | AssignableKind::MemberAccess(_) => Ok(()),
-            _ => Err(AstNodeError::InvalidOperand),
-        }
     }
 }
 

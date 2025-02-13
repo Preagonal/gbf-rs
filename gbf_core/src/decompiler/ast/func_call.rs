@@ -3,16 +3,14 @@
 use gbf_macros::AstNodeTransform;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    assignable::AssignableKind, expr::ExprKind, ptr::P, visitors::AstVisitor, AstKind, AstVisitable,
-};
+use super::{expr::ExprKind, ptr::P, visitors::AstVisitor, AstKind, AstVisitable};
 
 /// Represents a function call
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, AstNodeTransform)]
 #[convert_to(ExprKind::FunctionCall, AstKind::Expression)]
 pub struct FunctionCallNode {
     /// The name of the function being called.
-    pub name: AssignableKind,
+    pub name: ExprKind,
     /// The arguments to the function.
     pub arguments: Vec<ExprKind>,
 }
@@ -24,7 +22,7 @@ impl FunctionCallNode {
     /// - `name`: The name of the function being called.
     /// - `arguments`: The arguments to the function.
     /// - `base`: The base of the function call, if it's a method call.
-    pub fn new(name: AssignableKind, arguments: Vec<ExprKind>) -> Self {
+    pub fn new(name: ExprKind, arguments: Vec<ExprKind>) -> Self {
         Self { name, arguments }
     }
 }

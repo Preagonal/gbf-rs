@@ -4,7 +4,9 @@ use std::backtrace::Backtrace;
 
 use crate::{
     decompiler::{
-        ast::{new_bool, new_float, new_null, new_num, new_str},
+        ast::{
+            new_assignment, new_bool, new_float, new_id_with_version, new_null, new_num, new_str,
+        },
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -66,8 +68,11 @@ impl OpcodeHandler for LiteralHandler {
                         }
                     })?),
                     _ => {
-                        // We should not hit this case ever.
-                        panic!("Invalid operand type for PushNumber opcode: {:?}", operand);
+                        return Err(FunctionDecompilerError::Other {
+                            message: format!("Invalid operand type for PushNumber: {:?}", operand),
+                            context: context.get_error_context(),
+                            backtrace: Backtrace::capture(),
+                        });
                     }
                 },
                 _ => {
@@ -80,15 +85,15 @@ impl OpcodeHandler for LiteralHandler {
             }
         };
 
-        // let ver = context.ssa_context.new_ssa_version_for("lit");
-        // let ssa_id = new_id_with_version("lit", ver);
-        // let stmt = statement(ssa_id.clone(), literal);
+        let ver = context.ssa_context.new_ssa_version_for("lit");
+        let ssa_id = new_id_with_version("lit", ver);
+        let stmt = new_assignment(ssa_id.clone(), literal);
 
-        // Ok(ProcessedInstruction {
-        //     ssa_id: Some(ssa_id.into()),
-        //     node_to_push: Some(stmt.into()),
-        // })
-        context.push_one_node(literal.into())?;
-        Ok(ProcessedInstructionBuilder::new().build())
+        Ok(ProcessedInstructionBuilder::new()
+            .push_to_region(stmt.into())
+            .ssa_id(ssa_id.into())
+            .build())
+        // context.push_one_node(literal.into())?;
+        // Ok(ProcessedInstructionBuilder::new().build())
     }
 }

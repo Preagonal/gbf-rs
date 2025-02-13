@@ -4,7 +4,7 @@ use std::backtrace::Backtrace;
 
 use crate::{
     decompiler::{
-        ast::{new_unary_op, unary_op::UnaryOpType},
+        ast::{bin_op::BinOpType, new_bin_op, new_unary_op, unary_op::UnaryOpType},
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
         ProcessedInstruction, ProcessedInstructionBuilder,
@@ -51,6 +51,29 @@ impl OpcodeHandler for JumpHandler {
 
                 Ok(ProcessedInstructionBuilder::new()
                     .jump_condition(condition)
+                    .build())
+            }
+            Opcode::ForEach => {
+                // iter_var is the variable that will be assigned to each element in the array
+                let iter_var = context.pop_expression()?;
+                // arr is the array to iterate over
+                let arr = context.pop_expression()?;
+
+                // push arr and iter_var back onto the stack
+                context.push_one_node(arr.clone().into())?;
+                context.push_one_node(iter_var.clone().into())?;
+
+                // construct a new binary operation node with Foreach as the type
+                let bin_op = new_bin_op(iter_var, arr, BinOpType::Foreach).map_err(|e| {
+                    FunctionDecompilerError::AstNodeError {
+                        source: e,
+                        context: context.get_error_context(),
+                        backtrace: Backtrace::capture(),
+                    }
+                })?;
+
+                Ok(ProcessedInstructionBuilder::new()
+                    .jump_condition(bin_op.into())
                     .build())
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {

@@ -2,7 +2,6 @@
 
 use crate::{decompiler::ast::visitors::AstVisitor, opcode::Opcode};
 use array_access::ArrayAccessNode;
-use assignable::AssignableKind;
 use assignment::AssignmentNode;
 use bin_op::BinaryOperationNode;
 use block::BlockNode;
@@ -13,8 +12,10 @@ use function::FunctionNode;
 use identifier::IdentifierNode;
 use literal::LiteralNode;
 use member_access::MemberAccessNode;
+use new_array::NewArrayNode;
 use phi::PhiNode;
 use ptr::P;
+use range::RangeNode;
 use ret::ReturnNode;
 use serde::{Deserialize, Serialize};
 use ssa::SsaVersion;
@@ -30,8 +31,6 @@ use super::structure_analysis::region::RegionId;
 pub mod array;
 /// Represents an array access node.
 pub mod array_access;
-/// Contains the specifications for any AstNodes that are assignable.
-pub mod assignable;
 /// Contains the specifications for any AstNodes that are assignments
 pub mod assignment;
 /// Holds the macro that generates variants for the AST nodes.
@@ -58,12 +57,16 @@ pub mod member_access;
 pub mod meta;
 /// Represents the new
 pub mod new;
+/// Represents a new array node in the AST.
+pub mod new_array;
 /// A node identifier
 pub mod node_id;
 /// Represents a phi node in the AST.
 pub mod phi;
 /// Represents a pointer
 pub mod ptr;
+/// Represents a range of values in the AST.
+pub mod range;
 /// Represents a return node in the AST.
 pub mod ret;
 /// Represents SSA versioning for the AST.
@@ -142,7 +145,7 @@ where
 /// Creates a new AstNode for a statement.
 pub fn new_assignment<L, R>(lhs: L, rhs: R) -> AssignmentNode
 where
-    L: Into<AssignableKind>,
+    L: Into<ExprKind>,
     R: Into<ExprKind>,
 {
     AssignmentNode {
@@ -167,8 +170,8 @@ pub fn new_virtual_branch(branch: RegionId) -> VirtualBranchNode {
 /// Creates a new member access node.
 pub fn new_member_access<L, R>(lhs: L, rhs: R) -> Result<MemberAccessNode, AstNodeError>
 where
-    L: Into<AssignableKind>,
-    R: Into<AssignableKind>,
+    L: Into<ExprKind>,
+    R: Into<ExprKind>,
 {
     MemberAccessNode::new(lhs.into(), rhs.into())
 }
@@ -188,7 +191,7 @@ pub fn new_id_with_version(name: &str, version: SsaVersion) -> IdentifierNode {
 /// Creates a new function call node.
 pub fn new_fn_call<N>(name: N, args: Vec<ExprKind>) -> FunctionCallNode
 where
-    N: Into<AssignableKind>,
+    N: Into<ExprKind>,
 {
     FunctionCallNode::new(name.into(), args)
 }
@@ -201,10 +204,18 @@ where
     array::ArrayNode::new(elements.into_iter().map(Into::into).collect())
 }
 
+/// Creates a new uninitialized array node with a given size.
+pub fn new_uninitialized_array<E>(size: E) -> NewArrayNode
+where
+    E: Into<ExprKind>,
+{
+    NewArrayNode::new(size.into())
+}
+
 /// Creates a new array access node.
 pub fn new_array_access<A, I>(array: A, index: I) -> ArrayAccessNode
 where
-    A: Into<AssignableKind>,
+    A: Into<ExprKind>,
     I: Into<ExprKind>,
 {
     ArrayAccessNode::new(array.into(), index.into())
@@ -232,6 +243,15 @@ where
     A: Into<ExprKind>,
 {
     UnaryOperationNode::new(operand.into(), op_type)
+}
+
+/// Creates a new range node.
+pub fn new_range<L, R>(lhs: L, rhs: R) -> RangeNode
+where
+    L: Into<ExprKind>,
+    R: Into<ExprKind>,
+{
+    RangeNode::new(lhs.into(), rhs.into())
 }
 
 // == Literals ==
@@ -329,6 +349,75 @@ pub fn new_phi(index: usize) -> phi::PhiNode {
     PhiNode::new(index)
 }
 
+/// Creates a new while loop
+pub fn new_while<C, T>(condition: C, then_block: Vec<T>) -> ControlFlowNode
+where
+    C: Into<ExprKind>,
+    T: Into<AstKind>,
+{
+    ControlFlowNode::new(
+        ControlFlowType::While,
+        Some(condition),
+        then_block
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<AstKind>>(),
+    )
+}
+
+// TODO: There is a bug right now where the condition is improperly flipped for do-whiles.
+/// Creates a new do while loop
+pub fn new_do_while<C, T>(condition: C, then_block: Vec<T>) -> ControlFlowNode
+where
+    C: Into<ExprKind>,
+    T: Into<AstKind>,
+{
+    ControlFlowNode::new(
+        ControlFlowType::DoWhile,
+        Some(condition),
+        then_block
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<AstKind>>(),
+    )
+}
+
+/// Creates a new for loop
+pub fn new_for<C, T>(condition: C, then_block: Vec<T>) -> ControlFlowNode
+where
+    C: Into<ExprKind>,
+    T: Into<AstKind>,
+{
+    ControlFlowNode::new(
+        ControlFlowType::For,
+        Some(condition),
+        then_block
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<AstKind>>(),
+    )
+}
+
+/// Creates a new cyclic condition
+pub fn new_cyclic_condition<C, T>(
+    condition: C,
+    then_block: Vec<T>,
+    opcode: Option<Opcode>,
+) -> Result<ControlFlowNode, AstNodeError>
+where
+    C: Into<ExprKind>,
+    T: Into<AstKind>,
+{
+    match opcode {
+        Some(Opcode::Jne) => Ok(new_while(condition, then_block)),
+        // TODO: Move condition flipping logic here for Jeq
+        Some(Opcode::Jeq) => Ok(new_while(condition, then_block)),
+        Some(Opcode::ForEach) => Ok(new_for(condition, then_block)),
+        None => Ok(new_while(condition, then_block)),
+        _ => Err(AstNodeError::InvalidOperand),
+    }
+}
+
 /// Creates a new acyclic condition
 pub fn new_acylic_condition<C, T>(
     condition: C,
@@ -359,9 +448,9 @@ where
 }
 
 /// Creates a new new node.
-pub fn new_new<N>(new_type: &str, arg: N) -> Result<new::NewNode, AstNodeError>
+pub fn new_new<N>(new_type: N, arg: N) -> Result<new::NewNode, AstNodeError>
 where
     N: Into<ExprKind>,
 {
-    new::NewNode::new(new_type, arg.into())
+    new::NewNode::new(new_type.into(), arg.into())
 }
