@@ -142,6 +142,10 @@ pub fn global_opcode_handlers() -> &'static HashMap<Opcode, Box<dyn OpcodeHandle
             Opcode::InRange,
             Box::new(special_three_operand::SpecialThreeOperandHandler),
         );
+        handlers.insert(
+            Opcode::AssignMultiDimensionalArrayIndex,
+            Box::new(special_three_operand::SpecialThreeOperandHandler),
+        );
 
         // Two operand handlers
         handlers.insert(

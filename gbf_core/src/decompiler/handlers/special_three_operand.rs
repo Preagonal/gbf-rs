@@ -54,6 +54,16 @@ impl OpcodeHandler for SpecialThreeOperandHandler {
                 context.push_one_node(bin_op.into())?;
                 Ok(ProcessedInstructionBuilder::new().build())
             }
+            Opcode::AssignMultiDimensionalArrayIndex => {
+                let ind_2 = context.pop_expression()?;
+                let ind_1 = context.pop_expression()?;
+                let arr = context.pop_expression()?;
+
+                let arr_access = new_array_access(new_array_access(arr, ind_1), ind_2);
+
+                context.push_one_node(arr_access.into())?;
+                Ok(ProcessedInstructionBuilder::new().build())
+            }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {
                 opcode: instruction.opcode,
                 context: context.get_error_context(),
