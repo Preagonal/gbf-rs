@@ -2,9 +2,11 @@
 
 use std::backtrace::Backtrace;
 
+use cyclic_region_reducer::CyclicRegionReducer;
 use if_region_reducer::IfRegionReducer;
 use linear_region_reducer::LinearRegionReducer;
 use petgraph::{
+    algo::dominators::simple_fast,
     graph::{DiGraph, NodeIndex},
     visit::{DfsPostOrder, Walker},
 };
@@ -23,6 +25,8 @@ use super::ast::{AstKind, AstNodeError};
 
 use thiserror::Error;
 
+/// A module that reduces cyclic regions
+pub mod cyclic_region_reducer;
 /// A module representing a region that is an if
 pub mod if_region_reducer;
 /// A module that contains the logic for reducing a linear region.
@@ -297,7 +301,11 @@ impl StructureAnalysis {
                     self.is_marked = false;
 
                     // Reduce the region
-                    let did_reduce = self.reduce_acyclic_region(region_id)?;
+                    let mut did_reduce = self.reduce_acyclic_region(region_id)?;
+
+                    if !did_reduce && self.is_cyclic(region_id)? {
+                        did_reduce = CyclicRegionReducer.reduce_region(self, region_id)?;
+                    }
 
                     if !did_reduce {
                         break;
@@ -361,6 +369,93 @@ impl StructureAnalysis {
         }
 
         Ok(Some(successors[0].0))
+    }
+
+    /// Gets the single predecessor of a region, if there is only one.
+    ///
+    /// # Arguments
+    /// - `region_id`: The region ID to get the predecessor of.
+    ///
+    /// # Returns
+    /// - An `Option` containing the predecessor node index and region ID if there is only one predecessor.
+    pub fn get_single_predecessor(
+        &self,
+        region_id: RegionId,
+    ) -> Result<Option<RegionId>, StructureAnalysisError> {
+        let preds = self.get_predecessors(region_id)?;
+
+        if preds.len() != 1 {
+            return Ok(None);
+        }
+
+        Ok(Some(preds[0]))
+    }
+
+    /// If a region is cyclic
+    ///
+    /// # Arguments
+    /// - `region_id`: The region ID to check.
+    ///
+    /// # Returns
+    /// - `true` if the region is cyclic, `false` otherwise.
+    /// - `Err(StructureAnalysisError)` if an error occurred.
+    pub fn is_cyclic(&self, region_id: RegionId) -> Result<bool, StructureAnalysisError> {
+        let preds = self.get_predecessors(region_id)?;
+
+        for pred in preds {
+            if pred == region_id || self.is_back_edge(pred, region_id)? {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
+    /// If a node is a back edge. Basically calls `dominates_strictly` with the arguments reversed.
+    ///
+    /// # Arguments
+    /// - `region`: The region ID of the source region.
+    /// - `successor`: The region ID of the destination region.
+    ///
+    /// # Returns
+    /// - `true` if the edge is a back edge, `false` otherwise.
+    /// - `Err(StructureAnalysisError)` if an error occurred.
+    pub fn is_back_edge(
+        &self,
+        region: RegionId,
+        successor: RegionId,
+    ) -> Result<bool, StructureAnalysisError> {
+        self.dominates_strictly(successor, region)
+    }
+
+    /// If a node dominates another node.
+    ///
+    /// # Arguments
+    /// - `dominator`: The region ID of the dominator.
+    /// - `dominatee`: The region ID of the dominatee.
+    ///
+    /// # Returns
+    /// - `true` if the dominator dominates the dominatee, `false` otherwise.
+    /// - `Err(StructureAnalysisError)` if an error occurred.
+    pub fn dominates_strictly(
+        &self,
+        dominator: RegionId,
+        dominatee: RegionId,
+    ) -> Result<bool, StructureAnalysisError> {
+        let entry_node = self.get_node_index(self.get_entry_region())?;
+        let dominator_node = self.get_node_index(dominator)?;
+        let dominatee_node = self.get_node_index(dominatee)?;
+
+        // Use petgraph dominators to check if dominator dominates dominatee
+        // TODO: Maybe run this once and cache the result, especially for large graphs
+        let dominators = simple_fast(&self.region_graph, entry_node);
+
+        let doms = dominators.strict_dominators(dominator_node);
+
+        // If doms is none, return false, otherwise check if dominatee is in doms
+        Ok(doms
+            .map(|doms| doms.collect::<Vec<_>>().contains(&dominatee_node))
+            .unwrap_or(false))
     }
 
     /// Get the single linear successor of a region, if the region type is linear.

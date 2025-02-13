@@ -326,6 +326,75 @@ pub fn new_phi(index: usize) -> phi::PhiNode {
     PhiNode::new(index)
 }
 
+/// Creates a new while loop
+pub fn new_while<C, T>(condition: C, then_block: Vec<T>) -> ControlFlowNode
+where
+    C: Into<ExprKind>,
+    T: Into<AstKind>,
+{
+    ControlFlowNode::new(
+        ControlFlowType::While,
+        Some(condition),
+        then_block
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<AstKind>>(),
+    )
+}
+
+// TODO: There is a bug right now where the condition is improperly flipped for do-whiles.
+/// Creates a new do while loop
+pub fn new_do_while<C, T>(condition: C, then_block: Vec<T>) -> ControlFlowNode
+where
+    C: Into<ExprKind>,
+    T: Into<AstKind>,
+{
+    ControlFlowNode::new(
+        ControlFlowType::DoWhile,
+        Some(condition),
+        then_block
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<AstKind>>(),
+    )
+}
+
+/// Creates a new for loop
+pub fn new_for<C, T>(condition: C, then_block: Vec<T>) -> ControlFlowNode
+where
+    C: Into<ExprKind>,
+    T: Into<AstKind>,
+{
+    ControlFlowNode::new(
+        ControlFlowType::For,
+        Some(condition),
+        then_block
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<AstKind>>(),
+    )
+}
+
+/// Creates a new cyclic condition
+pub fn new_cyclic_condition<C, T>(
+    condition: C,
+    then_block: Vec<T>,
+    opcode: Option<Opcode>,
+) -> Result<ControlFlowNode, AstNodeError>
+where
+    C: Into<ExprKind>,
+    T: Into<AstKind>,
+{
+    match opcode {
+        Some(Opcode::Jne) => Ok(new_while(condition, then_block)),
+        // TODO: Move condition flipping logic here for Jeq
+        Some(Opcode::Jeq) => Ok(new_while(condition, then_block)),
+        Some(Opcode::ForEach) => Ok(new_for(condition, then_block)),
+        None => Ok(new_while(condition, then_block)),
+        _ => Err(AstNodeError::InvalidOperand),
+    }
+}
+
 /// Creates a new acyclic condition
 pub fn new_acylic_condition<C, T>(
     condition: C,

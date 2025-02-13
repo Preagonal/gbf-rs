@@ -470,20 +470,41 @@ impl AstVisitor for Gs2Emitter {
             ControlFlowType::Else => "else",
             ControlFlowType::ElseIf => "else if",
             ControlFlowType::With => "with",
+            ControlFlowType::While => "while",
+            ControlFlowType::For => "for",
+            ControlFlowType::DoWhile => "do",
         };
-        s.push_str(name);
-        if let Some(condition) = node.condition() {
-            let condition_out = condition.accept(self);
-            s.push_str(" (");
-            s.push_str(&condition_out.node);
-            s.push_str(") ");
-            base_comments.extend(condition_out.comments.clone());
-        }
-        let body_out = node.body().accept(self);
-        s.push_str(&body_out.node);
-        AstOutput {
-            node: s,
-            comments: self.merge_comments(vec![base_comments, body_out.comments]),
+        if *node.ty() == ControlFlowType::DoWhile {
+            s.push_str(name);
+            let body_out = node.body().accept(self);
+            s.push(' ');
+            s.push_str(&body_out.node);
+            s.push_str(" while (");
+            if let Some(condition) = node.condition() {
+                let condition_out = condition.accept(self);
+                s.push_str(&condition_out.node);
+                base_comments.extend(condition_out.comments.clone());
+            }
+            s.push_str(");");
+            AstOutput {
+                node: s,
+                comments: self.merge_comments(vec![base_comments, body_out.comments]),
+            }
+        } else {
+            s.push_str(name);
+            if let Some(condition) = node.condition() {
+                let condition_out = condition.accept(self);
+                s.push_str(" (");
+                s.push_str(&condition_out.node);
+                s.push_str(") ");
+                base_comments.extend(condition_out.comments.clone());
+            }
+            let body_out = node.body().accept(self);
+            s.push_str(&body_out.node);
+            AstOutput {
+                node: s,
+                comments: self.merge_comments(vec![base_comments, body_out.comments]),
+            }
         }
     }
 

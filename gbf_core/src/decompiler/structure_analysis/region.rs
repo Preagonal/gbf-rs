@@ -115,6 +115,16 @@ impl Region {
         self.unresolved_nodes.extend(nodes);
     }
 
+    /// Clears the nodes in the region
+    pub fn clear_nodes(&mut self) {
+        self.nodes.clear();
+    }
+
+    /// Clears the unresolved nodes in the region
+    pub fn clear_unresolved_nodes(&mut self) {
+        self.unresolved_nodes.clear();
+    }
+
     /// Gets the nodes in the region.
     ///
     /// # Return
