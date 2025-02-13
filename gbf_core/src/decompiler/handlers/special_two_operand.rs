@@ -68,7 +68,7 @@ impl OpcodeHandler for SpecialTwoOperandHandler {
                     .push_to_region(stmt.into())
                     .build())
             }
-            Opcode::AssignArrayIndex => {
+            Opcode::ArrayAccess => {
                 let index = context.pop_expression()?;
                 let arr = context.pop_expression()?;
 

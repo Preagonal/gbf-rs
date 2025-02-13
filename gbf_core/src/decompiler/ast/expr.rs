@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use super::{
     array::ArrayNode, array_access::ArrayAccessNode, bin_op::BinaryOperationNode,
     func_call::FunctionCallNode, identifier::IdentifierNode, literal::LiteralNode,
-    member_access::MemberAccessNode, new::NewNode, phi::PhiNode, ptr::P,
-    unary_op::UnaryOperationNode, visitors::AstVisitor, AstKind, AstVisitable,
+    member_access::MemberAccessNode, new::NewNode, new_array::NewArrayNode, phi::PhiNode, ptr::P,
+    range::RangeNode, unary_op::UnaryOperationNode, visitors::AstVisitor, AstKind, AstVisitable,
 };
 
 /// Represents an expression node in the AST.
@@ -26,6 +26,8 @@ pub enum ExprKind {
     Array(P<ArrayNode>),
     /// Represents a new node in the AST.
     New(P<NewNode>),
+    /// Represents a new array node in the AST.
+    NewArray(P<NewArrayNode>),
     /// Represents a member access node in the AST.
     MemberAccess(P<MemberAccessNode>),
     /// Represents an identifier node in the AST.
@@ -34,6 +36,8 @@ pub enum ExprKind {
     ArrayAccess(P<ArrayAccessNode>),
     /// Represents a phi node in the AST.
     Phi(P<PhiNode>),
+    /// Represents a range node in the AST.
+    Range(P<RangeNode>),
 }
 
 impl AstVisitable for ExprKind {
@@ -53,10 +57,12 @@ impl PartialEq for ExprKind {
             (ExprKind::FunctionCall(f1), ExprKind::FunctionCall(f2)) => f1 == f2,
             (ExprKind::Array(a1), ExprKind::Array(a2)) => a1 == a2,
             (ExprKind::New(n1), ExprKind::New(n2)) => n1 == n2,
+            (ExprKind::NewArray(n1), ExprKind::NewArray(n2)) => n1 == n2,
             (ExprKind::MemberAccess(m1), ExprKind::MemberAccess(m2)) => m1 == m2,
             (ExprKind::Identifier(i1), ExprKind::Identifier(i2)) => i1 == i2,
             (ExprKind::ArrayAccess(a1), ExprKind::ArrayAccess(a2)) => a1 == a2,
             (ExprKind::Phi(p1), ExprKind::Phi(p2)) => p1 == p2,
+            (ExprKind::Range(r1), ExprKind::Range(r2)) => r1 == r2,
             _ => false,
         }
     }

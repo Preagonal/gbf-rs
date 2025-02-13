@@ -187,10 +187,12 @@ impl AstVisitor for Gs2Emitter {
             ExprKind::FunctionCall(func_call) => func_call.accept(self),
             ExprKind::Array(array) => array.accept(self),
             ExprKind::New(new_node) => new_node.accept(self),
+            ExprKind::NewArray(new_array) => new_array.accept(self),
             ExprKind::MemberAccess(member_access) => member_access.accept(self),
             ExprKind::Identifier(identifier) => identifier.accept(self),
             ExprKind::ArrayAccess(array_access) => array_access.accept(self),
             ExprKind::Phi(phi) => phi.accept(self),
+            ExprKind::Range(range) => range.accept(self),
         }
     }
 
@@ -538,6 +540,33 @@ impl AstVisitor for Gs2Emitter {
                 node.metadata().comments().clone(),
                 type_out.comments,
                 arg_out.comments,
+            ]),
+        }
+    }
+
+    /// Visits a new array node
+    fn visit_new_array(
+        &mut self,
+        node: &P<crate::decompiler::ast::new_array::NewArrayNode>,
+    ) -> AstOutput {
+        let arg_out = node.arg.accept(self);
+        AstOutput {
+            node: format!("new [{}]", arg_out.node),
+            comments: self
+                .merge_comments(vec![node.metadata().comments().clone(), arg_out.comments]),
+        }
+    }
+
+    /// Visits a range node
+    fn visit_range(&mut self, node: &P<crate::decompiler::ast::range::RangeNode>) -> AstOutput {
+        let start_out = node.start.accept(self);
+        let end_out = node.end.accept(self);
+        AstOutput {
+            node: format!("<{}, {}>", start_out.node, end_out.node),
+            comments: self.merge_comments(vec![
+                node.metadata().comments().clone(),
+                start_out.comments,
+                end_out.comments,
             ]),
         }
     }

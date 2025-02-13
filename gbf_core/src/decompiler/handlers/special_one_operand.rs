@@ -6,7 +6,7 @@ use crate::{
     decompiler::{
         ast::{
             bin_op::BinOpType, expr::ExprKind, new_assignment, new_bin_op, new_id_with_version,
-            new_num, new_return,
+            new_num, new_return, new_uninitialized_array,
         },
         function_decompiler::FunctionDecompilerError,
         function_decompiler_context::FunctionDecompilerContext,
@@ -187,6 +187,15 @@ impl OpcodeHandler for SpecialOneOperandHandler {
                 Ok(ProcessedInstructionBuilder::new()
                     .push_to_region(stmt.into())
                     .build())
+            }
+            Opcode::NewUninitializedArray => {
+                // Pop the last expr from the stack, create AST node for new array expr, push it back to the stack
+                let num_elems = context.pop_expression()?;
+
+                // Create the node
+                let new_array = new_uninitialized_array(num_elems);
+                context.push_one_node(new_array.into())?;
+                Ok(ProcessedInstructionBuilder::new().build())
             }
             _ => Err(FunctionDecompilerError::UnimplementedOpcode {
                 opcode: instruction.opcode,

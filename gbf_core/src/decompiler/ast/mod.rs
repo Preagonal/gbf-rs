@@ -12,8 +12,10 @@ use function::FunctionNode;
 use identifier::IdentifierNode;
 use literal::LiteralNode;
 use member_access::MemberAccessNode;
+use new_array::NewArrayNode;
 use phi::PhiNode;
 use ptr::P;
+use range::RangeNode;
 use ret::ReturnNode;
 use serde::{Deserialize, Serialize};
 use ssa::SsaVersion;
@@ -55,12 +57,16 @@ pub mod member_access;
 pub mod meta;
 /// Represents the new
 pub mod new;
+/// Represents a new array node in the AST.
+pub mod new_array;
 /// A node identifier
 pub mod node_id;
 /// Represents a phi node in the AST.
 pub mod phi;
 /// Represents a pointer
 pub mod ptr;
+/// Represents a range of values in the AST.
+pub mod range;
 /// Represents a return node in the AST.
 pub mod ret;
 /// Represents SSA versioning for the AST.
@@ -198,6 +204,14 @@ where
     array::ArrayNode::new(elements.into_iter().map(Into::into).collect())
 }
 
+/// Creates a new uninitialized array node with a given size.
+pub fn new_uninitialized_array<E>(size: E) -> NewArrayNode
+where
+    E: Into<ExprKind>,
+{
+    NewArrayNode::new(size.into())
+}
+
 /// Creates a new array access node.
 pub fn new_array_access<A, I>(array: A, index: I) -> ArrayAccessNode
 where
@@ -229,6 +243,15 @@ where
     A: Into<ExprKind>,
 {
     UnaryOperationNode::new(operand.into(), op_type)
+}
+
+/// Creates a new range node.
+pub fn new_range<L, R>(lhs: L, rhs: R) -> RangeNode
+where
+    L: Into<ExprKind>,
+    R: Into<ExprKind>,
+{
+    RangeNode::new(lhs.into(), rhs.into())
 }
 
 // == Literals ==

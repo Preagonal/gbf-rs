@@ -314,7 +314,7 @@ define_opcodes! {
     AccessMember = 0x23,
     ConvertToObject = 0x24,
     EndArray = 0x25,
-    NewArray = 0x26,
+    NewUninitializedArray = 0x26,
     SetArray = 0x27,
     New = 0x28,
     MakeVar = 0x29,
@@ -387,7 +387,7 @@ define_opcodes! {
     ObjPositions = 0x78,
     // Unknown values: 0x78 - 0x81
     ObjSize = 0x82,
-    AssignArrayIndex = 0x83,
+    ArrayAccess = 0x83,
     AssignArray = 0x84,
     AssignMultiDimensionalArrayIndex = 0x85,
     AssignMultiDimensionalArray = 0x86,
